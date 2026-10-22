@@ -1,0 +1,113 @@
+---
+import App from "../../../layouts/App.astro";
+import { CATEGORIES, drills, href, LANGS, READY_TRACKS, type Lang, type Track } from "../../../lib/drills";
+import { rotation, ui } from "../../../lib/i18n";
+
+export function getStaticPaths() {
+  return LANGS.flatMap((lang) => READY_TRACKS.map((track) => ({ params: { lang, track } })));
+}
+const lang = Astro.params.lang as Lang;
+const track = Astro.params.track as Track;
+const t = ui[lang];
+const list = drills(track, lang);
+const byId = Object.fromEntries(list.map((d) => [d.id, d]));
+const fmt = new Intl.DateTimeFormat(t.htmlLang, { day: "numeric", month: "short" });
+const order = list.map((d) => d.id);
+
+function cell(ids: string[]) {
+  return ids.map((id) => {
+    if (id === "catch-up") return { label: t.catchUp };
+    if (id === "mock") return { label: t.mockInterview };
+    return { id, label: byId[id].title };
+  });
+}
+---
+
+<App lang={lang} title={t.tracks[track].name} path={`/${track}/`} track={track} section="drills">
+  <section class="track-head">
+    <h1>{t.tracks[track].name}</h1>
+    <p class="lead">{t.trackLead}</p>
+    <a class="btn btn-primary btn-big" id="begin" href={href(`/${lang}/${track}/${order[0]}/`)}
+       data-order={JSON.stringify(order)} data-base-path={href(`/${lang}/${track}/`)}
+       data-resume={t.resume("{id}")} data-done={t.allAcquired}>{t.begin}</a>
+  </section>
+
+  <section class="block mobile-list" aria-labelledby="all-h">
+    <h2 id="all-h">{t.allDrills}</h2>
+    {CATEGORIES.map((cat) => (
+      <div class="mobile-group">
+        <h3>{t.cats[cat]}</h3>
+        <ul class="drill-list">
+          {list.filter((d) => d.cat === cat).map((d) => (
+            <li>
+              <a href={href(`/${lang}/${track}/${d.id}/`)}>
+                <span class="side-id">{d.id.toUpperCase()}</span>
+                <span class="side-title">{d.title}</span>
+                <span class="side-status" data-status-for={`${track}:${d.id}`}></span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </section>
+
+  <section class="block">
+    <h2>{t.week}</h2>
+    <p class="lead">{t.weekLead}</p>
+    <div class="week-list">
+      {rotation.map((w) => (
+        <article class="week" data-week={w.week}>
+          <h3>{t.weekCols[0]} {fmt.format(new Date(`${w.week}T12:00:00`))}</h3>
+          <dl>
+            {[w.mon, w.wed, w.fri].map((ids, i) => (
+              <div>
+                <dt>{t.weekCols[i + 1]}</dt>
+                <dd>
+                  {cell(ids).map((c) =>
+                    c.id ? (
+                      <a class="chip" href={href(`/${lang}/${track}/${c.id}/`)}>
+                        <span class="chip-id">{c.id.toUpperCase()}</span> {c.label}
+                      </a>
+                    ) : (
+                      <span class="chip chip-plain">{c.label}</span>
+                    ),
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <div class="two-col">
+    <section class="block">
+      <h2>{t.rules}</h2>
+      <ol class="rules">
+        {t.rulesList.map((r) => <li>{r}</li>)}
+      </ol>
+    </section>
+
+    <section class="block">
+      <h2>{t.grid}</h2>
+      <div class="table-wrap">
+        <table class="grid">
+          <thead>
+            <tr>{t.gridCols.map((c) => <th scope="col">{c}</th>)}</tr>
+          </thead>
+          <tbody>
+            {t.gridRows.map((row) => (
+              <tr>
+                <th scope="row">{row[0]}</th>
+                {row.slice(1).map((v) => <td>{v}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="note">{t.gridNote}</p>
+    </section>
+  </div>
+</App>

@@ -1,5 +1,5 @@
 from pathlib import Path
-OUT = Path(__file__).resolve().parent.parent / "src" / "drills" / "en"
+OUT = Path(__file__).resolve().parent.parent / "src" / "drills" / "python" / "en"
 OUT.mkdir(parents=True, exist_ok=True)
 GECKO = "https://github.com/Mialy333/my-gecko-buyer"
 GRA = "https://github.com/Mialy333/grounded-research-agent"

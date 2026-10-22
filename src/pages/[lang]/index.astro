@@ -1,93 +1,49 @@
 ---
 import App from "../../layouts/App.astro";
-import { drills, href, LANGS, type Lang } from "../../lib/drills";
-import { rotation, ui } from "../../lib/i18n";
+import { drills, href, LANGS, READY_TRACKS, TRACKS, type Lang } from "../../lib/drills";
+import { ui } from "../../lib/i18n";
 
 export function getStaticPaths() {
   return LANGS.map((lang) => ({ params: { lang } }));
 }
 const lang = Astro.params.lang as Lang;
 const t = ui[lang];
-const byId = Object.fromEntries(drills(lang).map((d) => [d.id, d]));
-const fmt = new Intl.DateTimeFormat(t.htmlLang, { day: "numeric", month: "short" });
-
-function cell(ids: string[]) {
-  return ids.map((id) => {
-    if (id === "catch-up") return { label: t.catchUp };
-    if (id === "mock") return { label: t.mockInterview };
-    return { id, label: byId[id].title };
-  });
-}
 ---
 
-<App lang={lang} title={t.brand} path="/">
-  <section class="hero">
-    <img class="hero-art" src={href("/hero.webp")} alt={t.heroAlt} width="1504" height="628" fetchpriority="high" />
-    <div class="hero-text">
-      <h1>{t.brand}</h1>
-      <p>{t.tagline}</p>
-      <a class="btn btn-primary" href={href(`/${lang}/drills/d5/`)}>{t.start}</a>
-    </div>
-  </section>
-
-  <section class="block">
-    <h2>{t.week}</h2>
-    <p class="lead">{t.weekLead}</p>
-    <div class="table-wrap">
-      <table class="rotation">
-        <thead>
-          <tr>{t.weekCols.map((c) => <th scope="col">{c}</th>)}</tr>
-        </thead>
-        <tbody>
-          {rotation.map((w) => (
-            <tr data-week={w.week}>
-              <th scope="row">{fmt.format(new Date(`${w.week}T12:00:00`))}</th>
-              {[w.mon, w.wed, w.fri].map((ids) => (
-                <td>
-                  {cell(ids).map((c) =>
-                    c.id ? (
-                      <a class="chip" href={href(`/${lang}/drills/${c.id}/`)}>
-                        <span class="chip-id">{c.id.toUpperCase()}</span> {c.label}
-                      </a>
-                    ) : (
-                      <span class="chip chip-plain">{c.label}</span>
-                    ),
-                  )}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <div class="two-col">
-    <section class="block">
-      <h2>{t.rules}</h2>
-      <ol class="rules">
-        {t.rulesList.map((r) => <li>{r}</li>)}
+<App lang={lang} title={t.brand} path="/" section="home">
+  <section class="welcome">
+    <img class="welcome-art" src={href("/hero.webp")} alt={t.heroAlt} width="1504" height="628" fetchpriority="high" />
+    <div class="welcome-text">
+      <h1 class="welcome-title">{t.welcomeTitle}</h1>
+      <p class="welcome-lead">{t.welcomeLead}</p>
+      <ol class="steps">
+        {t.welcomeHow.map((s) => <li>{s}</li>)}
       </ol>
-    </section>
+    </div>
+  </section>
 
-    <section class="block">
-      <h2>{t.grid}</h2>
-      <div class="table-wrap">
-        <table class="grid">
-          <thead>
-            <tr>{t.gridCols.map((c) => <th scope="col">{c}</th>)}</tr>
-          </thead>
-          <tbody>
-            {t.gridRows.map((row) => (
-              <tr>
-                <th scope="row">{row[0]}</th>
-                {row.slice(1).map((v) => <td>{v}</td>)}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p class="note">{t.gridNote}</p>
-    </section>
-  </div>
+  <section class="tracks" aria-labelledby="tracks-h">
+    <h2 id="tracks-h">{t.chooseTrack}</h2>
+    <div class="track-grid">
+      {TRACKS.map((track) => {
+        const ready = READY_TRACKS.includes(track);
+        const total = drills(track, lang).length;
+        return ready ? (
+          <a class={`track track-${track}`} href={href(`/${lang}/${track}/`)} data-track-card={track} data-total={total}
+             data-progress-template={t.progressOf(999, total).replace("999", "{n}")} data-empty={t.noProgress}>
+            <span class="track-badge" aria-hidden="true">{track === "python" ? "py" : "ts"}</span>
+            <span class="track-name">{t.tracks[track].name}</span>
+            <span class="track-blurb">{t.tracks[track].blurb}</span>
+            <span class="track-progress"><span class="track-meter"><span></span></span><span class="track-count">{t.noProgress}</span></span>
+          </a>
+        ) : (
+          <div class={`track track-${track} is-soon`} aria-disabled="true">
+            <span class="track-badge" aria-hidden="true">{track === "python" ? "py" : "ts"}</span>
+            <span class="track-name">{t.tracks[track].name} <span class="soon">{t.soon}</span></span>
+            <span class="track-blurb">{t.tracks[track].blurb}</span>
+          </div>
+        );
+      })}
+    </div>
+  </section>
 </App>

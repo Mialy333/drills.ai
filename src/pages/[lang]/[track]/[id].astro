@@ -1,0 +1,116 @@
+---
+import App from "../../../layouts/App.astro";
+import { drills, href, LANGS, neighbours, READY_TRACKS, type Lang, type Track } from "../../../lib/drills";
+import { ui } from "../../../lib/i18n";
+
+export function getStaticPaths() {
+  return LANGS.flatMap((lang) =>
+    READY_TRACKS.flatMap((track) =>
+      drills(track, lang).map((d) => ({ params: { lang, track, id: d.id }, props: { d } })),
+    ),
+  );
+}
+const lang = Astro.params.lang as Lang;
+const track = Astro.params.track as Track;
+const { d } = Astro.props;
+const t = ui[lang];
+const { prev, next } = neighbours(track, lang, d.id);
+const strings = {
+  attempt: t.attemptN(999).replace("999", "{n}"),
+  best: t.best,
+  withSolution: t.withSolution,
+  acquired: t.acquired,
+  notYet: t.notYet,
+  saved: t.saved,
+  reveal: t.reveal,
+  hide: t.hide,
+  timer: t.timer,
+  timerState: t.timerState,
+};
+---
+
+<App lang={lang} title={`${d.id.toUpperCase()} ${d.title}`} path={`/${track}/${d.id}/`} track={track} activeId={d.id} section="drills">
+  <article class="drill" data-drill={d.id} data-track={track} data-minutes={d.minutes} data-strings={JSON.stringify(strings)}>
+    <header class="drill-head">
+      <p class="drill-cat">{t.cats[d.cat]}, {d.id.toUpperCase()} <span class="attempt-tag" id="attempt-tag"></span></p>
+      <h1>{d.title}</h1>
+      <dl class="drill-meta">
+        <div><dt>{t.target}</dt><dd>{d.minutes} {t.minutes}</dd></div>
+        <div><dt>{t.source}</dt><dd set:html={d.sourceHtml} /></div>
+      </dl>
+    </header>
+
+    <section class="crt" aria-label={lang === "fr" ? "Chronomètre" : "Timer"}>
+      <div class="crt-screen">
+        <output class="crt-time" id="timer-display">00:00</output>
+        <p class="crt-state" id="timer-state">{t.timerState.idle}</p>
+        <div class="crt-bar"><span id="timer-bar"></span></div>
+      </div>
+      <div class="crt-keys">
+        <button type="button" class="key key-go" id="timer-toggle">{t.timer.start}</button>
+        <button type="button" class="key" id="timer-reset">{t.timer.reset}</button>
+      </div>
+    </section>
+
+    <section class="prose" aria-labelledby="statement-h">
+      <h2 id="statement-h">{t.statement}</h2>
+      <Fragment set:html={d.statementHtml} />
+    </section>
+
+    <section class="solution" aria-labelledby="solution-h">
+      <h2 id="solution-h">{t.solution}</h2>
+      <button type="button" class="btn" id="reveal" aria-expanded="false" aria-controls="solution-body">{t.reveal}</button>
+      <p class="solution-note" id="revealed-note" hidden>{t.revealedNote}</p>
+      <div class="prose" id="solution-body" hidden set:html={d.solutionHtml} />
+    </section>
+
+    <section class="score" aria-labelledby="score-h">
+      <h2 id="score-h">{t.grade}</h2>
+      <form id="grade-form">
+        <div class="criteria">
+          {t.criteria.map((c, i) => (
+            <fieldset>
+              <legend>{c}</legend>
+              <div class="pick">
+                {[0, 1, 2].map((v) => (
+                  <label>
+                    <input type="radio" name={`c${i}`} value={v} required />
+                    <span>{v}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ))}
+        </div>
+        <p class="total">
+          {t.total} <output id="total">0</output>/8
+          <span class="verdict" id="verdict"></span>
+        </p>
+        <label class="field">
+          <span>{t.stuck}</span>
+          <textarea name="stuck" rows="3"></textarea>
+        </label>
+        <label class="field">
+          <span>{t.proof}</span>
+          <small>{t.proofHint}</small>
+          <input type="url" name="proof" placeholder={t.proofPlaceholder} inputmode="url" />
+        </label>
+        <button class="btn btn-primary" type="submit">{t.save}</button>
+      </form>
+    </section>
+
+    <section class="history" aria-labelledby="history-h">
+      <h2 id="history-h">{t.history}</h2>
+      <p class="note" id="history-empty">{t.historyEmpty}</p>
+      <ol class="history-list" id="history-list" hidden></ol>
+      <div class="after-actions">
+        <button type="button" class="btn" id="again">{t.again}</button>
+      </div>
+    </section>
+
+    <nav class="pager" aria-label={lang === "fr" ? "Drills voisins" : "Nearby drills"}>
+      {prev ? <a class="pager-prev" href={href(`/${lang}/${track}/${prev.id}/`)}><small>{t.prev}</small><span>{prev.id.toUpperCase()} {prev.title}</span></a> : <span></span>}
+      {next && <a class="pager-next" href={href(`/${lang}/${track}/${next.id}/`)}><small>{t.next}</small><span>{next.id.toUpperCase()} {next.title}</span></a>}
+    </nav>
+  </article>
+</App>
