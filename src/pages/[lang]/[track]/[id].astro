@@ -2,6 +2,7 @@
 import App from "../../../layouts/App.astro";
 import { drills, href, LANGS, neighbours, READY_TRACKS, type Lang, type Track } from "../../../lib/drills";
 import { ui } from "../../../lib/i18n";
+import { reviewLinks } from "../../../lib/review";
 
 export function getStaticPaths() {
   return LANGS.flatMap((lang) =>
@@ -15,6 +16,7 @@ const track = Astro.params.track as Track;
 const { d } = Astro.props;
 const t = ui[lang];
 const { prev, next } = neighbours(track, lang, d.id);
+const review = reviewLinks(d.id, lang);
 const strings = {
   attempt: t.attemptN(999).replace("999", "{n}"),
   best: t.best,
@@ -186,6 +188,24 @@ const strings = {
         <div class="prose" set:html={d.explanationHtml} />
       </div>
     </section>
+
+    {review.length > 0 && (
+      <section class="review" aria-labelledby="review-h">
+        <h2 id="review-h">{t.review}</h2>
+        <p class="note">{t.reviewLead}</p>
+        <ul class="review-list">
+          {review.map((r) => (
+            <li>
+              <a href={r.href} target="_blank" rel="noopener">
+                <small>{r.book}</small>
+                <span>{r.title}</span>
+                <span class="review-arrow" aria-hidden="true">↗</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
 
     <section class="history" aria-labelledby="history-h">
       <h2 id="history-h">{t.history}</h2>

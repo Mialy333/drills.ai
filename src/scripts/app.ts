@@ -2,6 +2,8 @@
 // State is kept in localStorage only; every access is guarded because storage can be
 // missing (private windows) or full.
 
+import { compute, type CatalogEntry, type GameState } from "../lib/game";
+
 type Attempt = {
   v: 2;
   track: string;
@@ -120,6 +122,7 @@ function rememberLang(): void {
 /* ---------- progress shown in lists, cards and the start button ---------- */
 
 function paintProgress(): void {
+  paintHud();
   const s = strings<{ acquired: string; tried: string }>(document.body);
   const groups = new Map<string, Attempt[]>();
   for (const a of journal()) groups.set(keyOf(a), [...(groups.get(keyOf(a)) ?? []), a]);
@@ -164,6 +167,130 @@ function paintProgress(): void {
       begin.textContent = begin.dataset.done!;
     }
   }
+}
+
+
+/* ---------- game: XP, levels, streaks, badges, effects ---------- */
+
+type GameData = {
+  catalog: CatalogEntry[];
+  badges: Record<string, { icon: string; tier: string; name: string; how: string }>;
+  levels: string[];
+};
+const gameData = JSON.parse(document.getElementById("game-data")?.textContent ?? "null") as GameData | null;
+const layoutStrings = strings<Record<string, string>>(document.body);
+const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function gameState(): GameState | null {
+  return gameData ? compute(journal(), gameData.catalog) : null;
+}
+
+function paintHud(): void {
+  const hud = document.getElementById("hud");
+  const g = gameState();
+  if (!hud || !g) return;
+  hud.hidden = g.attempts === 0;
+  hud.querySelector("[data-hud-level]")!.textContent = layoutStrings.hudLevel.replace("{n}", String(g.levelIndex + 1));
+  (hud.querySelector("[data-hud-bar]") as HTMLElement).style.width = `${Math.round(g.levelProgress * 100)}%`;
+  const streak = hud.querySelector<HTMLElement>("[data-hud-streak]")!;
+  streak.textContent = g.streak ? layoutStrings.hudStreak.replace("{n}", String(g.streak)) : "";
+  streak.hidden = !g.streak;
+  hud.title = `${g.xp} XP`;
+}
+
+/** Phosphor confetti from a point on screen. */
+function confetti(x: number, y: number, count = 28): void {
+  const layer = document.getElementById("fx");
+  if (!layer || reducedMotion()) return;
+  const colors = ["var(--accent)", "var(--ok)", "var(--warn)", "var(--link)"];
+  for (let i = 0; i < count; i++) {
+    const bit = document.createElement("span");
+    bit.className = i % 3 ? "fx-bit" : "fx-bit is-square";
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 60 + Math.random() * 140;
+    bit.style.left = `${x}px`;
+    bit.style.top = `${y}px`;
+    bit.style.background = colors[i % colors.length];
+    bit.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
+    bit.style.setProperty("--dy", `${Math.sin(angle) * dist - 60}px`);
+    bit.style.setProperty("--rot", `${Math.random() * 720 - 360}deg`);
+    bit.style.animationDelay = `${Math.random() * 80}ms`;
+    layer.append(bit);
+    window.setTimeout(() => bit.remove(), 1400);
+  }
+}
+
+/** A short text that rises from an element: "+80 XP", "✓". */
+function floater(el: Element | null, text: string, big = false): void {
+  const layer = document.getElementById("fx");
+  if (!el || !layer) return;
+  const r = el.getBoundingClientRect();
+  const f = document.createElement("span");
+  f.className = big ? "fx-float is-big" : "fx-float";
+  f.textContent = text;
+  f.style.left = `${r.left + r.width / 2}px`;
+  f.style.top = `${r.top}px`;
+  layer.append(f);
+  window.setTimeout(() => f.remove(), 1600);
+}
+
+const centre = (el: Element | null) => {
+  const r = el?.getBoundingClientRect();
+  return r ? { x: r.left + r.width / 2, y: r.top + Math.min(r.height / 2, 120) } : { x: innerWidth / 2, y: innerHeight / 3 };
+};
+
+/** Announces badges and levels not shown yet, one card at a time. */
+const unlockQueue: { kind: string; icon: string; name: string; how: string }[] = [];
+function showNextUnlock(): void {
+  const box = document.getElementById("unlock");
+  const next = unlockQueue.shift();
+  if (!box) return;
+  if (!next) {
+    box.hidden = true;
+    return;
+  }
+  box.querySelector(".unlock-kind")!.textContent = next.kind;
+  box.querySelector(".unlock-icon")!.textContent = next.icon;
+  box.querySelector(".unlock-name")!.textContent = next.name;
+  box.querySelector(".unlock-how")!.textContent = next.how;
+  box.hidden = false;
+  box.classList.remove("is-in");
+  void box.offsetWidth;
+  box.classList.add("is-in");
+  const c = centre(box.querySelector(".unlock-card"));
+  confetti(c.x, c.y, 36);
+  (box.querySelector(".unlock-close") as HTMLButtonElement).focus({ preventScroll: true });
+}
+
+function announce(): void {
+  const g = gameState();
+  if (!g || !gameData) return;
+  const seen = read<string[] | null>("drills.badges.seen", null);
+  const seenLevel = read<number | null>("drills.level.seen", null);
+  const fresh = g.badges.filter((b) => !(seen ?? []).includes(b));
+  const wasEmpty = unlockQueue.length === 0;
+  if (seenLevel !== null && g.levelIndex > seenLevel) {
+    unlockQueue.push({ kind: layoutStrings.levelUp, icon: String(g.levelIndex + 1), name: g.level.name[lang as "fr" | "en"], how: `${g.xp} XP` });
+  }
+  for (const id of fresh) {
+    const b = gameData.badges[id];
+    unlockQueue.push({ kind: layoutStrings.badgeUnlocked, icon: b.icon, name: b.name, how: b.how });
+  }
+  write("drills.badges.seen", g.badges);
+  write("drills.level.seen", g.levelIndex);
+  if (wasEmpty && unlockQueue.length) showNextUnlock();
+}
+
+function setupUnlock(): void {
+  const box = document.getElementById("unlock");
+  if (!box) return;
+  box.querySelector(".unlock-close")!.addEventListener("click", showNextUnlock);
+  box.addEventListener("click", (e) => {
+    if (e.target === box) showNextUnlock();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !box.hidden) showNextUnlock();
+  });
 }
 
 /* ---------- current week in the plan ---------- */
@@ -461,7 +588,13 @@ function setupDrill(): void {
     saveDraft();
     setScore(q, score);
     paintScore();
-    if (!quiet && score >= 1 && before < 1) celebrate(q);
+    if (!quiet && score >= 1 && before < 1) {
+      celebrate(q);
+      const badge = q.querySelector("[data-q-score]");
+      floater(badge, "✓");
+      const c = centre(badge);
+      confetti(c.x, c.y, 14);
+    }
     if (!quiet && allDone()) {
       stopTimer();
       toggle.textContent = s.timer.resume;
@@ -701,12 +834,21 @@ function setupDrill(): void {
       proof: String(data.get("proof") ?? "").trim(),
       stuck: String(data.get("stuck") ?? "").trim(),
     };
+    const xpBefore = gameState()?.xp ?? 0;
     saveJournal([...journal(), attempt]);
+    const gained = (gameState()?.xp ?? 0) - xpBefore;
     toast(s.saved);
-    if (attempt.total >= 7 && !attempt.withSolution) celebrate(article.querySelector(".score") as HTMLElement, true);
+    const saveBtn = form.querySelector("button[type=submit]");
+    if (gained > 0) floater(saveBtn, layoutStrings.xpGain.replace("{n}", String(gained)), true);
+    if (attempt.total >= 7 && !attempt.withSolution) {
+      celebrate(article.querySelector(".score") as HTMLElement, true);
+      const c = centre(saveBtn);
+      confetti(c.x, c.y, 40);
+    }
     newAttempt();
     renderHistory();
     paintProgress();
+    window.setTimeout(announce, 700);
     document.getElementById("history-h")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
@@ -818,6 +960,7 @@ function setupJournal(): void {
       saveJournal([...current, ...added]);
       render();
       paintProgress();
+      announce();
       toast(s.importDone.replace("{n}", String(added.length)));
       return true;
     } catch {
@@ -870,6 +1013,150 @@ function setupJournal(): void {
   render();
 }
 
+
+/* ---------- progress page ---------- */
+
+function setupProgress(): void {
+  const root = document.getElementById("progress");
+  if (!root || !gameData) return;
+  const s = strings<Record<string, string | string[]>>(root);
+  const titles = JSON.parse(root.dataset.titles!) as Record<string, string>;
+  const svgNS = "http://www.w3.org/2000/svg";
+  let track = root.dataset.track!;
+
+  const el = <T extends SVGElement>(name: string, attrs: Record<string, string | number>) => {
+    const node = document.createElementNS(svgNS, name) as T;
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+    return node;
+  };
+  const days = (n: number) => (n === 1 ? (s.days as string[])[0] : (s.days as string[])[1].replace("{n}", String(n)));
+
+  const render = () => {
+    const all = journal().filter((a) => a.track === track).sort((a, b) => a.date.localeCompare(b.date));
+    const catalog = gameData.catalog.filter((c) => c.track === track);
+    const g = compute(all, catalog);
+
+    // level card
+    root.querySelector("[data-level-n]")!.textContent = String(g.levelIndex + 1);
+    root.querySelector("[data-level-name]")!.textContent = gameData.levels[g.levelIndex];
+    (root.querySelector("[data-level-bar]") as HTMLElement).style.width = `${Math.round(g.levelProgress * 100)}%`;
+    root.querySelector("[data-level-xp]")!.textContent = g.next
+      ? (s.xpTo as string).replace("{xp}", String(g.xp)).replace("{left}", String(g.next.xp - g.xp)).replace("{name}", gameData.levels[g.levelIndex + 1])
+      : (s.xpMax as string).replace("{xp}", String(g.xp));
+
+    // KPIs
+    const kpi = (k: string, v: string) => (root.querySelector(`[data-kpi="${k}"]`)!.textContent = v);
+    kpi("acquired", `${g.acquired.size}/${catalog.length}`);
+    kpi("attempts", String(g.attempts));
+    const minutes = Math.round(g.seconds / 60);
+    kpi("time", minutes >= 60 ? `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")}` : `${minutes} min`);
+    kpi("streak", days(g.streak));
+    kpi("bestStreak", days(g.bestStreak));
+
+    // per family
+    root.querySelectorAll<HTMLElement>("[data-cat]").forEach((li) => {
+      const group = catalog.filter((c) => c.cat === li.dataset.cat);
+      const done = group.filter((c) => g.acquired.has(`${track}:${c.id}`)).length;
+      (li.querySelector(".cat-meter span") as HTMLElement).style.width = `${group.length ? (done / group.length) * 100 : 0}%`;
+      li.querySelector(".cat-count")!.textContent = `${done}/${group.length}`;
+      li.classList.toggle("is-full", group.length > 0 && done === group.length);
+    });
+
+    // drill map: fill = best score
+    root.querySelectorAll<HTMLElement>("[data-map]").forEach((a) => {
+      const list = all.filter((x) => `${x.track}:${x.id}` === a.dataset.map);
+      const best = Math.max(0, ...list.map((x) => x.total));
+      (a.querySelector(".map-fill") as HTMLElement).style.height = `${(best / 8) * 100}%`;
+      a.classList.toggle("is-acquired", isAcquired(list));
+      a.classList.toggle("is-tried", list.length > 0);
+      a.title = `${titles[a.dataset.map!] ?? ""}: ${list.length ? (s.bestOf as string).replace("{n}", String(best)) : s.neverTried}`;
+    });
+
+    // badges (all tracks: badges are earned once)
+    const everything = compute(journal(), gameData.catalog);
+    root.querySelectorAll<HTMLElement>("[data-badge]").forEach((b) => b.classList.toggle("is-earned", everything.badges.includes(b.dataset.badge!)));
+    document.getElementById("badges-lead")!.textContent = (s.badgesLead as string)
+      .replace("{n}", String(everything.badges.length))
+      .replace("{t}", String(Object.keys(gameData.badges).length));
+
+    // chart: one dot per attempt, score out of 8
+    const box = document.getElementById("chart")!;
+    const tip = document.getElementById("chart-tip")!;
+    document.getElementById("chart-empty")!.hidden = all.length > 0;
+    box.querySelector("svg")?.remove();
+    if (!all.length) return;
+    const W = 640, H = 240, L = 34, R = 12, T = 12, B = 30;
+    const x = (i: number) => (all.length === 1 ? (L + W - R) / 2 : L + (i / (all.length - 1)) * (W - L - R));
+    const y = (v: number) => T + (1 - v / 8) * (H - T - B);
+    const svg = el<SVGSVGElement>("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": String(s.axis), class: "chart-svg" });
+    for (const v of [0, 2, 4, 6, 8]) {
+      svg.append(el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: "c-grid" }));
+      const label = el<SVGTextElement>("text", { x: L - 8, y: y(v) + 4, class: "c-axis", "text-anchor": "end" });
+      label.textContent = String(v);
+      svg.append(label);
+    }
+    svg.append(el("line", { x1: L, x2: W - R, y1: y(7), y2: y(7), class: "c-threshold" }));
+    const t7 = el<SVGTextElement>("text", { x: W - R, y: y(7) - 6, class: "c-axis c-threshold-label", "text-anchor": "end" });
+    t7.textContent = `7 · ${s.acquired}`;
+    svg.append(t7);
+    if (all.length > 1) {
+      svg.append(el("polyline", { points: all.map((a, i) => `${x(i)},${y(a.total)}`).join(" "), class: "c-line" }));
+    }
+    const dots = all.map((a, i) => {
+      const ok = a.total >= 7 && !a.withSolution;
+      const dot = el<SVGCircleElement>("circle", { cx: x(i), cy: y(a.total), r: 5, class: ok ? "c-dot is-acquired" : "c-dot" });
+      svg.append(dot);
+      return dot;
+    });
+    const first = el<SVGTextElement>("text", { x: L, y: H - 8, class: "c-axis" });
+    first.textContent = shortDate.format(new Date(all[0].date)).split(",")[0];
+    const last = el<SVGTextElement>("text", { x: W - R, y: H - 8, class: "c-axis", "text-anchor": "end" });
+    last.textContent = shortDate.format(new Date(all[all.length - 1].date)).split(",")[0];
+    svg.append(first, last);
+    const cross = el<SVGLineElement>("line", { x1: 0, x2: 0, y1: T, y2: H - B, class: "c-cross", visibility: "hidden" });
+    svg.append(cross);
+    box.append(svg);
+
+    const move = (clientX: number) => {
+      const r = svg.getBoundingClientRect();
+      const px = ((clientX - r.left) / r.width) * W;
+      let k = 0;
+      for (let i = 1; i < all.length; i++) if (Math.abs(x(i) - px) < Math.abs(x(k) - px)) k = i;
+      const a = all[k];
+      cross.setAttribute("x1", String(x(k)));
+      cross.setAttribute("x2", String(x(k)));
+      cross.setAttribute("visibility", "visible");
+      dots.forEach((d, i) => d.setAttribute("r", i === k ? "8" : "5"));
+      tip.hidden = false;
+      tip.replaceChildren();
+      const h = document.createElement("strong");
+      h.textContent = `${a.id.toUpperCase()} ${titles[`${a.track}:${a.id}`] ?? ""}`;
+      const p = document.createElement("span");
+      p.textContent = `${a.total}/8 · ${clock(a.seconds)} · ${shortDate.format(new Date(a.date))}`;
+      tip.append(h, p);
+      const left = (x(k) / W) * r.width;
+      tip.style.left = `${Math.min(Math.max(left, 90), r.width - 90)}px`;
+      tip.style.top = `${(y(a.total) / H) * r.height}px`;
+    };
+    svg.addEventListener("pointermove", (e) => move(e.clientX));
+    svg.addEventListener("pointerdown", (e) => move(e.clientX));
+    svg.addEventListener("pointerleave", () => {
+      tip.hidden = true;
+      cross.setAttribute("visibility", "hidden");
+      dots.forEach((d) => d.setAttribute("r", "5"));
+    });
+  };
+
+  root.querySelectorAll<HTMLButtonElement>("[data-progress-track]").forEach((btn, _, all) =>
+    btn.addEventListener("click", () => {
+      track = btn.dataset.progressTrack!;
+      all.forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+      render();
+    }),
+  );
+  render();
+}
+
 /* ---------- offline ---------- */
 
 function registerServiceWorker(): void {
@@ -885,4 +1172,7 @@ paintProgress();
 markCurrentWeek();
 setupDrill();
 setupJournal();
+setupProgress();
+setupUnlock();
+announce();
 registerServiceWorker();

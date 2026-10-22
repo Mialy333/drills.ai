@@ -1,0 +1,120 @@
+---
+import App from "../../layouts/App.astro";
+import { CATEGORIES, drills, href, LANGS, READY_TRACKS, TRACKS, type Lang } from "../../lib/drills";
+import { BADGES } from "../../lib/game";
+import { ui } from "../../lib/i18n";
+
+export function getStaticPaths() {
+  return LANGS.map((lang) => ({ params: { lang } }));
+}
+const lang = Astro.params.lang as Lang;
+const t = ui[lang];
+const strings = {
+  xpTo: t.xpTo(1000, 3000, "{name}").replace("1000", "{xp}").replace("2000", "{left}"),
+  xpMax: t.xpMax(999).replace("999", "{xp}"),
+  days: [t.days(1), t.days(2).replace("2", "{n}")],
+  neverTried: t.neverTried,
+  bestOf: t.bestOf(9).replace("9", "{n}"),
+  badgesLead: t.badgesLead(98, 99).replace("98", "{n}").replace("99", "{t}"),
+  axis: t.chartAxis,
+  acquired: t.chartAcquired,
+  tried: t.chartTried,
+  attempt: t.attemptN(999).replace("999", "{n}"),
+};
+const titles = Object.fromEntries(
+  READY_TRACKS.flatMap((track) => drills(track, lang).map((d) => [`${track}:${d.id}`, d.title])),
+);
+---
+
+<App lang={lang} title={t.progressTitle} path="/progress/" section="progress">
+  <section class="block progress" id="progress" data-strings={JSON.stringify(strings)} data-titles={JSON.stringify(titles)} data-track="python">
+    <h1>{t.progressTitle}</h1>
+    <p class="lead">{t.progressLead}</p>
+
+    <div class="filters" role="group" aria-label={lang === "fr" ? "Choisir le langage" : "Pick the language"}>
+      {TRACKS.map((track, i) => (
+        <button type="button" class="filter" data-progress-track={track} aria-pressed={String(i === 0)} disabled={!READY_TRACKS.includes(track)}>
+          {t.tracks[track].name}{!READY_TRACKS.includes(track) && ` · ${t.soon}`}
+        </button>
+      ))}
+    </div>
+
+    <article class="level-card">
+      <div class="level-badge" aria-hidden="true"><span data-level-n>1</span></div>
+      <div class="level-body">
+        <p class="level-name" data-level-name></p>
+        <div class="level-meter"><span data-level-bar></span></div>
+        <p class="level-xp" data-level-xp></p>
+      </div>
+    </article>
+
+    <dl class="kpis">
+      <div><dt>{t.kpis.acquired}</dt><dd data-kpi="acquired">0</dd></div>
+      <div><dt>{t.kpis.attempts}</dt><dd data-kpi="attempts">0</dd></div>
+      <div><dt>{t.kpis.time}</dt><dd data-kpi="time">0 min</dd></div>
+      <div><dt>{t.kpis.streak}</dt><dd data-kpi="streak">0</dd></div>
+      <div><dt>{t.kpis.bestStreak}</dt><dd data-kpi="bestStreak">0</dd></div>
+    </dl>
+
+    <section class="panel" aria-labelledby="chart-h">
+      <h2 id="chart-h">{t.chartTitle}</h2>
+      <p class="note">{t.chartLead}</p>
+      <ul class="chart-legend">
+        <li><i class="is-acquired"></i>{t.chartAcquired}</li>
+        <li><i></i>{t.chartTried}</li>
+      </ul>
+      <div class="chart" id="chart">
+        <p class="note" id="chart-empty">{t.chartEmpty}</p>
+        <div class="chart-tip" id="chart-tip" hidden></div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="cat-h">
+      <h2 id="cat-h">{t.byCategory}</h2>
+      <ul class="cat-bars">
+        {CATEGORIES.map((cat) => (
+          <li data-cat={cat}>
+            <span class="cat-name">{t.cats[cat]}</span>
+            <span class="cat-meter"><span></span></span>
+            <span class="cat-count">0/0</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="panel" aria-labelledby="map-h">
+      <h2 id="map-h">{t.drillMap}</h2>
+      <p class="note">{t.drillMapLead}</p>
+      <ol class="drill-map">
+        {drills("python", lang).map((d) => (
+          <li>
+            <a href={href(`/${lang}/python/${d.id}/`)} data-map={`python:${d.id}`} title={d.title}>
+              <span class="map-fill"></span>
+              <span class="map-id">{d.id.toUpperCase()}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section class="panel" aria-labelledby="badges-h">
+      <h2 id="badges-h">{t.badgesTitle}</h2>
+      <p class="note" id="badges-lead"></p>
+      <ul class="badges">
+        {BADGES.map((b) => (
+          <li class={`badge tier-${b.tier}`} data-badge={b.id}>
+            <span class="badge-icon" aria-hidden="true">{b.icon}</span>
+            <span class="badge-name">{b.name[lang]}</span>
+            <span class="badge-how">{b.how[lang]}</span>
+            <span class="badge-lock">{t.locked}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="panel" aria-labelledby="xp-h">
+      <h2 id="xp-h">{t.xpRules}</h2>
+      <ul>{t.xpRulesList.map((r) => <li>{r}</li>)}</ul>
+    </section>
+  </section>
+</App>

@@ -4,7 +4,8 @@ import "@fontsource/chakra-petch/600.css";
 import "@fontsource/chakra-petch/700.css";
 import "@fontsource/vt323/400.css";
 import "../styles/global.css";
-import { CATEGORIES, drills, href, type Lang, type Track } from "../lib/drills";
+import { CATEGORIES, drills, href, READY_TRACKS, type Lang, type Track } from "../lib/drills";
+import { BADGES, LEVELS } from "../lib/game";
 import { otherLang, ui } from "../lib/i18n";
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
   path: string;
   track?: Track;
   activeId?: string;
-  section: "home" | "drills" | "journal";
+  section: "home" | "drills" | "journal" | "progress";
 }
 const { lang, title, path, track, activeId, section } = Astro.props;
 const t = ui[lang];
@@ -26,6 +27,18 @@ const strings = {
   tried: t.status.tried,
   toDark: t.theme.toDark,
   toLight: t.theme.toLight,
+  hudLevel: t.hudLevel(999).replace("999", "{n}"),
+  hudStreak: t.hudStreak(999).replace("999", "{n}"),
+  xpGain: t.xpGain(999).replace("999", "{n}"),
+  levelUp: t.levelUp,
+  badgeUnlocked: t.badgeUnlocked,
+  close: t.close,
+};
+// What the browser needs to compute XP and badges on every page.
+const game = {
+  catalog: READY_TRACKS.flatMap((tr) => drills(tr, lang).map((d) => ({ id: d.id, cat: d.cat, minutes: d.minutes, track: tr }))),
+  badges: Object.fromEntries(BADGES.map((b) => [b.id, { icon: b.icon, tier: b.tier, name: b.name[lang], how: b.how[lang] }])),
+  levels: LEVELS.map((l) => l.name[lang]),
 };
 ---
 
@@ -74,8 +87,14 @@ const strings = {
       <nav class="bar-nav" aria-label={lang === "fr" ? "Navigation principale" : "Main navigation"}>
         <a href={href(`/${lang}/`)} aria-current={section === "home" ? "page" : undefined}>{t.nav.home}</a>
         <a href={drillsHref} aria-current={section === "drills" ? "page" : undefined}>{t.nav.drills}</a>
+        <a href={href(`/${lang}/progress/`)} aria-current={section === "progress" ? "page" : undefined}>{t.nav.progress}</a>
         <a href={href(`/${lang}/journal/`)} aria-current={section === "journal" ? "page" : undefined}>{t.nav.journal}</a>
       </nav>
+      <a class="hud" id="hud" href={href(`/${lang}/progress/`)} aria-label={t.hudLabel} hidden>
+        <span class="hud-level" data-hud-level></span>
+        <span class="hud-xp"><span data-hud-bar></span></span>
+        <span class="hud-streak" data-hud-streak></span>
+      </a>
       <div class="bar-tools">
         <a class="tool" href={href(`/${otherLang(lang)}${path}`)} hreflang={otherLang(lang)} aria-label={t.switchLangLabel}>
           <span class="tool-long">{t.switchLang}</span><span class="tool-short" aria-hidden="true">{otherLang(lang).toUpperCase()}</span>
@@ -124,6 +143,10 @@ const strings = {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v12H3zM8 21h8M12 17v4" /><path d="m7 9 3 2-3 2M12 13h4" /></svg>
         <span>{t.nav.drills}</span>
       </a>
+      <a href={href(`/${lang}/progress/`)} aria-current={section === "progress" ? "page" : undefined}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>
+        <span>{t.nav.progress}</span>
+      </a>
       <a href={href(`/${lang}/journal/`)} aria-current={section === "journal" ? "page" : undefined}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l2 2v16H5zM9 8h6M9 12h6M9 16h4" /></svg>
         <span>{t.nav.journal}</span>
@@ -131,6 +154,17 @@ const strings = {
     </nav>
 
     <div class="toast" role="status" aria-live="polite" id="toast"></div>
+    <div class="unlock" id="unlock" role="dialog" aria-modal="false" aria-labelledby="unlock-kind" hidden>
+      <div class="unlock-card">
+        <p class="unlock-kind" id="unlock-kind"></p>
+        <p class="unlock-icon" aria-hidden="true"></p>
+        <p class="unlock-name"></p>
+        <p class="unlock-how"></p>
+        <button type="button" class="btn btn-primary unlock-close">{t.close}</button>
+      </div>
+    </div>
+    <div class="fx" id="fx" aria-hidden="true"></div>
+    <script type="application/json" id="game-data" set:html={JSON.stringify(game)} />
     <script>
       import "../scripts/app.ts";
     </script>
