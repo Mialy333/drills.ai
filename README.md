@@ -74,8 +74,8 @@ can't count as *acquired*.
 | each badge | +50 |
 
 ```text
-LVL 1 STAGIAIRE ─ 2 JUNIOR ─ 3 CONFIRMÉE ─ 4 SENIOR ─ 5 LEAD ─ 6 STAFF ─ 7 CTO
-      0 XP        150        500           1100       2000     3200      5000
+LVL 1 INTERN ─ 2 JUNIOR ─ 3 MID-LEVEL ─ 4 SENIOR ─ 5 LEAD ─ 6 STAFF ─ 7 CTO
+      0 XP     150        500           1100       2000     3200      5000
 ```
 
 ## 22 badges to unlock
