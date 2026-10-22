@@ -1,0 +1,80 @@
+{
+ "id": "f1",
+ "cat": "formats",
+ "order": 1,
+ "minutes": 20,
+ "title": {
+  "fr": "Écrire les tests d'une fonction",
+  "en": "Write the tests for a function"
+ },
+ "source": {
+  "fr": "Format « écris les tests » : très fréquent en entretien junior",
+  "en": "\"Write the tests\" format: very common in junior interviews"
+ },
+ "context": {
+  "fr": "On te donne la spécification d'une fonction, pas son code. Tes tests seront lancés contre la vraie fonction, puis contre trois versions cassées. De bons tests passent sur la vraie et échouent sur chaque version cassée.\n\nSpécification de `days_since(date_str, now)` :\n\n- elle renvoie le nombre de jours entiers entre `date_str` (format `AAAA-MM-JJ`, en UTC) et `now` ;\n- elle renvoie `None` si la date est illisible (`None`, chaîne vide, 30 février, mauvais format) ;\n- elle renvoie `None` si la date est dans le futur.",
+  "en": "You get a function's specification, not its code. Your tests will run against the real function, then against three broken versions. Good tests pass on the real one and fail on each broken version.\n\nSpecification of `days_since(date_str, now)`:\n\n- it returns the whole number of days between `date_str` (`YYYY-MM-DD`, UTC) and `now`;\n- it returns `None` if the date is unreadable (`None`, empty string, 30 February, wrong format);\n- it returns `None` if the date is in the future."
+ },
+ "mission": {
+  "fr": "Écrire des fonctions `test_...` qui couvrent la spécification, bornes comprises.",
+  "en": "Write `test_...` functions that cover the specification, boundaries included."
+ },
+ "criteria": {
+  "fr": [
+   "Tes tests passent sur la vraie fonction.",
+   "Chacune des trois versions cassées est attrapée par au moins un test."
+  ],
+  "en": [
+   "Your tests pass on the real function.",
+   "Each of the three broken versions is caught by at least one test."
+  ]
+ },
+ "questions": [
+  {
+   "id": "q1",
+   "type": "code",
+   "mode": "tests",
+   "prompt": {
+    "fr": "Écris tes tests ci-dessous. `days_since` et `NOW` sont fournis : n'écris pas la fonction. Utilise des `assert`.",
+    "en": "Write your tests below. `days_since` and `NOW` are provided: do not write the function. Use `assert`."
+   },
+   "starter": "# Provided, do not rewrite it: your tests will be run against it and against broken versions.\n# days_since(date_str, now) returns the whole days between date_str (\"YYYY-MM-DD\", UTC)\n# and now, or None if date_str is unreadable or in the future.\nfrom datetime import datetime, timezone\n\nNOW = datetime(2026, 10, 22, 12, 0, tzinfo=timezone.utc)\n\n\ndef test_today():\n    assert days_since(\"2026-10-22\", NOW) == 0\n",
+   "tests": "\nfrom datetime import datetime, timezone\n\ndef real(date_str, now):\n    try:\n        start = datetime.strptime(date_str, \"%Y-%m-%d\").replace(tzinfo=timezone.utc)\n    except (TypeError, ValueError):\n        return None\n    if start > now:\n        return None\n    return (now - start).days\n\ndef no_future_check(date_str, now):\n    try:\n        start = datetime.strptime(date_str, \"%Y-%m-%d\").replace(tzinfo=timezone.utc)\n    except (TypeError, ValueError):\n        return None\n    return (now - start).days\n\ndef off_by_one(date_str, now):\n    d = real(date_str, now)\n    return None if d is None else d + (1 if d >= 30 else 0)\n\ndef crashes_on_none(date_str, now):\n    start = datetime.strptime(date_str, \"%Y-%m-%d\").replace(tzinfo=timezone.utc)\n    if start > now:\n        return None\n    return (now - start).days\n\ndef run_user_tests(impl):\n    ns = {\"days_since\": impl}\n    exec(__user_code__, ns)\n    ns[\"days_since\"] = impl\n    tests = [v for k, v in ns.items() if k.startswith(\"test_\") and callable(v)]\n    assert tests, \"no test_ function found\"\n    failures = 0\n    for t in tests:\n        try:\n            t()\n        except Exception:\n            failures += 1\n    return len(tests), failures\n\ndef test_pass_on_real():\n    n, failed = run_user_tests(real)\n    assert failed == 0, f\"{failed} of your {n} tests fail on the real function\"\ndef test_catch_no_future_check():\n    assert run_user_tests(no_future_check)[1] > 0\ndef test_catch_off_by_one():\n    assert run_user_tests(off_by_one)[1] > 0\ndef test_catch_crash_on_none():\n    assert run_user_tests(crashes_on_none)[1] > 0\n",
+   "labels": {
+    "test_pass_on_real": {
+     "fr": "Tous tes tests passent sur la vraie fonction",
+     "en": "All your tests pass on the real function"
+    },
+    "test_catch_no_future_check": {
+     "fr": "Attrape la version qui accepte les dates futures",
+     "en": "Catches the version that accepts future dates"
+    },
+    "test_catch_off_by_one": {
+     "fr": "Attrape la version décalée d'un jour à partir de 30",
+     "en": "Catches the version off by one from 30 days"
+    },
+    "test_catch_crash_on_none": {
+     "fr": "Attrape la version qui plante sur `None`",
+     "en": "Catches the version that crashes on `None`"
+    }
+   },
+   "hints": {
+    "fr": [
+     "Teste les bornes : 30 jours pile, c'est là que se cachent les décalages.",
+     "Une date future, c'est un test à part entière.",
+     "`days_since(None, NOW)` doit renvoyer `None` sans planter."
+    ],
+    "en": [
+     "Test the boundaries: exactly 30 days is where off-by-ones hide.",
+     "A future date deserves its own test.",
+     "`days_since(None, NOW)` must return `None` without crashing."
+    ]
+   },
+   "model": "# Provided, do not rewrite it: your tests will be run against it and against broken versions.\n# days_since(date_str, now) returns the whole days between date_str (\"YYYY-MM-DD\", UTC)\n# and now, or None if date_str is unreadable or in the future.\nfrom datetime import datetime, timezone\n\nNOW = datetime(2026, 10, 22, 12, 0, tzinfo=timezone.utc)\n\n\ndef test_today():\n    assert days_since(\"2026-10-22\", NOW) == 0\n\ndef test_thirty_days():\n    assert days_since(\"2026-09-22\", NOW) == 30\n\ndef test_future_is_none():\n    assert days_since(\"2026-10-25\", NOW) is None\n\ndef test_unreadable_dates():\n    for bad in [None, \"\", \"2026-02-30\", \"22/10/2026\"]:\n        assert days_since(bad, NOW) is None\n"
+  }
+ ],
+ "explanation": {
+  "fr": "Le point qui fait la différence : **rendre l'horloge injectable**, sinon le test dépend du jour où il tourne.\n\n```python\nNOW = datetime(2026, 10, 22, 12, 0, tzinfo=timezone.utc)\n\n@pytest.mark.parametrize(\"date_str, expected\", [\n    (\"2026-10-22\", 0),\n    (\"2026-09-22\", 30),     # la limite de retour, pile\n    (\"2026-09-21\", 31),\n    (\"2026-10-25\", -3),     # date future : documente le comportement actuel\n    (\"2026-02-30\", None),\n    (\"\", None),\n    (None, None),\n    (\"22/10/2026\", None),\n])\ndef test_days_since(date_str, expected):\n    assert _days_since(date_str, now=NOW) == expected\n```\n\nCe qu'un CTO regarde : les bornes (29, 30, 31) et le test qui documente un comportement douteux au lieu de le cacher.",
+  "en": "The point that makes the difference: **make the clock injectable**, otherwise the test depends on the day it runs.\n\n```python\nNOW = datetime(2026, 10, 22, 12, 0, tzinfo=timezone.utc)\n\n@pytest.mark.parametrize(\"date_str, expected\", [\n    (\"2026-10-22\", 0),\n    (\"2026-09-22\", 30),     # the return limit, exactly\n    (\"2026-09-21\", 31),\n    (\"2026-10-25\", -3),     # future date: documents today's behaviour\n    (\"2026-02-30\", None),\n    (\"\", None),\n    (None, None),\n    (\"22/10/2026\", None),\n])\ndef test_days_since(date_str, expected):\n    assert _days_since(date_str, now=NOW) == expected\n```\n\nWhat a CTO looks at: the boundaries (29, 30, 31) and a test that documents doubtful behaviour instead of hiding it."
+ }
+}

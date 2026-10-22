@@ -1,0 +1,163 @@
+{
+ "id": "d4",
+ "cat": "debug",
+ "order": 4,
+ "minutes": 15,
+ "title": {
+  "fr": "Le Decimal devenu texte",
+  "en": "The Decimal that became text"
+ },
+ "source": {
+  "fr": "NovaMart : support client multi-agents sur DynamoDB",
+  "en": "NovaMart: multi-agent customer support on DynamoDB"
+ },
+ "context": {
+  "fr": "Une base DynamoDB renvoie tous ses nombres en `Decimal`, que `json.dumps` ne sait pas écrire. Pour passer un enregistrement à un agent, le code fait :\n\n```python\nimport json\nfrom decimal import Decimal\n\ndef to_json_safe(item):\n    return json.loads(json.dumps(item, default=str))\n\ncustomer = to_json_safe({\"id\": \"C42\", \"total_orders\": Decimal(\"7\"), \"rating\": Decimal(\"4.5\")})\n```\n\nPlus loin, `if customer[\"total_orders\"] > 5:` lève une erreur.",
+  "en": "A DynamoDB table returns every number as a `Decimal`, which `json.dumps` cannot write. To pass a record to an agent, the code does:\n\n```python\nimport json\nfrom decimal import Decimal\n\ndef to_json_safe(item):\n    return json.loads(json.dumps(item, default=str))\n\ncustomer = to_json_safe({\"id\": \"C42\", \"total_orders\": Decimal(\"7\"), \"rating\": Decimal(\"4.5\")})\n```\n\nFurther down, `if customer[\"total_orders\"] > 5:` raises an error."
+ },
+ "mission": {
+  "fr": "Comprendre la conversion, écrire une conversion qui garde les types, et dire ce qu'on perd avec un `float`.",
+  "en": "Understand the conversion, write one that keeps the types, and say what a `float` costs."
+ },
+ "criteria": {
+  "fr": [
+   "Le type obtenu est identifié.",
+   "La nouvelle conversion passe tous les tests.",
+   "La limite du `float` pour de l'argent est expliquée."
+  ],
+  "en": [
+   "The resulting type is identified.",
+   "The new conversion passes every test.",
+   "The limit of `float` for money is explained."
+  ]
+ },
+ "questions": [
+  {
+   "id": "q1",
+   "type": "choice",
+   "prompt": {
+    "fr": "Que vaut `customer[\"total_orders\"]` ?",
+    "en": "What is `customer[\"total_orders\"]`?"
+   },
+   "options": {
+    "fr": [
+     "`7` (un `int`)",
+     "`7.0` (un `float`)",
+     "`'7'` (une `str`)",
+     "`Decimal('7')`"
+    ],
+    "en": [
+     "`7` (an `int`)",
+     "`7.0` (a `float`)",
+     "`'7'` (a `str`)",
+     "`Decimal('7')`"
+    ]
+   },
+   "answer": 2,
+   "why": {
+    "fr": "`default=str` transforme chaque `Decimal` en chaîne ; `json.loads` relit une chaîne. Et `'7' > 5` lève une `TypeError`.",
+    "en": "`default=str` turns each `Decimal` into a string; `json.loads` reads back a string. And `'7' > 5` raises a `TypeError`."
+   }
+  },
+  {
+   "id": "q2",
+   "type": "code",
+   "prompt": {
+    "fr": "Écris `dynamo_default(o)`, à passer à `json.dumps(..., default=dynamo_default)`. Un `Decimal` entier devient un `int`, un `Decimal` à virgule devient un `float`. Tout autre type lève une `TypeError`.",
+    "en": "Write `dynamo_default(o)`, to pass to `json.dumps(..., default=dynamo_default)`. A whole `Decimal` becomes an `int`, a fractional `Decimal` becomes a `float`. Any other type raises a `TypeError`."
+   },
+   "starter": "import json\nfrom decimal import Decimal\n\ndef dynamo_default(o):\n    ...\n",
+   "tests": "\ndef roundtrip(item):\n    return json.loads(json.dumps(item, default=dynamo_default))\ndef test_int():\n    v = roundtrip({\"n\": Decimal(\"7\")})[\"n\"]\n    assert v == 7 and type(v) is int\ndef test_float():\n    v = roundtrip({\"r\": Decimal(\"4.5\")})[\"r\"]\n    assert v == 4.5 and type(v) is float\ndef test_big_int():\n    assert roundtrip({\"n\": Decimal(\"12345678901234567890\")})[\"n\"] == 12345678901234567890\ndef test_comparison_works():\n    assert roundtrip({\"n\": Decimal(\"7\")})[\"n\"] > 5\ndef test_unknown_type_raises():\n    try:\n        json.dumps({\"s\": {1, 2}}, default=dynamo_default)\n    except TypeError:\n        return\n    assert False, \"a set should raise TypeError\"\n",
+   "labels": {
+    "test_int": {
+     "fr": "`Decimal('7')` devient `7`, un `int`",
+     "en": "`Decimal('7')` becomes `7`, an `int`"
+    },
+    "test_float": {
+     "fr": "`Decimal('4.5')` devient `4.5`, un `float`",
+     "en": "`Decimal('4.5')` becomes `4.5`, a `float`"
+    },
+    "test_big_int": {
+     "fr": "Un grand entier reste exact",
+     "en": "A big integer stays exact"
+    },
+    "test_comparison_works": {
+     "fr": "La comparaison `> 5` fonctionne",
+     "en": "The `> 5` comparison works"
+    },
+    "test_unknown_type_raises": {
+     "fr": "Un type inconnu lève une `TypeError`",
+     "en": "An unknown type raises a `TypeError`"
+    }
+   },
+   "hints": {
+    "fr": [
+     "`o == o.to_integral_value()` dit si un `Decimal` est entier.",
+     "Termine la fonction par `raise TypeError(...)` pour tout le reste."
+    ],
+    "en": [
+     "`o == o.to_integral_value()` tells whether a `Decimal` is whole.",
+     "End the function with `raise TypeError(...)` for everything else."
+    ]
+   },
+   "model": "import json\nfrom decimal import Decimal\n\ndef dynamo_default(o):\n    if isinstance(o, Decimal):\n        return int(o) if o == o.to_integral_value() else float(o)\n    raise TypeError(f\"{type(o).__name__} is not JSON serializable\")\n"
+  },
+  {
+   "id": "q3",
+   "type": "text",
+   "prompt": {
+    "fr": "Pour un montant en euros, pourquoi éviter le `float` ? Que fais-tu à la place ?",
+    "en": "For an amount in euros, why avoid `float`? What do you do instead?"
+   },
+   "concepts": [
+    {
+     "label": {
+      "fr": "Le `float` n'est pas exact (erreurs d'arrondi)",
+      "en": "`float` is not exact (rounding errors)"
+     },
+     "any": [
+      "arrondi",
+      "round",
+      "(pas |in)exact",
+      "precision",
+      "0\\.1 ?\\+ ?0\\.2",
+      "binaire",
+      "binary"
+     ]
+    },
+    {
+     "label": {
+      "fr": "Garder `Decimal` ou des entiers en plus petite unité (centimes)",
+      "en": "Keep `Decimal` or integers in the smallest unit (cents)"
+     },
+     "any": [
+      "decimal",
+      "centime",
+      "cent\\b",
+      "cents",
+      "plus petite unite",
+      "smallest unit",
+      "entier",
+      "integer"
+     ]
+    }
+   ],
+   "hints": {
+    "fr": [
+     "Que vaut `0.1 + 0.2` en Python ?"
+    ],
+    "en": [
+     "What is `0.1 + 0.2` in Python?"
+    ]
+   },
+   "model": {
+    "fr": "Un `float` est stocké en binaire et n'est pas exact : `0.1 + 0.2` ne vaut pas `0.3`, et les erreurs d'arrondi s'accumulent. Pour de l'argent, on garde un `Decimal` dans le code, ou des entiers en centimes (la plus petite unité).",
+    "en": "A `float` is stored in binary and is not exact: `0.1 + 0.2` is not `0.3`, and rounding errors add up. For money, keep a `Decimal` in the code, or integers in cents (the smallest unit)."
+   }
+  }
+ ],
+ "explanation": {
+  "fr": "**Cause.** `default=str` transforme chaque `Decimal` en chaîne. Le JSON est valide, mais le type a changé.\n\n```python\ndef dynamo_default(o):\n    if isinstance(o, Decimal):\n        return int(o) if o == o.to_integral_value() else float(o)\n    raise TypeError(f\"{type(o).__name__} is not JSON serializable\")\n```\n\n**Ce que tu perds avec `float` :** l'exactitude, `0.1 + 0.2 != 0.3`. Pour un compteur, sans importance ; pour de l'argent, jamais de float. On garde `Decimal` dans le code, et des entiers en plus petite unité dans le JSON, comme `price_raw` dans le Gecko buyer.\n\n**Ce qu'attend un CTO :** lever une `TypeError` pour un type inconnu plutôt que tout convertir en `str`. Ne jamais convertir en silence.",
+  "en": "**Cause.** `default=str` turns every `Decimal` into a string. The JSON is valid, but the type changed.\n\n```python\ndef dynamo_default(o):\n    if isinstance(o, Decimal):\n        return int(o) if o == o.to_integral_value() else float(o)\n    raise TypeError(f\"{type(o).__name__} is not JSON serializable\")\n```\n\n**What `float` costs:** exactness, `0.1 + 0.2 != 0.3`. Fine for a counter; never for money. Keep `Decimal` in the code and integers in the smallest unit in the JSON, like `price_raw` in the Gecko buyer.\n\n**What a CTO expects:** raise a `TypeError` for an unknown type instead of turning everything into `str`. Never convert silently."
+ }
+}

@@ -1,0 +1,171 @@
+{
+ "id": "l4",
+ "cat": "read",
+ "order": 4,
+ "minutes": 15,
+ "title": {
+  "fr": "Suivre une requête dans un repo inconnu",
+  "en": "Follow a request through an unknown repo"
+ },
+ "source": {
+  "fr": "Inspiré de full-stack-fastapi-template (FastAPI)",
+  "en": "Inspired by full-stack-fastapi-template (FastAPI)"
+ },
+ "context": {
+  "fr": "Tu découvres une API FastAPI. Voici les extraits utiles de quatre fichiers. FastAPI exécute les dépendances (`Depends`) avant le corps de la route, et valide le corps JSON avec le modèle annoté (`UserCreate`).\n\n```python\n# api/routes/users.py\n@router.post(\"/users\", response_model=UserPublic)\ndef create_user(user_in: UserCreate, session: SessionDep, current: AdminDep):\n    if crud.get_user_by_email(session, user_in.email):\n        raise HTTPException(400, \"Email already registered\")\n    return crud.create_user(session, user_in)\n\n# api/deps.py\ndef get_current_user(session: SessionDep, token: TokenDep) -> User:\n    payload = jwt.decode(token, SECRET_KEY, algorithms=[\"HS256\"])\n    return session.get(User, payload[\"sub\"])\n\ndef get_current_admin(current: CurrentUser) -> User:\n    if not current.is_superuser:\n        raise HTTPException(403, \"Not enough privileges\")\n    return current\n\nAdminDep = Annotated[User, Depends(get_current_admin)]\n\n# models.py\nclass UserCreate(SQLModel):\n    email: EmailStr\n    password: str = Field(min_length=8)\n\n# crud.py\ndef create_user(session, user_in):\n    user = User.model_validate(user_in, update={\"hashed_password\": hash_password(user_in.password)})\n    session.add(user)\n    session.commit()\n    return user\n```",
+  "en": "You are discovering a FastAPI API. Here are the useful parts of four files. FastAPI runs the dependencies (`Depends`) before the route body, and validates the JSON body with the annotated model (`UserCreate`).\n\n```python\n# api/routes/users.py\n@router.post(\"/users\", response_model=UserPublic)\ndef create_user(user_in: UserCreate, session: SessionDep, current: AdminDep):\n    if crud.get_user_by_email(session, user_in.email):\n        raise HTTPException(400, \"Email already registered\")\n    return crud.create_user(session, user_in)\n\n# api/deps.py\ndef get_current_user(session: SessionDep, token: TokenDep) -> User:\n    payload = jwt.decode(token, SECRET_KEY, algorithms=[\"HS256\"])\n    return session.get(User, payload[\"sub\"])\n\ndef get_current_admin(current: CurrentUser) -> User:\n    if not current.is_superuser:\n        raise HTTPException(403, \"Not enough privileges\")\n    return current\n\nAdminDep = Annotated[User, Depends(get_current_admin)]\n\n# models.py\nclass UserCreate(SQLModel):\n    email: EmailStr\n    password: str = Field(min_length=8)\n\n# crud.py\ndef create_user(session, user_in):\n    user = User.model_validate(user_in, update={\"hashed_password\": hash_password(user_in.password)})\n    session.add(user)\n    session.commit()\n    return user\n```"
+ },
+ "mission": {
+  "fr": "Suivre `POST /users` de la requête jusqu'à la ligne en base, sans exécuter le code.",
+  "en": "Follow `POST /users` from the request down to the database row, without running the code."
+ },
+ "criteria": {
+  "fr": [
+   "L'ordre des étapes est juste.",
+   "Chaque garde-fou est situé dans le bon fichier."
+  ],
+  "en": [
+   "The order of steps is right.",
+   "Each safeguard is placed in the right file."
+  ]
+ },
+ "questions": [
+  {
+   "id": "q1",
+   "type": "choice",
+   "prompt": {
+    "fr": "Dans quel ordre la requête traverse-t-elle le code ?",
+    "en": "In what order does the request go through the code?"
+   },
+   "options": {
+    "fr": [
+     "`crud.create_user` → `UserCreate` → `get_current_admin` → `create_user`",
+     "Validation `UserCreate` et dépendances (`get_current_user` puis `get_current_admin`) → corps de `create_user` → `crud.create_user`",
+     "`create_user` → `get_current_admin` → `UserCreate` → base",
+     "`get_current_user` → `crud.create_user` → `UserCreate`"
+    ],
+    "en": [
+     "`crud.create_user` → `UserCreate` → `get_current_admin` → `create_user`",
+     "`UserCreate` validation and dependencies (`get_current_user` then `get_current_admin`) → `create_user` body → `crud.create_user`",
+     "`create_user` → `get_current_admin` → `UserCreate` → database",
+     "`get_current_user` → `crud.create_user` → `UserCreate`"
+    ]
+   },
+   "answer": 1,
+   "why": {
+    "fr": "FastAPI valide le corps et résout les dépendances avant d'appeler la route ; la route appelle ensuite le CRUD qui écrit.",
+    "en": "FastAPI validates the body and resolves dependencies before calling the route; the route then calls the CRUD that writes."
+   }
+  },
+  {
+   "id": "q2",
+   "type": "choice",
+   "prompt": {
+    "fr": "Un mot de passe de 5 caractères : où est-il refusé, et avec quel code ?",
+    "en": "A 5-character password: where is it refused, and with which code?"
+   },
+   "options": {
+    "fr": [
+     "Dans `crud.create_user`, code 500",
+     "Par la validation de `UserCreate`, code 422, avant la route",
+     "Dans `get_current_user`, code 401",
+     "Il n'est pas refusé"
+    ],
+    "en": [
+     "In `crud.create_user`, code 500",
+     "By `UserCreate` validation, code 422, before the route",
+     "In `get_current_user`, code 401",
+     "It is not refused"
+    ]
+   },
+   "answer": 1,
+   "why": {
+    "fr": "`Field(min_length=8)` est vérifié à la frontière : la route n'est jamais appelée.",
+    "en": "`Field(min_length=8)` is checked at the boundary: the route is never called."
+   }
+  },
+  {
+   "id": "q3",
+   "type": "choice",
+   "prompt": {
+    "fr": "Un utilisateur connecté mais pas administrateur appelle la route. Que reçoit-il ?",
+    "en": "A logged-in user who is not an admin calls the route. What do they get?"
+   },
+   "options": {
+    "fr": [
+     "201, l'utilisateur est créé",
+     "403 « Not enough privileges »",
+     "400 « Email already registered »",
+     "422"
+    ],
+    "en": [
+     "201, the user is created",
+     "403 \"Not enough privileges\"",
+     "400 \"Email already registered\"",
+     "422"
+    ]
+   },
+   "answer": 1,
+   "why": {
+    "fr": "`AdminDep` appelle `get_current_admin`, qui lève 403 avant le corps de la route.",
+    "en": "`AdminDep` calls `get_current_admin`, which raises 403 before the route body."
+   }
+  },
+  {
+   "id": "q4",
+   "type": "text",
+   "prompt": {
+    "fr": "Où le mot de passe est-il haché, et pourquoi pas dans la route ?",
+    "en": "Where is the password hashed, and why not in the route?"
+   },
+   "concepts": [
+    {
+     "label": {
+      "fr": "Dans `crud.create_user`",
+      "en": "In `crud.create_user`"
+     },
+     "any": [
+      "crud",
+      "create_user",
+      "couche (de )?donnees",
+      "data layer"
+     ]
+    },
+    {
+     "label": {
+      "fr": "Une seule place pour la règle : toute création passe par là",
+      "en": "One place for the rule: every creation goes through it"
+     },
+     "any": [
+      "(une|un) seul",
+      "single",
+      "(un|une) (seul )?(endroit|place)",
+      "one place",
+      "toute(s)? (les )?(creation|route)",
+      "every (creation|route)",
+      "reutilis",
+      "reus",
+      "oubli",
+      "forget"
+     ]
+    }
+   ],
+   "hints": {
+    "fr": [
+     "Combien de routes pourraient créer un utilisateur un jour ?"
+    ],
+    "en": [
+     "How many routes could create a user one day?"
+    ]
+   },
+   "model": {
+    "fr": "Dans `crud.create_user`. Toute création d'utilisateur passe par cette fonction : la règle « on ne stocke jamais un mot de passe en clair » vit à un seul endroit, et une nouvelle route ne peut pas l'oublier.",
+    "en": "In `crud.create_user`. Every user creation goes through it: the rule \"never store a plain-text password\" lives in one place, and a new route cannot forget it."
+   }
+  }
+ ],
+ "explanation": {
+  "fr": "Pas de solution à recopier : la preuve est ton schéma. Points de contrôle : le routeur (`backend/app/api/routes/`), la dépendance qui injecte la session et l'utilisateur courant, le modèle SQLModel, la fonction CRUD qui écrit, la migration Alembic qui a créé la table. Si ton schéma n'a ni la validation d'entrée ni l'authentification, il manque deux étapes.",
+  "en": "No answer to copy: your diagram is the proof. Checkpoints: the router (`backend/app/api/routes/`), the dependency that injects the session and current user, the SQLModel model, the CRUD function that writes, the Alembic migration that created the table. If your diagram has neither input validation nor authentication, two steps are missing."
+ }
+}

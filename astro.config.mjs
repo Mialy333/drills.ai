@@ -19,7 +19,7 @@ function offline() {
           for (const entry of await readdir(folder, { withFileTypes: true })) {
             const full = join(folder, entry.name);
             if (entry.isDirectory()) await walk(full);
-            else if (entry.name !== "sw.js" && !entry.name.endsWith(".map")) files.push(full);
+            else if (entry.name !== "sw.js" && !entry.name.endsWith(".map") && !full.includes("/pyodide/")) files.push(full);
           }
         };
         await walk(root);
@@ -58,8 +58,21 @@ self.addEventListener("fetch", (event) => {
     );
     return;
   }
-  // Assets are fingerprinted or rarely change: cache first.
-  event.respondWith(caches.match(request).then((hit) => hit || fetch(request)));
+  // Assets are fingerprinted or rarely change: cache first, and keep what was
+  // fetched (the 13 MB Python runtime is cached on first use, not at install).
+  event.respondWith(
+    caches.match(request).then(
+      (hit) =>
+        hit ||
+        fetch(request).then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then((c) => c.put(request, copy));
+          }
+          return response;
+        }),
+    ),
+  );
 });
 `;
         await writeFile(join(root, "sw.js"), sw);

@@ -1,0 +1,204 @@
+{
+ "id": "d3",
+ "cat": "debug",
+ "order": 3,
+ "minutes": 15,
+ "title": {
+  "fr": "Le paragraphe zéro",
+  "en": "Paragraph zero"
+ },
+ "source": {
+  "fr": "grounded-research-agent : un agent qui cite ses sources",
+  "en": "grounded-research-agent: an agent that cites its sources"
+ },
+ "context": {
+  "fr": "Un agent de recherche montre au modèle des paragraphes numérotés à partir de 1. Le modèle répond en JSON avec les numéros des paragraphes qui répondent à la question, puis l'application les recopie mot pour mot et cite leur document.\n\n```python\ndef pick(numbered, numbers):\n    \"\"\"numbered: list of (doc_id, text); numbers: paragraph numbers chosen by the model, from 1.\"\"\"\n    return [numbered[n - 1] for n in numbers]\n\nnumbered = [(\"rag\", \"P1 ...\"), (\"rag\", \"P2 ...\"), (\"agents\", \"P3 ...\")]\n```\n\nUn petit modèle local renvoie parfois `{\"paragraphs\": [0]}`.",
+  "en": "A research agent shows the model paragraphs numbered from 1. The model replies in JSON with the numbers of the paragraphs that answer the question, then the app copies them word for word and cites their document.\n\n```python\ndef pick(numbered, numbers):\n    \"\"\"numbered: list of (doc_id, text); numbers: paragraph numbers chosen by the model, from 1.\"\"\"\n    return [numbered[n - 1] for n in numbers]\n\nnumbered = [(\"rag\", \"P1 ...\"), (\"rag\", \"P2 ...\"), (\"agents\", \"P3 ...\")]\n```\n\nA small local model sometimes returns `{\"paragraphs\": [0]}`."
+ },
+ "mission": {
+  "fr": "Prédire ce qui se passe, écrire la fonction qui protège la frontière entre le modèle et le code, et expliquer le risque.",
+  "en": "Predict what happens, write the function that guards the boundary between the model and the code, and explain the risk."
+ },
+ "criteria": {
+  "fr": [
+   "La prédiction est juste.",
+   "Le validateur refuse toutes les réponses pièges.",
+   "Le risque d'une erreur silencieuse est expliqué."
+  ],
+  "en": [
+   "The prediction is right.",
+   "The validator refuses every trap reply.",
+   "The risk of a silent failure is explained."
+  ]
+ },
+ "questions": [
+  {
+   "id": "q1",
+   "type": "choice",
+   "prompt": {
+    "fr": "Que renvoie `pick(numbered, [0])` ?",
+    "en": "What does `pick(numbered, [0])` return?"
+   },
+   "options": {
+    "fr": [
+     "`[(\"rag\", \"P1 ...\")]`",
+     "`[(\"agents\", \"P3 ...\")]`",
+     "Une `IndexError`",
+     "`[]`"
+    ],
+    "en": [
+     "`[(\"rag\", \"P1 ...\")]`",
+     "`[(\"agents\", \"P3 ...\")]`",
+     "An `IndexError`",
+     "`[]`"
+    ]
+   },
+   "answer": 1,
+   "why": {
+    "fr": "`numbered[0 - 1]` est `numbered[-1]` : Python prend le dernier élément, sans erreur.",
+    "en": "`numbered[0 - 1]` is `numbered[-1]`: Python takes the last item, with no error."
+   }
+  },
+  {
+   "id": "q2",
+   "type": "code",
+   "prompt": {
+    "fr": "Écris `parse_selection(raw, count)`. `raw` est la réponse texte du modèle, `count` le nombre de paragraphes. Renvoie la liste des numéros si `raw` est un objet JSON avec une clé `paragraphs` contenant entre 1 et 3 entiers, tous entre 1 et `count` ; garde l'ordre et retire les doublons. Dans tous les autres cas, renvoie `None`.",
+    "en": "Write `parse_selection(raw, count)`. `raw` is the model's text reply, `count` the number of paragraphs. Return the list of numbers if `raw` is a JSON object with a `paragraphs` key holding 1 to 3 integers, all between 1 and `count`; keep the order and drop duplicates. In every other case, return `None`."
+   },
+   "starter": "import json\n\ndef parse_selection(raw, count):\n    ...\n",
+   "tests": "\ndef test_valid():\n    assert parse_selection('{\"paragraphs\": [2, 1]}', 3) == [2, 1]\ndef test_duplicates():\n    assert parse_selection('{\"paragraphs\": [2, 2, 1]}', 3) == [2, 1]\ndef test_zero():\n    assert parse_selection('{\"paragraphs\": [0]}', 3) is None\ndef test_negative():\n    assert parse_selection('{\"paragraphs\": [-1]}', 3) is None\ndef test_too_big():\n    assert parse_selection('{\"paragraphs\": [4]}', 3) is None\ndef test_one_bad_spoils():\n    assert parse_selection('{\"paragraphs\": [1, 0]}', 3) is None\ndef test_empty():\n    assert parse_selection('{\"paragraphs\": []}', 3) is None\ndef test_not_json():\n    assert parse_selection(\"Paragraph 2 answers it.\", 3) is None\ndef test_not_a_list():\n    assert parse_selection('{\"paragraphs\": 2}', 3) is None\ndef test_not_int():\n    assert parse_selection('{\"paragraphs\": [\"two\"]}', 3) is None\ndef test_bool_is_not_a_number():\n    assert parse_selection('{\"paragraphs\": [true]}', 3) is None\n",
+   "labels": {
+    "test_valid": {
+     "fr": "Une sélection valide est renvoyée dans l'ordre",
+     "en": "A valid selection is returned in order"
+    },
+    "test_duplicates": {
+     "fr": "Les doublons sont retirés",
+     "en": "Duplicates are dropped"
+    },
+    "test_zero": {
+     "fr": "`0` est refusé",
+     "en": "`0` is refused"
+    },
+    "test_negative": {
+     "fr": "`-1` est refusé",
+     "en": "`-1` is refused"
+    },
+    "test_too_big": {
+     "fr": "Un numéro trop grand est refusé",
+     "en": "A number too large is refused"
+    },
+    "test_one_bad_spoils": {
+     "fr": "Un seul mauvais numéro refuse tout",
+     "en": "One bad number refuses all"
+    },
+    "test_empty": {
+     "fr": "Une liste vide est refusée",
+     "en": "An empty list is refused"
+    },
+    "test_not_json": {
+     "fr": "Du texte sans JSON est refusé",
+     "en": "Text without JSON is refused"
+    },
+    "test_not_a_list": {
+     "fr": "Un nombre au lieu d'une liste est refusé",
+     "en": "A number instead of a list is refused"
+    },
+    "test_not_int": {
+     "fr": "Un mot au lieu d'un nombre est refusé",
+     "en": "A word instead of a number is refused"
+    },
+    "test_bool_is_not_a_number": {
+     "fr": "`true` n'est pas un numéro",
+     "en": "`true` is not a number"
+    }
+   },
+   "hints": {
+    "fr": [
+     "Commence par `json.loads` dans un `try`, et vérifie que le résultat est un `dict`.",
+     "En Python, `True` est un `int` : vérifie `type(n) is int`.",
+     "Pour retirer les doublons en gardant l'ordre : parcours la liste et ajoute seulement ce que tu n'as pas déjà."
+    ],
+    "en": [
+     "Start with `json.loads` inside a `try`, and check the result is a `dict`.",
+     "In Python, `True` is an `int`: check `type(n) is int`.",
+     "To drop duplicates and keep the order: walk the list and only add what you have not seen."
+    ]
+   },
+   "model": "import json\n\ndef parse_selection(raw, count):\n    try:\n        data = json.loads(raw)\n    except ValueError:\n        return None\n    if not isinstance(data, dict):\n        return None\n    numbers = data.get(\"paragraphs\")\n    if not isinstance(numbers, list) or not 1 <= len(numbers) <= 3:\n        return None\n    result = []\n    for n in numbers:\n        if type(n) is not int or not 1 <= n <= count:\n            return None\n        if n not in result:\n            result.append(n)\n    return result\n"
+  },
+  {
+   "id": "q3",
+   "type": "text",
+   "prompt": {
+    "fr": "Pourquoi un indice négatif accepté en silence est-il plus dangereux qu'une `IndexError` ?",
+    "en": "Why is a silently accepted negative index more dangerous than an `IndexError`?"
+   },
+   "concepts": [
+    {
+     "label": {
+      "fr": "Aucune erreur visible, le bug passe inaperçu",
+      "en": "No visible error, the bug goes unnoticed"
+     },
+     "any": [
+      "silenc",
+      "aucune erreur",
+      "pas d'erreur",
+      "sans (erreur|bruit|plant)",
+      "no (error|crash)",
+      "inapercu",
+      "unnoticed",
+      "ne plante pas",
+      "doesn'?t crash",
+      "ne se voit pas"
+     ]
+    },
+    {
+     "label": {
+      "fr": "La réponse a l'air juste mais cite une mauvaise source",
+      "en": "The answer looks right but cites a wrong source"
+     },
+     "any": [
+      "plausible",
+      "(mauvais|faux|fausse|autre) (source|document|citation|paragraphe)",
+      "wrong (source|document|citation|paragraph)",
+      "cite",
+      "a l'air (juste|correct)",
+      "looks? (right|correct)"
+     ]
+    },
+    {
+     "label": {
+      "fr": "Une erreur bruyante est détectée tout de suite",
+      "en": "A loud error is caught at once"
+     },
+     "any": [
+      "(tout de suite|immediat|des le premier|vite)",
+      "(right away|immediately|first test|at once)",
+      "bruyant",
+      "loud",
+      "test (echoue|la voit|l'attrape)",
+      "test (fails|catches)"
+     ]
+    }
+   ],
+   "hints": {
+    "fr": [
+     "Compare ce que voit l'utilisateur dans les deux cas."
+    ],
+    "en": [
+     "Compare what the user sees in both cases."
+    ]
+   },
+   "model": {
+    "fr": "Une `IndexError` fait planter le programme : on la voit tout de suite, dès le premier test. Un indice négatif ne produit aucune erreur : l'agent rend une réponse plausible qui cite une mauvaise source, et personne ne s'en rend compte. Pour un agent qui cite ses sources, c'est la panne la plus grave.",
+    "en": "An `IndexError` crashes the program: you see it at once, in the first test. A negative index produces no error: the agent returns a plausible answer that cites a wrong source, and nobody notices. For an agent that cites its sources, that is the worst failure."
+   }
+  }
+ ],
+ "explanation": {
+  "fr": "**Verdict.** Ce n'est pas un bug dans ce code : `_selection` refuse tout numéro hors de `1..count` (ligne 178) et retire les doublons. Aucun test ne le protégeait ; la [PR #2](https://github.com/Mialy333/grounded-research-agent/pull/2) en ajoute 10, et retirer la ligne 178 en fait échouer 3.\n\n**Pourquoi un indice négatif est pire qu'une IndexError :** une erreur bruyante se voit au premier test ; une erreur silencieuse produit une réponse plausible avec une citation fausse. Dans un agent qui cite ses sources, c'est la panne qu'on veut empêcher.\n\n**Ce qu'attend un CTO :** le principe *parse, don't validate*. On transforme la sortie du modèle en type sûr à la frontière, et le reste du code n'a plus à se méfier. Toute sortie de LLM est une entrée non fiable. Bonus : tester une fonction interne comme `_selection` est d'habitude à éviter, mais c'est justifié ici parce que c'est la frontière de sécurité.",
+  "en": "**Verdict.** Not a bug in this code: `_selection` rejects any number outside `1..count` (line 178) and drops duplicates. No test protected it; [PR #2](https://github.com/Mialy333/grounded-research-agent/pull/2) adds 10, and removing line 178 makes 3 of them fail.\n\n**Why a negative index is worse than an IndexError:** a loud error shows up in the first test; a silent one produces a plausible answer with a wrong citation. In an agent that cites its sources, that is the exact failure to prevent.\n\n**What a CTO expects:** *parse, don't validate*. Turn the model's output into a safe type at the boundary, and the rest of the code never has to distrust it. Every LLM output is untrusted input. Bonus: testing a private function like `_selection` is usually avoided, but it is justified here because it is the security boundary."
+ }
+}

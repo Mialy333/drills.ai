@@ -26,6 +26,21 @@ const strings = {
   hide: t.hide,
   timer: t.timer,
   timerState: t.timerState,
+  validate: t.validate,
+  runTests: t.runTests,
+  running: t.running,
+  loadingPy: t.loadingPy,
+  pyFailed: t.pyFailed,
+  timeoutMsg: t.timeoutMsg,
+  answerError: t.answerError,
+  testsScore: t.testsScore,
+  conceptsScore: t.conceptsScore,
+  missingConcept: t.missingConcept,
+  right: t.right,
+  wrong: t.wrong,
+  hintOf: t.hintOf,
+  hintsUsed: t.hintsUsed(999).replace("999", "{n}"),
+  untouched: t.untouched,
 };
 ---
 
@@ -36,7 +51,7 @@ const strings = {
       <h1>{d.title}</h1>
       <dl class="drill-meta">
         <div><dt>{t.target}</dt><dd>{d.minutes} {t.minutes}</dd></div>
-        <div><dt>{t.source}</dt><dd set:html={d.sourceHtml} /></div>
+        <div><dt>{t.source}</dt><dd>{d.source}</dd></div>
       </dl>
     </header>
 
@@ -50,31 +65,93 @@ const strings = {
         <button type="button" class="key key-go" id="timer-toggle">{t.timer.start}</button>
         <button type="button" class="key" id="timer-reset">{t.timer.reset}</button>
       </div>
+      <p class="crt-help">{t.timerAuto}</p>
     </section>
 
-    <section class="prose" aria-labelledby="statement-h">
-      <h2 id="statement-h">{t.statement}</h2>
-      <Fragment set:html={d.statementHtml} />
+    <section class="brief" aria-labelledby="context-h">
+      <h2 id="context-h">{t.contextTitle}</h2>
+      <div class="prose" set:html={d.contextHtml} />
+      <h2>{t.missionTitle}</h2>
+      <p class="mission" set:html={d.missionHtml} />
+      <h2>{t.criteriaTitle}</h2>
+      <ul class="criteria-list">
+        {d.criteriaHtml.map((c) => <li set:html={c} />)}
+      </ul>
     </section>
 
-    <section class="solution" aria-labelledby="solution-h">
-      <h2 id="solution-h">{t.solution}</h2>
-      <button type="button" class="btn" id="reveal" aria-expanded="false" aria-controls="solution-body">{t.reveal}</button>
-      <p class="solution-note" id="revealed-note" hidden>{t.revealedNote}</p>
-      <div class="prose" id="solution-body" hidden set:html={d.solutionHtml} />
+    <section class="deliverables" aria-labelledby="deliv-h">
+      <h2 id="deliv-h">{t.deliverables}</h2>
+      {d.questions.map((q, i) => (
+        <article class={`q q-${q.type}`} data-qid={q.id} data-type={q.type}>
+          <header class="q-head">
+            <h3>{t.deliverableN(i + 1)}</h3>
+            <span class="q-score" data-q-score></span>
+          </header>
+          <div class="prose q-prompt" set:html={q.promptHtml} />
+
+          {q.type === "code" && (
+            <>
+              <label class="visually-hidden" for={`a-${q.id}`}>{t.yourAnswer}</label>
+              <textarea class="code-input" id={`a-${q.id}`} data-answer spellcheck="false" autocapitalize="off" autocomplete="off" rows={Math.max(8, q.starter!.split("\n").length + 2)} data-starter={q.starter}>{q.starter}</textarea>
+              <script type="application/json" data-tests set:html={JSON.stringify({ tests: q.tests, labels: q.labels })} />
+            </>
+          )}
+          {q.type === "text" && (
+            <>
+              <label class="visually-hidden" for={`a-${q.id}`}>{t.yourAnswer}</label>
+              <textarea class="text-input" id={`a-${q.id}`} data-answer rows="5" placeholder={t.yourAnswer}></textarea>
+              <script type="application/json" data-concepts set:html={JSON.stringify(q.concepts!.map((c) => ({ label: c.labelHtml, any: c.any })))} />
+            </>
+          )}
+          {q.type === "choice" && (
+            <fieldset class="options" data-answer-choice data-correct={q.answer}>
+              <legend class="visually-hidden">{t.yourAnswer}</legend>
+              {q.optionsHtml!.map((o, k) => (
+                <label class="option">
+                  <input type="radio" name={`a-${q.id}`} value={k} />
+                  <span set:html={o} />
+                </label>
+              ))}
+            </fieldset>
+          )}
+
+          <div class="q-actions">
+            <button type="button" class="btn btn-primary" data-check>{q.type === "code" ? t.runTests : t.validate}</button>
+            {q.hintsHtml.length > 0 && <button type="button" class="btn" data-hint data-total={q.hintsHtml.length}>{t.hint}</button>}
+            {q.type === "code" && <button type="button" class="link-btn" data-reset-code>{t.resetCode}</button>}
+          </div>
+          <div class="q-feedback" data-feedback aria-live="polite"></div>
+          <ol class="q-hints" data-hints hidden>
+            {q.hintsHtml.map((h) => <li hidden set:html={h} />)}
+          </ol>
+          <div class="q-model" data-model hidden>
+            <h4>{t.modelAnswer}</h4>
+            {q.modelCode && <pre><code>{q.modelCode}</code></pre>}
+            {q.modelHtml && <div class="prose" set:html={q.modelHtml} />}
+            {q.whyHtml && <p set:html={q.whyHtml} />}
+          </div>
+        </article>
+      ))}
+      <p class="note">{t.rubricNote}</p>
     </section>
 
     <section class="score" aria-labelledby="score-h">
-      <h2 id="score-h">{t.grade}</h2>
+      <h2 id="score-h">{t.resultTitle}</h2>
+      <div class="completeness">
+        <span>{t.completeness}</span>
+        <span class="meter"><span id="completeness-bar"></span></span>
+        <strong id="completeness">0 %</strong>
+      </div>
+      <p class="note" id="hints-used"></p>
       <form id="grade-form">
         <div class="criteria">
           {t.criteria.map((c, i) => (
-            <fieldset>
-              <legend>{c}</legend>
+            <fieldset class:list={[i < 2 && "is-auto"]}>
+              <legend>{c} <small>{i < 2 ? t.autoLabel : t.selfLabel}</small></legend>
               <div class="pick">
                 {[0, 1, 2].map((v) => (
                   <label>
-                    <input type="radio" name={`c${i}`} value={v} required />
+                    <input type="radio" name={`c${i}`} value={v} required disabled={i < 2} />
                     <span>{v}</span>
                   </label>
                 ))}
@@ -82,6 +159,7 @@ const strings = {
             </fieldset>
           ))}
         </div>
+        <p class="note">{t.autoHelp}</p>
         <p class="total">
           {t.total} <output id="total">0</output>/8
           <span class="verdict" id="verdict"></span>
@@ -97,6 +175,16 @@ const strings = {
         </label>
         <button class="btn btn-primary" type="submit">{t.save}</button>
       </form>
+    </section>
+
+    <section class="solution" aria-labelledby="solution-h">
+      <h2 id="solution-h">{t.solution}</h2>
+      <button type="button" class="btn" id="reveal" aria-expanded="false" aria-controls="solution-body">{t.reveal}</button>
+      <p class="solution-note" id="revealed-note" hidden>{t.revealedNote}</p>
+      <div id="solution-body" hidden>
+        <h3>{t.expectations}</h3>
+        <div class="prose" set:html={d.explanationHtml} />
+      </div>
     </section>
 
     <section class="history" aria-labelledby="history-h">

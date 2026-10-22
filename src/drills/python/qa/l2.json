@@ -1,0 +1,189 @@
+{
+ "id": "l2",
+ "cat": "read",
+ "order": 2,
+ "minutes": 12,
+ "title": {
+  "fr": "Le pin et la vérification",
+  "en": "The pin and the check"
+ },
+ "source": {
+  "fr": "my-gecko-buyer : un agent qui paie et refuse ce qu'il n'a pas vérifié",
+  "en": "my-gecko-buyer: an agent that pays and refuses what it has not checked"
+ },
+ "context": {
+  "fr": "Avant de signer, un agent d'achat compare la transaction préparée par un service tiers à la demande initiale, enregistrée avant (le « pin »). Les montants sont des entiers dans la plus petite unité du jeton (`price_raw` : 1 USDC = 1 000 000).\n\n```python\ndef check_price(intent, prepared):\n    if prepared.price_raw is None:\n        return refuse(\"price_raw\", \"a known price\", None)   # unknown price: never agree\n    if prepared.price_raw > intent.budget_raw:\n        return refuse(\"price_raw\", intent.budget_raw, prepared.price_raw)\n    return agree(\"price_raw\", prepared.price_raw)\n\ndef check_mint(intent, prepared):\n    if prepared.mint != intent.mint:                        # compared as an address\n        return refuse(\"mint\", intent.mint, prepared.mint)\n    return agree(\"mint\", prepared.mint)\n\ndef check_store(intent, prepared):\n    expected = store_address(intent.store)                  # derived, never read from the answer\n    if prepared.store != expected:\n        return refuse(\"store\", expected, prepared.store)\n    return agree(\"store\", expected)\n```",
+  "en": "Before signing, a buying agent compares the transaction prepared by a third-party service with the original request, saved beforehand (the \"pin\"). Amounts are integers in the token's smallest unit (`price_raw`: 1 USDC = 1,000,000).\n\n```python\ndef check_price(intent, prepared):\n    if prepared.price_raw is None:\n        return refuse(\"price_raw\", \"a known price\", None)   # unknown price: never agree\n    if prepared.price_raw > intent.budget_raw:\n        return refuse(\"price_raw\", intent.budget_raw, prepared.price_raw)\n    return agree(\"price_raw\", prepared.price_raw)\n\ndef check_mint(intent, prepared):\n    if prepared.mint != intent.mint:                        # compared as an address\n        return refuse(\"mint\", intent.mint, prepared.mint)\n    return agree(\"mint\", prepared.mint)\n\ndef check_store(intent, prepared):\n    expected = store_address(intent.store)                  # derived, never read from the answer\n    if prepared.store != expected:\n        return refuse(\"store\", expected, prepared.store)\n    return agree(\"store\", expected)\n```"
+ },
+ "mission": {
+  "fr": "Expliquer deux choix de sécurité, puis écrire la conversion de montant qui ne trompe pas.",
+  "en": "Explain two security choices, then write the amount conversion that does not mislead."
+ },
+ "criteria": {
+  "fr": [
+   "Les deux principes sont nommés.",
+   "La conversion passe tous les tests, sans `float`."
+  ],
+  "en": [
+   "Both principles are named.",
+   "The conversion passes every test, without `float`."
+  ]
+ },
+ "questions": [
+  {
+   "id": "q1",
+   "type": "text",
+   "prompt": {
+    "fr": "Pourquoi un prix inconnu (`None`) est-il un refus plutôt qu'un accord ?",
+    "en": "Why is an unknown price (`None`) a refusal rather than an agreement?"
+   },
+   "concepts": [
+    {
+     "label": {
+      "fr": "En cas de doute, on refuse (fail closed)",
+      "en": "When in doubt, refuse (fail closed)"
+     },
+     "any": [
+      "fail.?closed",
+      "(en cas de |dans le )doute",
+      "in doubt",
+      "par defaut.{0,20}(refus|non)",
+      "by default.{0,20}(refus|no)"
+     ]
+    },
+    {
+     "label": {
+      "fr": "Un prix inconnu n'est pas un prix sous le budget",
+      "en": "An unknown price is not a price under budget"
+     },
+     "any": [
+      "inconnu",
+      "unknown",
+      "(pas|not).{0,20}(sous|under).{0,10}budget",
+      "ne prouve",
+      "doesn'?t prove",
+      "argent",
+      "money"
+     ]
+    }
+   ],
+   "hints": {
+    "fr": [
+     "Que coûte une erreur dans chaque sens ?"
+    ],
+    "en": [
+     "What does an error cost in each direction?"
+    ]
+   },
+   "model": {
+    "fr": "Un prix inconnu n'est pas un prix sous le budget : rien ne prouve que l'achat est sûr. Un système qui déplace de l'argent refuse en cas de doute (fail closed) : un refus à tort coûte un nouvel essai, un accord à tort coûte de l'argent.",
+    "en": "An unknown price is not a price under budget: nothing proves the purchase is safe. A system that moves money refuses when in doubt (fail closed): a wrong refusal costs a retry, a wrong agreement costs money."
+   }
+  },
+  {
+   "id": "q2",
+   "type": "text",
+   "prompt": {
+    "fr": "Pourquoi `check_store` recalcule-t-il l'adresse au lieu de la lire dans la réponse du service ?",
+    "en": "Why does `check_store` recompute the address instead of reading it from the service's answer?"
+   },
+   "concepts": [
+    {
+     "label": {
+      "fr": "Ce qu'on vérifie ne doit jamais fournir la réponse attendue",
+      "en": "What is being checked must never supply the expected answer"
+     },
+     "any": [
+      "(fournir|donner) (la|sa) (propre )?reponse",
+      "supply (the|its)",
+      "se valider (elle-meme|lui-meme|seul)",
+      "validate itself",
+      "juge et partie",
+      "(meme|same) source"
+     ]
+    },
+    {
+     "label": {
+      "fr": "Une réponse falsifiée se validerait elle-même",
+      "en": "A forged answer would validate itself"
+     },
+     "any": [
+      "falsifi",
+      "forg",
+      "tamper",
+      "modifi",
+      "attaqu",
+      "malveill",
+      "malicious",
+      "pirat"
+     ]
+    }
+   ],
+   "hints": {
+    "fr": [
+     "Si l'adresse attendue venait de la réponse, que vérifierait-on vraiment ?"
+    ],
+    "en": [
+     "If the expected address came from the answer, what would we really be checking?"
+    ]
+   },
+   "model": {
+    "fr": "Parce que ce qu'on vérifie ne doit jamais fournir la réponse attendue. Si l'adresse venait de la réponse du service, une réponse falsifiée se validerait elle-même. On recalcule donc l'adresse à partir du nom demandé.",
+    "en": "Because the thing being checked must never supply the expected answer. If the address came from the service's answer, a forged answer would validate itself. So the address is recomputed from the requested name."
+   }
+  },
+  {
+   "id": "q3",
+   "type": "code",
+   "prompt": {
+    "fr": "Écris `to_raw(amount, decimals)`. `amount` est une chaîne comme `\"2.01\"`, `decimals` le nombre de décimales du jeton. Renvoie l'entier en plus petite unité, exact. Lève une `TypeError` si `amount` n'est pas une `str`, et une `ValueError` si le montant a plus de décimales que le jeton.",
+    "en": "Write `to_raw(amount, decimals)`. `amount` is a string such as `\"2.01\"`, `decimals` the token's number of decimals. Return the exact integer in the smallest unit. Raise a `TypeError` if `amount` is not a `str`, and a `ValueError` if the amount has more decimals than the token."
+   },
+   "starter": "from decimal import Decimal\n\ndef to_raw(amount, decimals):\n    ...\n",
+   "tests": "\ndef test_simple():\n    assert to_raw(\"2\", 6) == 2_000_000\ndef test_float_trap():\n    assert to_raw(\"2.01\", 6) == 2_010_000\ndef test_small():\n    assert to_raw(\"0.000001\", 6) == 1\ndef test_is_int():\n    assert type(to_raw(\"1.5\", 6)) is int\ndef test_float_refused():\n    try:\n        to_raw(2.01, 6)\n    except TypeError:\n        return\n    assert False, \"a float must raise TypeError\"\ndef test_too_precise_refused():\n    try:\n        to_raw(\"0.0000001\", 6)\n    except ValueError:\n        return\n    assert False, \"7 decimals on a 6-decimal token must raise ValueError\"\n",
+   "labels": {
+    "test_simple": {
+     "fr": "`\"2\"` donne 2 000 000",
+     "en": "`\"2\"` gives 2,000,000"
+    },
+    "test_float_trap": {
+     "fr": "`\"2.01\"` donne 2 010 000, pas 2 009 999",
+     "en": "`\"2.01\"` gives 2,010,000, not 2,009,999"
+    },
+    "test_small": {
+     "fr": "La plus petite unité donne 1",
+     "en": "The smallest unit gives 1"
+    },
+    "test_is_int": {
+     "fr": "Le résultat est un `int`",
+     "en": "The result is an `int`"
+    },
+    "test_float_refused": {
+     "fr": "Un `float` en entrée est refusé",
+     "en": "A `float` input is refused"
+    },
+    "test_too_precise_refused": {
+     "fr": "Trop de décimales est refusé",
+     "en": "Too many decimals is refused"
+    }
+   },
+   "hints": {
+    "fr": [
+     "`int(2.01 * 10**6)` donne 2009999. Pourquoi ?",
+     "`Decimal(\"2.01\") * 10**decimals` est exact.",
+     "Si `value != value.to_integral_value()`, il reste des décimales en trop."
+    ],
+    "en": [
+     "`int(2.01 * 10**6)` gives 2009999. Why?",
+     "`Decimal(\"2.01\") * 10**decimals` is exact.",
+     "If `value != value.to_integral_value()`, there are decimals left over."
+    ]
+   },
+   "model": "from decimal import Decimal\n\ndef to_raw(amount, decimals):\n    if not isinstance(amount, str):\n        raise TypeError(\"amount must be a string, never a float\")\n    value = Decimal(amount) * (10 ** decimals)\n    if value != value.to_integral_value():\n        raise ValueError(\"more decimals than the token allows\")\n    return int(value)\n"
+  }
+ ],
+ "explanation": {
+  "fr": "1. **Fail closed** : un prix inconnu n'est pas un prix sous le budget. Un système qui déplace de l'argent dit non en cas de doute.\n2. **La chose vérifiée ne doit jamais fournir la réponse attendue.** Lue dans la réponse de Gecko, une adresse falsifiée se validerait elle-même.\n3. **L'annotation `int` n'est pas vérifiée à l'exécution**, et aucun test ne refuse un `budget_raw` float (`test_a_float_price_is_refused` protège la construction d'instruction, pas le budget). Le danger est en amont : `2.01 * 10**6` vaut `2009999.9999999998`, donc `int()` donne un budget faux d'une unité, alors que `Decimal(\"2.01\")` donne `2010000`. Réponse attendue : valider le type à la frontière (`__post_init__` ou Pydantic) et ajouter le test.",
+  "en": "1. **Fail closed**: an unknown price is not a price under budget. A system that moves money says no when in doubt.\n2. **The thing being checked must never supply the expected answer.** Read from Gecko's answer, a forged address would validate itself.\n3. **The `int` annotation is not checked at runtime**, and no test rejects a float `budget_raw` (`test_a_float_price_is_refused` covers instruction building, not the budget). The danger is upstream: `2.01 * 10**6` is `2009999.9999999998`, so `int()` gives a budget one unit short, while `Decimal(\"2.01\")` gives `2010000`. Expected answer: validate the type at the boundary (`__post_init__` or Pydantic) and add the test."
+ }
+}

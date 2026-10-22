@@ -1,0 +1,172 @@
+{
+ "id": "d5",
+ "cat": "debug",
+ "order": 5,
+ "minutes": 10,
+ "title": {
+  "fr": "Le panier partagé",
+  "en": "The shared basket"
+ },
+ "source": {
+  "fr": "Black Monday 1987 : un jeu de bourse piloté par la voix",
+  "en": "Black Monday 1987: a voice-driven trading game"
+ },
+ "context": {
+  "fr": "Dans un jeu, chaque partie garde l'historique des phrases du joueur :\n\n```python\ndef record_turn(phrase, history=[]):\n    history.append(phrase)\n    return history\n\ngame_1 = record_turn(\"sell\")\ngame_2 = record_turn(\"buy\")\n```\n\nUn testeur signale que la deuxième partie contient les phrases de la première.",
+  "en": "In a game, each game keeps the history of the player's phrases:\n\n```python\ndef record_turn(phrase, history=[]):\n    history.append(phrase)\n    return history\n\ngame_1 = record_turn(\"sell\")\ngame_2 = record_turn(\"buy\")\n```\n\nA tester reports that the second game holds the first game's phrases."
+ },
+ "mission": {
+  "fr": "Prédire l'état exact des variables, expliquer la cause, corriger la fonction.",
+  "en": "Predict the exact state of the variables, explain the cause, fix the function."
+ },
+ "criteria": {
+  "fr": [
+   "Les deux prédictions sont justes.",
+   "La cause est expliquée.",
+   "La correction passe tous les tests."
+  ],
+  "en": [
+   "Both predictions are right.",
+   "The cause is explained.",
+   "The fix passes every test."
+  ]
+ },
+ "questions": [
+  {
+   "id": "q1",
+   "type": "choice",
+   "prompt": {
+    "fr": "Que vaut `game_1` après les deux appels ?",
+    "en": "What is `game_1` after both calls?"
+   },
+   "options": {
+    "fr": [
+     "`['sell']`",
+     "`['sell', 'buy']`",
+     "`['buy']`",
+     "`[]`"
+    ],
+    "en": [
+     "`['sell']`",
+     "`['sell', 'buy']`",
+     "`['buy']`",
+     "`[]`"
+    ]
+   },
+   "answer": 1,
+   "why": {
+    "fr": "Les deux appels ajoutent à la même liste.",
+    "en": "Both calls append to the same list."
+   }
+  },
+  {
+   "id": "q2",
+   "type": "choice",
+   "prompt": {
+    "fr": "Que vaut `game_1 is game_2` ?",
+    "en": "What is `game_1 is game_2`?"
+   },
+   "options": {
+    "fr": [
+     "`True`",
+     "`False`"
+    ],
+    "en": [
+     "`True`",
+     "`False`"
+    ]
+   },
+   "answer": 0,
+   "why": {
+    "fr": "C'est le même objet liste, créé une seule fois.",
+    "en": "It is the same list object, created once."
+   }
+  },
+  {
+   "id": "q3",
+   "type": "text",
+   "prompt": {
+    "fr": "Pourquoi les deux parties partagent-elles la même liste ?",
+    "en": "Why do both games share the same list?"
+   },
+   "concepts": [
+    {
+     "label": {
+      "fr": "La valeur par défaut est évaluée une seule fois",
+      "en": "The default value is evaluated once"
+     },
+     "any": [
+      "une (seule )?fois",
+      "\\bonce\\b",
+      "une seule liste",
+      "single list"
+     ]
+    },
+    {
+     "label": {
+      "fr": "À la définition de la fonction (ligne `def`)",
+      "en": "When the function is defined (the `def` line)"
+     },
+     "any": [
+      "definition",
+      "defini",
+      "\\bdef\\b",
+      "defined",
+      "creation de la fonction",
+      "function is created"
+     ]
+    }
+   ],
+   "hints": {
+    "fr": [
+     "Quand Python crée-t-il la liste `[]` de la valeur par défaut ?"
+    ],
+    "en": [
+     "When does Python create the default `[]` list?"
+    ]
+   },
+   "model": {
+    "fr": "Une valeur par défaut est évaluée une seule fois, quand Python exécute la ligne `def`. La liste `[]` est donc créée une fois et partagée par tous les appels.",
+    "en": "A default value is evaluated once, when Python runs the `def` line. The `[]` list is created once and shared by every call."
+   }
+  },
+  {
+   "id": "q4",
+   "type": "code",
+   "prompt": {
+    "fr": "Corrige `record_turn` pour que chaque partie ait son historique.",
+    "en": "Fix `record_turn` so each game has its own history."
+   },
+   "starter": "def record_turn(phrase, history=[]):\n    history.append(phrase)\n    return history\n",
+   "tests": "\ndef test_independent_games():\n    a = record_turn(\"sell\")\n    b = record_turn(\"buy\")\n    assert a == [\"sell\"] and b == [\"buy\"]\ndef test_not_same_object():\n    assert record_turn(\"x\") is not record_turn(\"y\")\ndef test_explicit_history_kept():\n    h = [\"open\"]\n    assert record_turn(\"sell\", h) == [\"open\", \"sell\"]\n    assert h == [\"open\", \"sell\"]\n",
+   "labels": {
+    "test_independent_games": {
+     "fr": "Deux parties ont des historiques séparés",
+     "en": "Two games have separate histories"
+    },
+    "test_not_same_object": {
+     "fr": "Chaque appel crée sa propre liste",
+     "en": "Each call creates its own list"
+    },
+    "test_explicit_history_kept": {
+     "fr": "Un historique passé en argument est complété",
+     "en": "A history passed in is extended"
+    }
+   },
+   "hints": {
+    "fr": [
+     "Utilise `None` comme valeur par défaut, et crée la liste dans le corps de la fonction."
+    ],
+    "en": [
+     "Use `None` as the default, and create the list inside the function body."
+    ]
+   },
+   "model": "def record_turn(phrase, history=None):\n    if history is None:\n        history = []\n    history.append(phrase)\n    return history\n",
+   "broken_check": true
+  }
+ ],
+ "explanation": {
+  "fr": "**Prédiction :** `['sell', 'buy']`, `['sell', 'buy']`, `True`.\n\n**Cause.** Les valeurs par défaut sont évaluées **une seule fois**, quand Python exécute la ligne `def`. Toutes les parties partagent la même liste.\n\n```python\ndef record_turn(phrase, history=None):\n    if history is None:\n        history = []\n    history.append(phrase)\n    return history\n```\n\n**Ce qu'attend un CTO :** le lien avec D2 (même mécanisme d'évaluation), l'outil qui l'attrape (`ruff`, règle B006), et la remarque qu'une fonction qui modifie son argument et le renvoie a deux responsabilités.",
+  "en": "**Prediction:** `['sell', 'buy']`, `['sell', 'buy']`, `True`.\n\n**Cause.** Default values are evaluated **once**, when Python runs the `def` line. Every game shares the same list.\n\n```python\ndef record_turn(phrase, history=None):\n    if history is None:\n        history = []\n    history.append(phrase)\n    return history\n```\n\n**What a CTO expects:** the link with D2 (same evaluation mechanism), the tool that catches it (`ruff`, rule B006), and the remark that a function that mutates its argument and returns it has two jobs."
+ }
+}

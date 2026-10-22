@@ -1,0 +1,140 @@
+{
+ "id": "r6",
+ "cat": "refactor",
+ "order": 6,
+ "minutes": 20,
+ "title": {
+  "fr": "Relire un fichier écrit par l'IA",
+  "en": "Review a file the AI wrote"
+ },
+ "source": {
+  "fr": "Réflexe à prendre sur tous tes repos",
+  "en": "A reflex for every one of your repos"
+ },
+ "context": {
+  "fr": "Un assistant IA a écrit ce fichier pour une petite API. Il marche en démo. Tu dois le relire avant de l'accepter.\n\n```python\nimport json, os\n\ndef get_user(db, user_id):\n    data = db.query(f\"SELECT * FROM users WHERE id = {user_id}\")\n    db.execute(\"UPDATE users SET last_seen = NOW() WHERE id = %s\", (user_id,))\n    return data\n\ndef format_name(u):\n    return u[\"first\"] + \" \" + u[\"last\"]\n\ndef old_format_name(u):\n    return u[\"first\"].title() + \" \" + u[\"last\"].title()\n\ndef load_settings():\n    try:\n        return json.load(open(os.environ[\"SETTINGS\"]))\n    except:\n        return {}\n```",
+  "en": "An AI assistant wrote this file for a small API. It works in the demo. You must review it before accepting it.\n\n```python\nimport json, os\n\ndef get_user(db, user_id):\n    data = db.query(f\"SELECT * FROM users WHERE id = {user_id}\")\n    db.execute(\"UPDATE users SET last_seen = NOW() WHERE id = %s\", (user_id,))\n    return data\n\ndef format_name(u):\n    return u[\"first\"] + \" \" + u[\"last\"]\n\ndef old_format_name(u):\n    return u[\"first\"].title() + \" \" + u[\"last\"].title()\n\ndef load_settings():\n    try:\n        return json.load(open(os.environ[\"SETTINGS\"]))\n    except:\n        return {}\n```"
+ },
+ "mission": {
+  "fr": "Trouver ce qui ne va pas, puis dire dans quel ordre tu relis un fichier écrit par l'IA.",
+  "en": "Find what is wrong, then say in what order you review a file the AI wrote."
+ },
+ "criteria": {
+  "fr": [
+   "Les quatre problèmes sont trouvés.",
+   "La méthode commence par les outils automatiques."
+  ],
+  "en": [
+   "All four problems are found.",
+   "The method starts with automated tools."
+  ]
+ },
+ "questions": [
+  {
+   "id": "q1",
+   "type": "text",
+   "prompt": {
+    "fr": "Liste les problèmes de ce fichier, du plus grave au moins grave.",
+    "en": "List the problems in this file, most serious first."
+   },
+   "concepts": [
+    {
+     "label": {
+      "fr": "Injection SQL : la requête est construite avec une f-string",
+      "en": "SQL injection: the query is built with an f-string"
+     },
+     "any": [
+      "injection",
+      "f-?string",
+      "sql",
+      "parametr"
+     ]
+    },
+    {
+     "label": {
+      "fr": "`get_user` écrit en base : le nom ment",
+      "en": "`get_user` writes to the database: the name lies"
+     },
+     "any": [
+      "(nom|name).{0,30}(ment|lie|trompe|mislead)",
+      "get_user.{0,60}(ecrit|update|write|modifie|effet)",
+      "effet de bord",
+      "side effect"
+     ]
+    },
+    {
+     "label": {
+      "fr": "`old_format_name` est du code mort",
+      "en": "`old_format_name` is dead code"
+     },
+     "any": [
+      "code mort",
+      "dead code",
+      "old_format_name",
+      "inutilise",
+      "unused"
+     ]
+    },
+    {
+     "label": {
+      "fr": "Le `except:` nu avale toutes les erreurs",
+      "en": "The bare `except:` swallows every error"
+     },
+     "any": [
+      "except",
+      "avale",
+      "swallow",
+      "silenc",
+      "masque",
+      "hide"
+     ]
+    }
+   ],
+   "hints": {
+    "fr": [
+     "Que se passe-t-il si `user_id` vaut `\"1 OR 1=1\"` ?",
+     "Que fait `get_user`, à part lire ?"
+    ],
+    "en": [
+     "What happens if `user_id` is `\"1 OR 1=1\"`?",
+     "What does `get_user` do besides reading?"
+    ]
+   },
+   "model": {
+    "fr": "1. Injection SQL : la première requête est construite avec une f-string ; il faut une requête paramétrée comme la seconde. 2. `get_user` écrit en base (`last_seen`) : son nom ment, et lire devient un effet de bord. 3. Le `except:` nu avale toutes les erreurs, même un fichier de réglages corrompu, et renvoie `{}` sans rien dire. 4. `old_format_name` est du code mort. Bonus : le fichier ouvert n'est jamais fermé.",
+    "en": "1. SQL injection: the first query is built with an f-string; it needs a parameterised query like the second. 2. `get_user` writes to the database (`last_seen`): its name lies, and reading becomes a side effect. 3. The bare `except:` swallows every error, even a corrupt settings file, and returns `{}` silently. 4. `old_format_name` is dead code. Bonus: the opened file is never closed."
+   }
+  },
+  {
+   "id": "q2",
+   "type": "choice",
+   "prompt": {
+    "fr": "Par quoi commences-tu la relecture d'un fichier écrit par l'IA ?",
+    "en": "What do you start with when reviewing a file the AI wrote?"
+   },
+   "options": {
+    "fr": [
+     "Lire chaque ligne à voix haute",
+     "Lancer les outils automatiques (`ruff`, `mypy`) et les tests",
+     "Demander à l'IA de se relire",
+     "Renommer les variables"
+    ],
+    "en": [
+     "Read every line out loud",
+     "Run the automated tools (`ruff`, `mypy`) and the tests",
+     "Ask the AI to review itself",
+     "Rename the variables"
+    ]
+   },
+   "answer": 1,
+   "why": {
+    "fr": "L'outil trouve en une seconde ce qu'il sait trouver ; ton attention va ensuite au sens, aux noms et aux effets de bord.",
+    "en": "The tool finds in a second what it can find; your attention then goes to meaning, names and side effects."
+   }
+  }
+ ],
+ "explanation": {
+  "fr": "L'ordre qui fonctionne :\n\n1. `ruff check` et `mypy --strict` d'abord : l'outil trouve ce qu'il sait trouver.\n2. Supprimer le code mort, en vérifiant chaque fonction avec `git grep`.\n3. Renommer ce qui ment, par exemple une fonction `get_x` qui écrit en base.\n4. Ajouter les annotations de type manquantes.\n5. Relire le diff à voix haute, une ligne à la fois.\n\nCe qui impressionne : une liste écrite des choix de l'IA que tu as **gardés**, avec la raison.",
+  "en": "The order that works:\n\n1. `ruff check` and `mypy --strict` first: let the tool find what it can.\n2. Delete dead code, checking each function with `git grep`.\n3. Rename what lies, such as a `get_x` function that writes to the database.\n4. Add missing type hints.\n5. Read the diff out loud, one line at a time.\n\nWhat impresses: a written list of the AI's choices you **kept**, with the reason."
+ }
+}

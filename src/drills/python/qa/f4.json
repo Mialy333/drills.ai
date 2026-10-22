@@ -1,0 +1,139 @@
+{
+ "id": "f4",
+ "cat": "formats",
+ "order": 4,
+ "minutes": 25,
+ "title": {
+  "fr": "Pannes d'un LLM : réessai borné",
+  "en": "LLM failures: bounded retries"
+ },
+ "source": {
+  "fr": "Black Monday 1987 : la voix du courtier, avec mode de secours",
+  "en": "Black Monday 1987: the broker's voice, with a fallback"
+ },
+ "context": {
+  "fr": "Un agent appelle un fournisseur de LLM qui renvoie parfois une erreur passagère : limitation de débit, délai dépassé, service indisponible. On veut réessayer ces erreurs-là, et seulement elles, avec une attente qui double à chaque fois.\n\n```python\nclass TransientError(Exception):\n    \"\"\"Throttling, timeout, 503: worth retrying.\"\"\"\n```\n\n`sleep` est passé en paramètre pour que les tests tournent instantanément.",
+  "en": "An agent calls an LLM provider that sometimes returns a passing error: throttling, timeout, service unavailable. We want to retry those errors, and only those, waiting twice as long each time.\n\n```python\nclass TransientError(Exception):\n    \"\"\"Throttling, timeout, 503: worth retrying.\"\"\"\n```\n\n`sleep` is passed in so the tests run instantly."
+ },
+ "mission": {
+  "fr": "Écrire la fonction de réessai, puis dire quand il ne faut pas réessayer.",
+  "en": "Write the retry function, then say when not to retry."
+ },
+ "criteria": {
+  "fr": [
+   "La fonction passe tous les tests.",
+   "Le lien entre réessai et idempotence est fait."
+  ],
+  "en": [
+   "The function passes every test.",
+   "The link between retries and idempotency is made."
+  ]
+ },
+ "questions": [
+  {
+   "id": "q1",
+   "type": "code",
+   "prompt": {
+    "fr": "Écris `call_with_retry(fn, tries=3, base_delay=0.5, sleep=time.sleep)`. Elle appelle `fn()`. Sur une `TransientError`, elle attend `base_delay`, puis le double, puis le double, et réessaie, `tries` fois au total. Après le dernier échec, elle relance l'erreur. Toute autre erreur remonte tout de suite. `tries` inférieur à 1 lève une `ValueError`.",
+    "en": "Write `call_with_retry(fn, tries=3, base_delay=0.5, sleep=time.sleep)`. It calls `fn()`. On a `TransientError`, it waits `base_delay`, then double, then double again, and retries, `tries` times in all. After the last failure, it re-raises. Any other error propagates at once. `tries` below 1 raises a `ValueError`."
+   },
+   "starter": "import time\n\nclass TransientError(Exception):\n    pass\n\ndef call_with_retry(fn, tries=3, base_delay=0.5, sleep=time.sleep):\n    ...\n",
+   "tests": "\ndef flaky(fail_times, error=None):\n    state = {\"calls\": 0}\n    def fn():\n        state[\"calls\"] += 1\n        if state[\"calls\"] <= fail_times:\n            raise (error or TransientError(\"throttled\"))\n        return \"ok\"\n    return fn, state\n\ndef test_success_first_try():\n    fn, state = flaky(0)\n    assert call_with_retry(fn, sleep=lambda d: None) == \"ok\" and state[\"calls\"] == 1\ndef test_success_after_two_failures():\n    fn, state = flaky(2)\n    assert call_with_retry(fn, tries=3, sleep=lambda d: None) == \"ok\" and state[\"calls\"] == 3\ndef test_delays_double():\n    delays = []\n    fn, _ = flaky(2)\n    call_with_retry(fn, tries=3, base_delay=0.5, sleep=delays.append)\n    assert delays == [0.5, 1.0]\ndef test_reraises_after_last_try():\n    fn, state = flaky(10)\n    try:\n        call_with_retry(fn, tries=3, sleep=lambda d: None)\n    except TransientError:\n        assert state[\"calls\"] == 3\n        return\n    assert False, \"should re-raise TransientError\"\ndef test_no_sleep_after_last_try():\n    delays = []\n    fn, _ = flaky(10)\n    try:\n        call_with_retry(fn, tries=3, base_delay=1, sleep=delays.append)\n    except TransientError:\n        pass\n    assert len(delays) == 2\ndef test_other_errors_not_retried():\n    fn, state = flaky(1, error=ValueError(\"bad request\"))\n    try:\n        call_with_retry(fn, tries=3, sleep=lambda d: None)\n    except ValueError:\n        assert state[\"calls\"] == 1\n        return\n    assert False, \"a ValueError must propagate at once\"\ndef test_tries_below_one():\n    try:\n        call_with_retry(lambda: \"ok\", tries=0)\n    except ValueError:\n        return\n    assert False, \"tries=0 must raise ValueError\"\n",
+   "labels": {
+    "test_success_first_try": {
+     "fr": "Réussit du premier coup : un seul appel",
+     "en": "Succeeds first time: a single call"
+    },
+    "test_success_after_two_failures": {
+     "fr": "Réussit après deux erreurs passagères",
+     "en": "Succeeds after two passing errors"
+    },
+    "test_delays_double": {
+     "fr": "Les attentes doublent : 0,5 s puis 1 s",
+     "en": "Waits double: 0.5 s then 1 s"
+    },
+    "test_reraises_after_last_try": {
+     "fr": "Relance l'erreur après le dernier essai",
+     "en": "Re-raises after the last try"
+    },
+    "test_no_sleep_after_last_try": {
+     "fr": "N'attend pas après le dernier essai",
+     "en": "Does not wait after the last try"
+    },
+    "test_other_errors_not_retried": {
+     "fr": "Une erreur définitive n'est pas réessayée",
+     "en": "A permanent error is not retried"
+    },
+    "test_tries_below_one": {
+     "fr": "`tries=0` lève une `ValueError`",
+     "en": "`tries=0` raises a `ValueError`"
+    }
+   },
+   "hints": {
+    "fr": [
+     "`for attempt in range(1, tries + 1):` puis un `try / except TransientError`.",
+     "Au dernier essai, `raise` sans argument relance l'erreur en cours.",
+     "Attente : `base_delay * 2 ** (attempt - 1)`."
+    ],
+    "en": [
+     "`for attempt in range(1, tries + 1):` then a `try / except TransientError`.",
+     "On the last try, a bare `raise` re-raises the current error.",
+     "Wait: `base_delay * 2 ** (attempt - 1)`."
+    ]
+   },
+   "model": "import time\n\nclass TransientError(Exception):\n    pass\n\ndef call_with_retry(fn, tries=3, base_delay=0.5, sleep=time.sleep):\n    if tries < 1:\n        raise ValueError(\"tries must be >= 1\")\n    for attempt in range(1, tries + 1):\n        try:\n            return fn()\n        except TransientError:\n            if attempt == tries:\n                raise\n            sleep(base_delay * 2 ** (attempt - 1))\n"
+  },
+  {
+   "id": "q2",
+   "type": "text",
+   "prompt": {
+    "fr": "Dans quel cas ne faut-il pas réessayer un appel qui écrit (un paiement, un envoi d'e-mail) ? Comment s'en protéger ?",
+    "en": "When must you not retry a call that writes (a payment, an email send)? How do you protect against it?"
+   },
+   "concepts": [
+    {
+     "label": {
+      "fr": "Si l'action n'est pas idempotente, elle risque d'être faite deux fois",
+      "en": "If the action is not idempotent, it may happen twice"
+     },
+     "any": [
+      "idempoten",
+      "deux fois",
+      "twice",
+      "double"
+     ]
+    },
+    {
+     "label": {
+      "fr": "Une clé unique par action, vérifiée avant d'agir",
+      "en": "A unique key per action, checked before acting"
+     },
+     "any": [
+      "cle (unique|d'idempotence)",
+      "idempotency.?key",
+      "unique (key|id)",
+      "identifiant unique",
+      "deja (fait|traite)",
+      "already (done|processed)"
+     ]
+    }
+   ],
+   "hints": {
+    "fr": [
+     "Le délai dépassé prouve-t-il que l'action n'a pas eu lieu ?"
+    ],
+    "en": [
+     "Does a timeout prove the action did not happen?"
+    ]
+   },
+   "model": {
+    "fr": "Quand l'action n'est pas idempotente : un délai dépassé ne prouve pas qu'elle a échoué, et le réessai peut payer ou envoyer deux fois. On s'en protège avec une clé d'idempotence unique par action, que le serveur vérifie avant d'agir.",
+    "en": "When the action is not idempotent: a timeout does not prove it failed, and the retry may pay or send twice. Protect against it with a unique idempotency key per action, checked by the server before acting."
+   }
+  }
+ ],
+ "explanation": {
+  "fr": "```python\nclass TransientError(Exception): ...\n\ndef call_with_retry(fn, *, tries=3, base_delay=0.5, sleep=time.sleep):\n    if tries < 1:\n        raise ValueError(\"tries must be >= 1\")\n    for attempt in range(1, tries + 1):\n        try:\n            return fn()\n        except TransientError:\n            if attempt == tries:\n                raise\n            sleep(base_delay * 2 ** (attempt - 1) * (1 + random.random() * 0.1))\n```\n\nCinq points à dire à voix haute :\n\n1. On ne réessaie que les erreurs **transitoires** (limitation de débit, délai, 503).\n2. L'attente double, avec un peu de hasard (*jitter*).\n3. `sleep` est injecté : le test tourne en 0 seconde.\n4. On ne réessaie une écriture que si elle est **idempotente**.\n5. Le dernier échec remonte, et le mode de secours écrit la raison.",
+  "en": "```python\nclass TransientError(Exception): ...\n\ndef call_with_retry(fn, *, tries=3, base_delay=0.5, sleep=time.sleep):\n    if tries < 1:\n        raise ValueError(\"tries must be >= 1\")\n    for attempt in range(1, tries + 1):\n        try:\n            return fn()\n        except TransientError:\n            if attempt == tries:\n                raise\n            sleep(base_delay * 2 ** (attempt - 1) * (1 + random.random() * 0.1))\n```\n\nFive points to say out loud:\n\n1. Retry only **transient** errors (throttling, timeouts, 503).\n2. The wait doubles, with a little randomness (*jitter*).\n3. `sleep` is injected: the test runs in 0 seconds.\n4. Retry a write only if it is **idempotent**.\n5. The last failure propagates, and the fallback logs the reason."
+ }
+}

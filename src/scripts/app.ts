@@ -11,6 +11,8 @@ type Attempt = {
   scores: number[]; // 4 criteria, 0 to 2
   total: number; // 0 to 8
   withSolution: boolean;
+  completeness?: number; // 0 to 1, share of deliverables fully right
+  hints?: number;
   proof: string;
   stuck: string;
 };
@@ -47,6 +49,8 @@ function normalise(x: unknown): Attempt | null {
     scores: Array.isArray(e.scores) ? (e.scores as number[]) : [],
     total: e.total,
     withSolution: Boolean(e.withSolution ?? e.revealed),
+    completeness: typeof e.completeness === "number" ? e.completeness : undefined,
+    hints: typeof e.hints === "number" ? e.hints : undefined,
     proof: typeof e.proof === "string" ? e.proof : "",
     stuck: typeof e.stuck === "string" ? e.stuck : "",
   };
@@ -187,7 +191,71 @@ type DrillStrings = {
   hide: string;
   timer: Record<"start" | "pause" | "resume" | "reset", string>;
   timerState: Record<"idle" | "running" | "over" | "twice", string>;
+  validate: string;
+  runTests: string;
+  running: string;
+  loadingPy: string;
+  pyFailed: string;
+  timeoutMsg: string;
+  answerError: string;
+  testsScore: string;
+  conceptsScore: string;
+  missingConcept: string;
+  right: string;
+  wrong: string;
+  hintOf: string;
+  hintsUsed: string;
+  untouched: string;
 };
+
+type TestResult = { error: string | null; tests: { name: string; ok: boolean; msg?: string }[] };
+
+/** One Python worker for the page; recreated if an answer runs too long. */
+class PythonRunner {
+  private worker: Worker | null = null;
+  private seq = 0;
+  private pending = new Map<number, (r: TestResult) => void>();
+  constructor(private base: string) {}
+
+  private ensure(): Worker {
+    if (!this.worker) {
+      this.worker = new Worker(new URL("./py-worker.ts", import.meta.url), { type: "module" });
+      this.worker.onmessage = (e: MessageEvent) => {
+        const { id, result } = e.data ?? {};
+        const done = this.pending.get(id);
+        if (done) {
+          this.pending.delete(id);
+          done(result);
+        }
+      };
+    }
+    return this.worker;
+  }
+
+  run(code: string, tests: string, timeoutMs = 10_000): Promise<TestResult | "timeout"> {
+    const worker = this.ensure();
+    const id = ++this.seq;
+    return new Promise((resolve) => {
+      const timer = window.setTimeout(() => {
+        this.pending.delete(id);
+        worker.terminate();
+        this.worker = null;
+        resolve("timeout");
+      }, timeoutMs);
+      this.pending.set(id, (r) => {
+        window.clearTimeout(timer);
+        resolve(r);
+      });
+      worker.postMessage({ id, base: this.base, code, tests });
+    });
+  }
+}
+
+/** Lower case, no accents, straight apostrophes: what the concept patterns expect. */
+const fold = (s: string) =>
+  s.replace(/’/g, "'").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+type Draft = { answers: Record<string, string>; scores: Record<string, number>; hints: Record<string, number>; elapsed?: number };
 
 function setupDrill(): void {
   const article = document.querySelector<HTMLElement>("article.drill");
@@ -196,16 +264,24 @@ function setupDrill(): void {
   const track = article.dataset.track!;
   const target = Number(article.dataset.minutes) * 60;
   const s = strings<DrillStrings>(article);
+  const draftKey = `drills.draft.${track}:${id}`;
+  const runner = new PythonRunner(base);
+  const questions = [...article.querySelectorAll<HTMLElement>(".q")];
+  let draft: Draft = read<Draft>(draftKey, { answers: {}, scores: {}, hints: {} });
+  const saveDraft = () => write(draftKey, draft);
 
-  // Timer
+  // ----- timer: starts by itself at the first answer -----
   const display = document.getElementById("timer-display")!;
   const state = document.getElementById("timer-state")!;
   const bar = document.getElementById("timer-bar")!;
   const toggle = document.getElementById("timer-toggle") as HTMLButtonElement;
   const crt = article.querySelector<HTMLElement>(".crt")!;
-  let elapsed = 0;
+  // Time already spent survives a reload: it is kept in the draft, paused.
+  let elapsed = draft.elapsed ?? 0;
   let startedAt = 0;
   let ticking: number | undefined;
+  let overAnnounced = elapsed > target;
+  let lastSaved = 0;
 
   const seconds = () => elapsed + (ticking ? Math.floor((Date.now() - startedAt) / 1000) : 0);
   const paintTimer = () => {
@@ -217,16 +293,40 @@ function setupDrill(): void {
     if (sec > target * 2) state.textContent = s.timerState.twice;
     else if (sec > target) state.textContent = s.timerState.over;
     else state.textContent = ticking ? s.timerState.running : s.timerState.idle;
+    if (ticking && Date.now() - lastSaved > 5000) {
+      lastSaved = Date.now();
+      draft.elapsed = sec;
+      saveDraft();
+    }
+    if (sec > target && !overAnnounced) {
+      overAnnounced = true;
+      crt.classList.add("is-alarm");
+      window.setTimeout(() => crt.classList.remove("is-alarm"), 1600);
+    }
+    paintScore();
+  };
+  const startTimer = () => {
+    if (ticking) return;
+    startedAt = Date.now();
+    ticking = window.setInterval(paintTimer, 250);
+    toggle.textContent = s.timer.pause;
+    crt.classList.add("is-running");
+    paintTimer();
   };
   const stopTimer = () => {
     if (ticking) elapsed = seconds();
     window.clearInterval(ticking);
     ticking = undefined;
     crt.classList.remove("is-running");
+    draft.elapsed = elapsed;
+    saveDraft();
   };
   const resetTimer = () => {
     stopTimer();
     elapsed = 0;
+    draft.elapsed = 0;
+    saveDraft();
+    overAnnounced = false;
     toggle.textContent = s.timer.start;
     paintTimer();
   };
@@ -234,50 +334,287 @@ function setupDrill(): void {
     if (ticking) {
       stopTimer();
       toggle.textContent = s.timer.resume;
-    } else {
-      startedAt = Date.now();
-      ticking = window.setInterval(paintTimer, 250);
-      toggle.textContent = s.timer.pause;
-      crt.classList.add("is-running");
-    }
-    paintTimer();
+      paintTimer();
+    } else startTimer();
   });
   document.getElementById("timer-reset")!.addEventListener("click", resetTimer);
 
-  // Solution: can be opened and closed again; opening it marks this attempt only.
+  // ----- questions -----
+  const setScore = (q: HTMLElement, value: number | undefined) => {
+    const badge = q.querySelector<HTMLElement>("[data-q-score]")!;
+    if (value === undefined) {
+      badge.textContent = "";
+      badge.className = "q-score";
+    } else {
+      badge.textContent = `${Math.round(value * 100)} %`;
+      badge.className = `q-score ${value >= 1 ? "is-full" : value > 0 ? "is-part" : "is-zero"}`;
+    }
+    q.classList.toggle("is-done", value !== undefined && value >= 1);
+  };
+
+  const feedbackList = (items: { ok: boolean; html: string; msg?: string }[], head: string) => {
+    const wrap = document.createElement("div");
+    const h = document.createElement("p");
+    h.className = "fb-head";
+    h.textContent = head;
+    const ul = document.createElement("ul");
+    ul.className = "fb-list";
+    for (const it of items) {
+      const li = document.createElement("li");
+      li.className = it.ok ? "ok" : "ko";
+      const label = document.createElement("span");
+      label.innerHTML = it.html;
+      li.append(label);
+      if (it.msg) {
+        const m = document.createElement("code");
+        m.className = "fb-msg";
+        m.textContent = it.msg;
+        li.append(m);
+      }
+      ul.append(li);
+    }
+    wrap.append(h, ul);
+    return wrap;
+  };
+
+  const check = async (q: HTMLElement, quiet = false) => {
+    const qid = q.dataset.qid!;
+    const type = q.dataset.type!;
+    const fb = q.querySelector<HTMLElement>("[data-feedback]")!;
+    const btn = q.querySelector<HTMLButtonElement>("[data-check]")!;
+    let score = 0;
+
+    if (type === "choice") {
+      const picked = q.querySelector<HTMLInputElement>("input[type=radio]:checked");
+      if (!picked) return;
+      const correct = picked.value === q.querySelector<HTMLElement>("[data-answer-choice]")!.dataset.correct;
+      score = correct ? 1 : 0;
+      fb.className = `q-feedback ${correct ? "is-ok" : "is-ko"}`;
+      fb.textContent = correct ? s.right : s.wrong;
+      if (correct) {
+        const why = q.querySelector<HTMLElement>("[data-model] p");
+        if (why) {
+          const p = document.createElement("p");
+          p.innerHTML = why.innerHTML;
+          fb.append(p);
+        }
+      }
+    } else if (type === "text") {
+      const text = fold((q.querySelector<HTMLTextAreaElement>("[data-answer]")!).value);
+      if (!text.trim()) return;
+      const concepts = JSON.parse(q.querySelector("[data-concepts]")!.textContent!) as { label: string; any: string[] }[];
+      const found = concepts.map((c) => c.any.some((p) => new RegExp(p).test(text)));
+      score = found.filter(Boolean).length / concepts.length;
+      const revealed = article.classList.contains("is-solution-open");
+      fb.className = "q-feedback";
+      fb.replaceChildren(
+        feedbackList(
+          concepts.map((c, i) => ({ ok: found[i], html: found[i] || revealed ? c.label : s.missingConcept })),
+          s.conceptsScore.replace("{n}", String(found.filter(Boolean).length)).replace("{t}", String(concepts.length)),
+        ),
+      );
+    } else {
+      const area = q.querySelector<HTMLTextAreaElement>("[data-answer]")!;
+      const code = area.value;
+      // An untouched starter can pass the "returns None" tests by accident: it scores 0.
+      if (code.trim() === (area.dataset.starter ?? "").trim()) {
+        fb.className = "q-feedback is-ko";
+        fb.textContent = s.untouched;
+        draft.scores[qid] = 0;
+        saveDraft();
+        setScore(q, 0);
+        paintScore();
+        return;
+      }
+      const { tests, labels } = JSON.parse(q.querySelector("[data-tests]")!.textContent!) as { tests: string; labels: Record<string, string> };
+      btn.disabled = true;
+      fb.className = "q-feedback is-busy";
+      fb.textContent = (window as any).__pyReady ? s.running : s.loadingPy;
+      const result = await runner.run(code, tests);
+      (window as any).__pyReady = true;
+      btn.disabled = false;
+      if (result === "timeout") {
+        fb.className = "q-feedback is-ko";
+        fb.textContent = s.timeoutMsg;
+      } else if (result.error && !result.tests.length) {
+        fb.className = "q-feedback is-ko";
+        const p = document.createElement("p");
+        p.textContent = result.error.includes("pyodide") ? s.pyFailed : s.answerError;
+        const c = document.createElement("code");
+        c.className = "fb-msg";
+        c.textContent = result.error;
+        fb.replaceChildren(p, c);
+      } else {
+        const passed = result.tests.filter((r) => r.ok).length;
+        score = result.tests.length ? passed / result.tests.length : 0;
+        fb.className = "q-feedback";
+        fb.replaceChildren(
+          feedbackList(
+            result.tests.map((r) => ({ ok: r.ok, html: labels[r.name] ?? r.name, msg: r.ok ? undefined : r.msg })),
+            s.testsScore.replace("{n}", String(passed)).replace("{t}", String(result.tests.length)),
+          ),
+        );
+      }
+    }
+    const before = draft.scores[qid] ?? 0;
+    draft.scores[qid] = score;
+    saveDraft();
+    setScore(q, score);
+    paintScore();
+    if (!quiet && score >= 1 && before < 1) celebrate(q);
+    if (!quiet && allDone()) {
+      stopTimer();
+      toggle.textContent = s.timer.resume;
+      paintTimer();
+      celebrate(article.querySelector(".score") as HTMLElement, true);
+    }
+  };
+
+  const allDone = () => questions.every((q) => (draft.scores[q.dataset.qid!] ?? 0) >= 1);
+
+  questions.forEach((q) => {
+    const qid = q.dataset.qid!;
+    const answer = q.querySelector<HTMLTextAreaElement>("[data-answer]");
+    const choice = q.querySelector<HTMLElement>("[data-answer-choice]");
+
+    // restore the draft
+    if (answer && draft.answers[qid] !== undefined) answer.value = draft.answers[qid];
+    if (choice && draft.answers[qid] !== undefined) {
+      const radio = choice.querySelector<HTMLInputElement>(`input[value="${draft.answers[qid]}"]`);
+      if (radio) radio.checked = true;
+    }
+    if (draft.scores[qid] !== undefined) {
+      setScore(q, draft.scores[qid]);
+      // Feedback for choices and written answers is cheap to rebuild; code waits for a new run.
+      if (q.dataset.type !== "code") check(q, true);
+    }
+
+    const onInput = (value: string) => {
+      draft.answers[qid] = value;
+      saveDraft();
+      startTimer();
+    };
+    answer?.addEventListener("input", () => onInput(answer.value));
+    choice?.addEventListener("change", (e) => {
+      onInput((e.target as HTMLInputElement).value);
+      check(q);
+    });
+
+    // Tab writes 4 spaces in code; Escape first, then Tab, leaves the field.
+    if (answer?.classList.contains("code-input")) {
+      let escaped = false;
+      answer.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") escaped = true;
+        if (e.key === "Tab" && !escaped && !e.shiftKey) {
+          e.preventDefault();
+          const { selectionStart: a, selectionEnd: b, value } = answer;
+          answer.value = value.slice(0, a) + "    " + value.slice(b);
+          answer.selectionStart = answer.selectionEnd = a + 4;
+          onInput(answer.value);
+        }
+        if (e.key !== "Escape" && e.key !== "Tab") escaped = false;
+      });
+    }
+
+    q.querySelector("[data-check]")!.addEventListener("click", () => check(q));
+
+    q.querySelector("[data-reset-code]")?.addEventListener("click", () => {
+      if (!answer) return;
+      answer.value = answer.dataset.starter ?? "";
+      onInput(answer.value);
+    });
+
+    const hintBtn = q.querySelector<HTMLButtonElement>("[data-hint]");
+    const hintList = q.querySelector<HTMLElement>("[data-hints]")!;
+    const showHints = (n: number) => {
+      const items = [...hintList.querySelectorAll("li")];
+      items.forEach((li, i) => (li.hidden = i >= n));
+      hintList.hidden = n === 0;
+      if (hintBtn) {
+        const total = Number(hintBtn.dataset.total);
+        hintBtn.textContent = s.hintOf.replace("{n}", String(Math.min(n + 1, total))).replace("{t}", String(total));
+        hintBtn.disabled = n >= total;
+      }
+    };
+    showHints(draft.hints[qid] ?? 0);
+    hintBtn?.addEventListener("click", () => {
+      draft.hints[qid] = (draft.hints[qid] ?? 0) + 1;
+      saveDraft();
+      showHints(draft.hints[qid]);
+      paintScore();
+      startTimer();
+    });
+  });
+
+  // ----- solution: can be opened and closed; opening it marks this attempt -----
   const revealButton = document.getElementById("reveal") as HTMLButtonElement;
   const body = document.getElementById("solution-body")!;
   const note = document.getElementById("revealed-note")!;
-  let withSolution = false;
+  let withSolution = read<string[]>("drills.revealed", []).includes(`${track}:${id}`);
   const setSolution = (open: boolean) => {
     body.hidden = !open;
+    article.classList.toggle("is-solution-open", open);
+    article.querySelectorAll<HTMLElement>("[data-model]").forEach((m) => (m.hidden = !open));
     revealButton.textContent = open ? s.hide : s.reveal;
     revealButton.setAttribute("aria-expanded", String(open));
     note.hidden = !withSolution;
   };
   revealButton.addEventListener("click", () => {
     const open = body.hidden;
-    if (open) withSolution = true;
+    if (open && !withSolution) {
+      withSolution = true;
+      write("drills.revealed", [...new Set([...read<string[]>("drills.revealed", []), `${track}:${id}`])]);
+    }
     setSolution(open);
-    updateTotal();
+    paintScore();
   });
+  setSolution(false);
 
-  // Score
+  // ----- score of this attempt: two criteria computed, two self-rated -----
   const form = document.getElementById("grade-form") as HTMLFormElement;
   const totalEl = document.getElementById("total")!;
   const verdict = document.getElementById("verdict")!;
-  const scores = () =>
-    [0, 1, 2, 3].map((i) => Number((form.elements.namedItem(`c${i}`) as RadioNodeList).value || 0));
+  const compEl = document.getElementById("completeness")!;
+  const compBar = document.getElementById("completeness-bar")!;
+  const hintsEl = document.getElementById("hints-used")!;
+
+  const completeness = () =>
+    questions.reduce((sum, q) => sum + (draft.scores[q.dataset.qid!] ?? 0), 0) / Math.max(1, questions.length);
+  const hintCount = () => Object.values(draft.hints).reduce((a, b) => a + b, 0);
+  const autoResult = () => {
+    const c = completeness();
+    if (c >= 0.9 && hintCount() === 0) return 2;
+    return c >= 0.5 ? 1 : 0;
+  };
+  const autoTime = () => {
+    const sec = seconds();
+    if (sec === 0) return 0;
+    return sec <= target ? 2 : sec <= target * 2 ? 1 : 0;
+  };
+  const selfScore = (i: number) => Number((form.elements.namedItem(`c${i}`) as RadioNodeList).value || 0);
+  const scores = () => [autoResult(), autoTime(), selfScore(2), selfScore(3)];
   const total = () => scores().reduce((a, b) => a + b, 0);
-  function updateTotal() {
+
+  function paintScore() {
+    const c = completeness();
+    compEl.textContent = `${Math.round(c * 100)} %`;
+    compBar.style.width = `${c * 100}%`;
+    compBar.classList.toggle("is-full", c >= 1);
+    const n = hintCount();
+    hintsEl.textContent = n ? s.hintsUsed.replace("{n}", String(n)) : "";
+    const [r, tm] = scores();
+    for (const [i, v] of [[0, r], [1, tm]] as const) {
+      const radio = form.querySelector<HTMLInputElement>(`input[name=c${i}][value="${v}"]`);
+      if (radio) radio.checked = true;
+    }
     const acquired = total() >= 7 && !withSolution;
     totalEl.textContent = String(total());
     verdict.textContent = acquired ? s.acquired : withSolution ? s.withSolution : s.notYet;
     verdict.classList.toggle("is-yes", acquired);
   }
-  form.addEventListener("change", updateTotal);
+  form.addEventListener("change", paintScore);
 
-  // History of attempts, with a bar per attempt so progress shows at a glance.
+  // ----- history -----
   const tag = document.getElementById("attempt-tag")!;
   const list = document.getElementById("history-list")!;
   const empty = document.getElementById("history-empty")!;
@@ -304,7 +641,13 @@ function setupDrill(): void {
         score.textContent = `${a.total}/8`;
         const meta = document.createElement("span");
         meta.className = "h-meta";
-        meta.textContent = [shortDate.format(new Date(a.date)), clock(a.seconds), a.withSolution ? s.withSolution : "", a.total === best ? s.best : ""]
+        meta.textContent = [
+          shortDate.format(new Date(a.date)),
+          clock(a.seconds),
+          a.completeness !== undefined ? `${Math.round(a.completeness * 100)} %` : "",
+          a.withSolution ? s.withSolution : "",
+          a.total === best ? s.best : "",
+        ]
           .filter(Boolean)
           .join(", ");
         li.append(label, meter, score, meta);
@@ -315,10 +658,29 @@ function setupDrill(): void {
 
   const newAttempt = () => {
     form.reset();
+    draft = { answers: {}, scores: {}, hints: {}, elapsed: 0 };
+    saveDraft();
     withSolution = false;
+    write("drills.revealed", read<string[]>("drills.revealed", []).filter((x) => x !== `${track}:${id}`));
+    questions.forEach((q) => {
+      const answer = q.querySelector<HTMLTextAreaElement>("[data-answer]");
+      if (answer) answer.value = answer.dataset.starter ?? "";
+      q.querySelectorAll<HTMLInputElement>("input[type=radio]").forEach((r) => (r.checked = false));
+      const fb = q.querySelector<HTMLElement>("[data-feedback]")!;
+      fb.className = "q-feedback";
+      fb.replaceChildren();
+      setScore(q, undefined);
+      const hintList = q.querySelector<HTMLElement>("[data-hints]")!;
+      hintList.hidden = true;
+      hintList.querySelectorAll("li").forEach((li) => (li.hidden = true));
+      const hintBtn = q.querySelector<HTMLButtonElement>("[data-hint]");
+      if (hintBtn) {
+        hintBtn.disabled = false;
+        hintBtn.textContent = s.hintOf.replace("{n}", "1").replace("{t}", hintBtn.dataset.total!);
+      }
+    });
     setSolution(false);
     resetTimer();
-    updateTotal();
   };
 
   form.addEventListener("submit", (event) => {
@@ -334,11 +696,14 @@ function setupDrill(): void {
       scores: scores(),
       total: total(),
       withSolution,
+      completeness: completeness(),
+      hints: hintCount(),
       proof: String(data.get("proof") ?? "").trim(),
       stuck: String(data.get("stuck") ?? "").trim(),
     };
     saveJournal([...journal(), attempt]);
     toast(s.saved);
+    if (attempt.total >= 7 && !attempt.withSolution) celebrate(article.querySelector(".score") as HTMLElement, true);
     newAttempt();
     renderHistory();
     paintProgress();
@@ -350,9 +715,18 @@ function setupDrill(): void {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
-  updateTotal();
+  if (elapsed > 0) toggle.textContent = s.timer.resume;
   paintTimer();
   renderHistory();
+}
+
+/** A short phosphor burst on an element; skipped when the person prefers reduced motion. */
+function celebrate(el: HTMLElement | null, big = false): void {
+  if (!el) return;
+  el.classList.remove("is-celebrating", "is-celebrating-big");
+  void el.offsetWidth;
+  el.classList.add(big ? "is-celebrating-big" : "is-celebrating");
+  window.setTimeout(() => el.classList.remove("is-celebrating", "is-celebrating-big"), 1400);
 }
 
 /* ---------- journal page ---------- */

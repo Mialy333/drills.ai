@@ -1,0 +1,134 @@
+{
+ "id": "r2",
+ "cat": "refactor",
+ "order": 2,
+ "minutes": 25,
+ "title": {
+  "fr": "Les seuils dans une table",
+  "en": "Thresholds in a table"
+ },
+ "source": {
+  "fr": "Black Monday 1987 : seuils de confiance par action",
+  "en": "Black Monday 1987: confidence thresholds per action"
+ },
+ "context": {
+  "fr": "Un modèle de décision renvoie une action et une confiance entre 0 et 1. Le jeu exige plus de confiance avant une action qui coûte cher si elle est fausse (vendre, acheter) qu'avant une action sans risque (demander un conseil).\n\n```python\ndef band_for(action, confidence):\n    if action == \"sell\":\n        if confidence >= 0.75:\n            return \"execute\"\n        if confidence >= 0.5:\n            return \"hesitate\"\n        return \"say_again\"\n    if action == \"buy\":\n        if confidence >= 0.75:\n            return \"execute\"\n        if confidence >= 0.5:\n            return \"hesitate\"\n        return \"say_again\"\n    if confidence >= 0.2:\n        return \"execute\"\n    return \"say_again\"\n```\n\nLe product owner veut pouvoir changer un seuil sans toucher à la logique.",
+  "en": "A decision model returns an action and a confidence between 0 and 1. The game requires more confidence before an action that is costly if wrong (sell, buy) than before a safe one (asking for advice).\n\n```python\ndef band_for(action, confidence):\n    if action == \"sell\":\n        if confidence >= 0.75:\n            return \"execute\"\n        if confidence >= 0.5:\n            return \"hesitate\"\n        return \"say_again\"\n    if action == \"buy\":\n        if confidence >= 0.75:\n            return \"execute\"\n        if confidence >= 0.5:\n            return \"hesitate\"\n        return \"say_again\"\n    if confidence >= 0.2:\n        return \"execute\"\n    return \"say_again\"\n```\n\nThe product owner wants to change a threshold without touching the logic."
+ },
+ "mission": {
+  "fr": "Remplacer les `if` par une table de seuils lue par une seule fonction, sans changer le comportement.",
+  "en": "Replace the `if`s with a threshold table read by a single function, without changing behaviour."
+ },
+ "criteria": {
+  "fr": [
+   "Le comportement est identique sur tous les cas.",
+   "Les seuils vivent dans une table `THRESHOLDS`.",
+   "L'intérêt pour le métier est expliqué."
+  ],
+  "en": [
+   "Behaviour is identical on every case.",
+   "Thresholds live in a `THRESHOLDS` table.",
+   "The benefit for the business is explained."
+  ]
+ },
+ "questions": [
+  {
+   "id": "q1",
+   "type": "code",
+   "prompt": {
+    "fr": "Écris `THRESHOLDS` (action vers `(seuil_exécute, seuil_hésite)`), une valeur `DEFAULT` pour les autres actions, et `band_for` qui lit la table.",
+    "en": "Write `THRESHOLDS` (action to `(execute_threshold, hesitate_threshold)`), a `DEFAULT` for other actions, and `band_for` that reads the table."
+   },
+   "starter": "def band_for(action, confidence):\n    if action == \"sell\":\n        if confidence >= 0.75:\n            return \"execute\"\n        if confidence >= 0.5:\n            return \"hesitate\"\n        return \"say_again\"\n    if action == \"buy\":\n        if confidence >= 0.75:\n            return \"execute\"\n        if confidence >= 0.5:\n            return \"hesitate\"\n        return \"say_again\"\n    if confidence >= 0.2:\n        return \"execute\"\n    return \"say_again\"\n",
+   "tests": "\nCASES = [(\"sell\", 0.9, \"execute\"), (\"sell\", 0.75, \"execute\"), (\"sell\", 0.6, \"hesitate\"), (\"sell\", 0.4, \"say_again\"),\n         (\"buy\", 0.8, \"execute\"), (\"buy\", 0.5, \"hesitate\"), (\"buy\", 0.1, \"say_again\"),\n         (\"ask_advice\", 0.44, \"execute\"), (\"ask_advice\", 0.1, \"say_again\"), (\"get_info\", 0.2, \"execute\")]\ndef test_same_behaviour():\n    for action, conf, band in CASES:\n        assert band_for(action, conf) == band, f\"{action} {conf}\"\ndef test_table_exists():\n    assert isinstance(THRESHOLDS, dict) and \"sell\" in THRESHOLDS and \"buy\" in THRESHOLDS\ndef test_table_drives_logic():\n    old = THRESHOLDS[\"sell\"]\n    THRESHOLDS[\"sell\"] = (0.9, 0.5)\n    try:\n        assert band_for(\"sell\", 0.8) == \"hesitate\"\n    finally:\n        THRESHOLDS[\"sell\"] = old\ndef test_new_action_by_data_only():\n    THRESHOLDS[\"short\"] = (0.95, 0.8)\n    try:\n        assert band_for(\"short\", 0.9) == \"hesitate\"\n    finally:\n        del THRESHOLDS[\"short\"]\n",
+   "labels": {
+    "test_same_behaviour": {
+     "fr": "Même résultat que l'ancien code sur 10 cas",
+     "en": "Same result as the old code on 10 cases"
+    },
+    "test_table_exists": {
+     "fr": "Une table `THRESHOLDS` existe",
+     "en": "A `THRESHOLDS` table exists"
+    },
+    "test_table_drives_logic": {
+     "fr": "Changer un seuil dans la table change le résultat",
+     "en": "Changing a threshold in the table changes the result"
+    },
+    "test_new_action_by_data_only": {
+     "fr": "Une nouvelle action s'ajoute par la table seule",
+     "en": "A new action is added through the table alone"
+    }
+   },
+   "hints": {
+    "fr": [
+     "`execute, hesitate = THRESHOLDS.get(action, DEFAULT)`",
+     "Pour les actions sans risque, les deux seuils valent 0,2."
+    ],
+    "en": [
+     "`execute, hesitate = THRESHOLDS.get(action, DEFAULT)`",
+     "For safe actions, both thresholds are 0.2."
+    ]
+   },
+   "model": "THRESHOLDS = {\"sell\": (0.75, 0.5), \"buy\": (0.75, 0.5)}  # (execute, hesitate)\nDEFAULT = (0.2, 0.2)  # safe actions\n\ndef band_for(action, confidence):\n    execute, hesitate = THRESHOLDS.get(action, DEFAULT)\n    if confidence >= execute:\n        return \"execute\"\n    if confidence >= hesitate:\n        return \"hesitate\"\n    return \"say_again\"\n",
+   "broken_check": true
+  },
+  {
+   "id": "q2",
+   "type": "text",
+   "prompt": {
+    "fr": "Qu'est-ce que ce changement apporte au product owner ?",
+    "en": "What does this change give the product owner?"
+   },
+   "concepts": [
+    {
+     "label": {
+      "fr": "La règle devient une donnée lisible sans coder",
+      "en": "The rule becomes data readable without coding"
+     },
+     "any": [
+      "donnee",
+      "\\bdata\\b",
+      "lisible",
+      "readable",
+      "sans (savoir )?coder",
+      "without coding",
+      "tableau",
+      "table"
+     ]
+    },
+    {
+     "label": {
+      "fr": "On change un seuil sans toucher à la logique, donc moins de risque",
+      "en": "A threshold changes without touching logic, so less risk"
+     },
+     "any": [
+      "sans toucher",
+      "without touching",
+      "(une|1) ligne",
+      "one line",
+      "risque",
+      "risk",
+      "logique",
+      "logic"
+     ]
+    }
+   ],
+   "hints": {
+    "fr": [
+     "Qui peut relire `THRESHOLDS` sans connaître Python ?"
+    ],
+    "en": [
+     "Who can read `THRESHOLDS` without knowing Python?"
+    ]
+   },
+   "model": {
+    "fr": "La règle métier devient une donnée lisible par quelqu'un qui ne code pas. Changer un seuil, c'est changer une ligne de la table, sans toucher à la logique : moins de risque de casser autre chose.",
+    "en": "The business rule becomes data a non-developer can read. Changing a threshold means changing one line of the table, without touching the logic: less risk of breaking something else."
+   }
+  }
+ ],
+ "explanation": {
+  "fr": "```python\nTHRESHOLDS = {\"sell\": (0.75, 0.5), \"buy\": (0.75, 0.5)}  # (exécute, hésite)\nDEFAULT = (0.2, 0.2)  # actions sans risque\n\ndef band_for(action: str, confidence: float) -> str:\n    execute, hesitate = THRESHOLDS.get(action, DEFAULT)\n    if confidence >= execute:\n        return \"execute\"\n    return \"hesitate\" if confidence >= hesitate else \"say_again\"\n```\n\nLes noms de bandes sont à aligner sur ceux de ton `api/main.py`. Ce qu'un CTO apprécie : la règle métier devient une donnée lisible par quelqu'un qui ne code pas, et un seuil se change sans toucher à la logique.",
+  "en": "```python\nTHRESHOLDS = {\"sell\": (0.75, 0.5), \"buy\": (0.75, 0.5)}  # (execute, hesitate)\nDEFAULT = (0.2, 0.2)  # safe actions\n\ndef band_for(action: str, confidence: float) -> str:\n    execute, hesitate = THRESHOLDS.get(action, DEFAULT)\n    if confidence >= execute:\n        return \"execute\"\n    return \"hesitate\" if confidence >= hesitate else \"say_again\"\n```\n\nAlign the band names with your `api/main.py`. What a CTO likes: the business rule becomes data a non-developer can read, and a threshold changes without touching logic."
+ }
+}

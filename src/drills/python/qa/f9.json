@@ -1,0 +1,134 @@
+{
+ "id": "f9",
+ "cat": "formats",
+ "order": 9,
+ "minutes": 10,
+ "title": {
+  "fr": "Raconter un bug de l'IA en 2 minutes",
+  "en": "Tell an AI bug story in 2 minutes"
+ },
+ "source": {
+  "fr": "Question d'entretien 2026 : « Racontez un bug introduit par l'IA »",
+  "en": "2026 interview question: \"Tell us about a bug the AI introduced\""
+ },
+ "context": {
+  "fr": "En 2026, presque tous les entretiens posent une question sur ton usage de l'IA. La meilleure réponse est une histoire vraie, courte, avec un chiffre. Choisis un bug introduit par un assistant IA dans un de tes projets.",
+  "en": "In 2026, almost every interview asks about how you use AI. The best answer is a true story, short, with a number. Pick a bug an AI assistant introduced in one of your projects."
+ },
+ "mission": {
+  "fr": "Écrire ton histoire en 5 à 8 phrases, puis l'entraîner à voix haute en moins de 2 minutes.",
+  "en": "Write your story in 5 to 8 sentences, then practise it out loud in under 2 minutes."
+ },
+ "criteria": {
+  "fr": [
+   "L'histoire a les cinq temps : contexte, symptôme chiffré, détection, cause, ce que tu vérifies depuis."
+  ],
+  "en": [
+   "The story has all five beats: context, measured symptom, detection, cause, what you check since."
+  ]
+ },
+ "questions": [
+  {
+   "id": "q1",
+   "type": "text",
+   "prompt": {
+    "fr": "Écris ton histoire.",
+    "en": "Write your story."
+   },
+   "concepts": [
+    {
+     "label": {
+      "fr": "Le contexte : le projet, en une phrase",
+      "en": "The context: the project, in one sentence"
+     },
+     "any": [
+      "projet",
+      "project",
+      "agent",
+      "app",
+      "api",
+      "(sur|on) mon",
+      "bootcamp",
+      "hackathon"
+     ]
+    },
+    {
+     "label": {
+      "fr": "Le symptôme, avec un chiffre",
+      "en": "The symptom, with a number"
+     },
+     "any": [
+      "\\d"
+     ]
+    },
+    {
+     "label": {
+      "fr": "Comment tu l'as détecté",
+      "en": "How you spotted it"
+     },
+     "any": [
+      "(j'ai |i )?(vu|remarque|detecte|repere|noticed|spotted|saw|found)",
+      "trace",
+      "log",
+      "grep",
+      "test",
+      "en (relisant|comparant)",
+      "by (reading|comparing)"
+     ]
+    },
+    {
+     "label": {
+      "fr": "La cause",
+      "en": "The cause"
+     },
+     "any": [
+      "cause",
+      "parce que",
+      "because",
+      "alors que",
+      "\\bwhile\\b",
+      "assistant",
+      "en fait",
+      "actually",
+      "venait de",
+      "came from",
+      "l'ia (avait|a)",
+      "the ai (had|has)?"
+     ]
+    },
+    {
+     "label": {
+      "fr": "Ce que tu vérifies depuis",
+      "en": "What you check since"
+     },
+     "any": [
+      "depuis",
+      "since",
+      "maintenant",
+      "now i",
+      "desormais",
+      "from then on",
+      "toujours",
+      "always"
+     ]
+    }
+   ],
+   "hints": {
+    "fr": [
+     "Contexte, symptôme, comment tu l'as vu, cause, ce que tu vérifies depuis : une phrase chacun."
+    ],
+    "en": [
+     "Context, symptom, how you saw it, cause, what you check since: one sentence each."
+    ]
+   },
+   "model": {
+    "fr": "Sur mon agent de recherche, un score est tombé à 4/10 après un changement censé l'améliorer. En relisant la commande du correcteur, j'ai vu qu'il lisait `agent.py`, alors que l'assistant avait copié la nouvelle version sous `agent-2.py` : je mesurais l'ancien code. Depuis, avant de lire un score, je vérifie quel fichier tourne, avec un `grep` sur une phrase propre à la nouvelle version.",
+    "en": "On my research agent, a score dropped to 4/10 after a change meant to improve it. Rereading the grader's command, I saw it read `agent.py`, while the assistant had copied the new version as `agent-2.py`: I was measuring the old code. Since then, before reading a score, I check which file runs, with a `grep` on a sentence unique to the new version."
+   }
+  }
+ ],
+ "explanation": {
+  "fr": "Structure : **contexte**, **symptôme** (le chiffre), **comment tu l'as vu**, **cause**, **ce que tu vérifies depuis**.\n\n> Sur mon agent de recherche, un score est passé à 4/10 après un changement censé l'améliorer. Le grader lisait `agent.py`, alors que la nouvelle version avait été copiée sous `agent-2.py` : je mesurais l'ancien code. Depuis, avant de lire un score, je vérifie quel fichier tourne, avec un `grep` sur une phrase propre à la nouvelle version.\n\nCe qu'un CTO entend : tu ne crois pas un chiffre avant de savoir ce qu'il mesure.",
+  "en": "Structure: **context**, **symptom** (the number), **how you spotted it**, **cause**, **what you check since**.\n\n> On my research agent, a score dropped to 4/10 after a change meant to improve it. The grader read `agent.py`, while the new version had been copied as `agent-2.py`: I was measuring the old code. Since then, before reading a score, I check which file runs, with a `grep` on a sentence unique to the new version.\n\nWhat a CTO hears: you do not trust a number before you know what it measures."
+ }
+}

@@ -1,0 +1,155 @@
+{
+ "id": "l3",
+ "cat": "read",
+ "order": 3,
+ "minutes": 12,
+ "title": {
+  "fr": "Isolation des clients",
+  "en": "Customer isolation"
+ },
+ "source": {
+  "fr": "NovaMart : un agent ne doit voir que les données du client de la session",
+  "en": "NovaMart: an agent must only see the session customer's data"
+ },
+ "context": {
+  "fr": "Dans un support client multi-agents, l'orchestrateur lie chaque session à un client. Les outils de base de données vérifient qu'on ne demande pas les données d'un autre client :\n\n```python\ndef check_scope(bound_customer, requested_customer):\n    \"\"\"Called by every database tool. Returns None if access is allowed, else a refusal.\"\"\"\n    if bound_customer and requested_customer != bound_customer:\n        return {\"access_denied\": True}\n    return None\n```",
+  "en": "In multi-agent customer support, the orchestrator binds each session to a customer. The database tools check that nobody asks for another customer's data:\n\n```python\ndef check_scope(bound_customer, requested_customer):\n    \"\"\"Called by every database tool. Returns None if access is allowed, else a refusal.\"\"\"\n    if bound_customer and requested_customer != bound_customer:\n        return {\"access_denied\": True}\n    return None\n```"
+ },
+ "mission": {
+  "fr": "Trouver le cas dangereux, le nommer, et réécrire la règle.",
+  "en": "Find the dangerous case, name it, and rewrite the rule."
+ },
+ "criteria": {
+  "fr": [
+   "Le cas sans client lié est identifié.",
+   "Le principe est nommé.",
+   "La nouvelle règle refuse par défaut."
+  ],
+  "en": [
+   "The no-customer-bound case is identified.",
+   "The principle is named.",
+   "The new rule refuses by default."
+  ]
+ },
+ "questions": [
+  {
+   "id": "q1",
+   "type": "choice",
+   "prompt": {
+    "fr": "Que renvoie `check_scope(None, \"C42\")` ?",
+    "en": "What does `check_scope(None, \"C42\")` return?"
+   },
+   "options": {
+    "fr": [
+     "`{\"access_denied\": True}`",
+     "`None` : l'accès est autorisé",
+     "Une `TypeError`"
+    ],
+    "en": [
+     "`{\"access_denied\": True}`",
+     "`None`: access is allowed",
+     "A `TypeError`"
+    ]
+   },
+   "answer": 1,
+   "why": {
+    "fr": "`None` est faux en Python : la condition saute, tout client est accessible.",
+    "en": "`None` is falsy in Python: the condition is skipped, any customer is reachable."
+   }
+  },
+  {
+   "id": "q2",
+   "type": "text",
+   "prompt": {
+    "fr": "Pourquoi est-ce un risque en production, même si aujourd'hui l'orchestrateur lie toujours un client ?",
+    "en": "Why is this a production risk, even if today the orchestrator always binds a customer?"
+   },
+   "concepts": [
+    {
+     "label": {
+      "fr": "C'est du fail open : sans information, l'accès est ouvert",
+      "en": "It fails open: without information, access is open"
+     },
+     "any": [
+      "fails? ?.?open",
+      "ouvert par defaut",
+      "open by default",
+      "autorise par defaut",
+      "allowed by default"
+     ]
+    },
+    {
+     "label": {
+      "fr": "Une future route qui oublie de lier le client exposerait tout le monde",
+      "en": "A future route that forgets to bind would expose everyone"
+     },
+     "any": [
+      "oubli",
+      "forget",
+      "futur",
+      "future",
+      "nouvelle route",
+      "new route",
+      "tous les clients",
+      "every customer",
+      "all customers"
+     ]
+    }
+   ],
+   "hints": {
+    "fr": [
+     "Que se passe-t-il le jour où quelqu'un ajoute un nouvel agent et oublie une ligne ?"
+    ],
+    "en": [
+     "What happens the day someone adds a new agent and forgets one line?"
+    ]
+   },
+   "model": {
+    "fr": "La règle échoue en position ouverte (fail open) : sans client lié, tout est autorisé. Le jour où une nouvelle route oublie de lier le client, tous les clients sont exposés, sans aucune erreur. La sécurité ne doit pas dépendre de la discipline de chaque appelant.",
+    "en": "The rule fails open: with no customer bound, everything is allowed. The day a new route forgets to bind the customer, every customer is exposed, with no error. Security must not depend on every caller's discipline."
+   }
+  },
+  {
+   "id": "q3",
+   "type": "code",
+   "prompt": {
+    "fr": "Réécris `check_scope` pour qu'elle refuse par défaut : l'accès n'est autorisé que si un client est lié et que c'est celui demandé.",
+    "en": "Rewrite `check_scope` so it refuses by default: access is allowed only if a customer is bound and it is the one requested."
+   },
+   "starter": "def check_scope(bound_customer, requested_customer):\n    \"\"\"Called by every database tool. Returns None if access is allowed, else a refusal.\"\"\"\n    if bound_customer and requested_customer != bound_customer:\n        return {\"access_denied\": True}\n    return None\n",
+   "tests": "\ndef test_same_customer_allowed():\n    assert check_scope(\"C42\", \"C42\") is None\ndef test_other_customer_denied():\n    assert check_scope(\"C42\", \"C7\") == {\"access_denied\": True}\ndef test_no_customer_denied():\n    assert check_scope(None, \"C42\") == {\"access_denied\": True}\ndef test_empty_customer_denied():\n    assert check_scope(\"\", \"C42\") == {\"access_denied\": True}\n",
+   "labels": {
+    "test_same_customer_allowed": {
+     "fr": "Le bon client est autorisé",
+     "en": "The right customer is allowed"
+    },
+    "test_other_customer_denied": {
+     "fr": "Un autre client est refusé",
+     "en": "Another customer is denied"
+    },
+    "test_no_customer_denied": {
+     "fr": "Sans client lié, c'est refusé",
+     "en": "With no customer bound, it is denied"
+    },
+    "test_empty_customer_denied": {
+     "fr": "Une chaîne vide est refusée",
+     "en": "An empty string is denied"
+    }
+   },
+   "hints": {
+    "fr": [
+     "Écris d'abord la seule condition qui autorise, puis refuse tout le reste."
+    ],
+    "en": [
+     "Write the only condition that allows first, then refuse everything else."
+    ]
+   },
+   "model": "def check_scope(bound_customer, requested_customer):\n    \"\"\"Called by every database tool. Returns None if access is allowed, else a refusal.\"\"\"\n    if bound_customer and requested_customer == bound_customer:\n        return None\n    return {\"access_denied\": True}\n",
+   "broken_check": true
+  }
+ ],
+ "explanation": {
+  "fr": "1. Dans les tests et les scripts qui appellent les outils directement, sans orchestrateur.\n2. **Oui, c'est du fail open.** Une future route qui oublie de lier le client donnerait accès à tous les clients, sans erreur. La règle : refuser quand aucun client n'est lié, et que les tests lient un client explicitement. La sécurité par défaut ne doit pas dépendre de la discipline de chaque appelant.",
+  "en": "1. In tests and scripts that call the tools directly, without the orchestrator.\n2. **Yes, it fails open.** A future route that forgets to bind the customer would expose every customer, with no error. The rule: refuse when no customer is bound, and make tests bind one explicitly. Safe defaults must not depend on every caller's discipline."
+ }
+}
