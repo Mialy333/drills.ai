@@ -1,0 +1,93 @@
+---
+import App from "../../layouts/App.astro";
+import { drills, href, LANGS, type Lang } from "../../lib/drills";
+import { rotation, ui } from "../../lib/i18n";
+
+export function getStaticPaths() {
+  return LANGS.map((lang) => ({ params: { lang } }));
+}
+const lang = Astro.params.lang as Lang;
+const t = ui[lang];
+const byId = Object.fromEntries(drills(lang).map((d) => [d.id, d]));
+const fmt = new Intl.DateTimeFormat(t.htmlLang, { day: "numeric", month: "short" });
+
+function cell(ids: string[]) {
+  return ids.map((id) => {
+    if (id === "catch-up") return { label: t.catchUp };
+    if (id === "mock") return { label: t.mockInterview };
+    return { id, label: byId[id].title };
+  });
+}
+---
+
+<App lang={lang} title={t.brand} path="/">
+  <section class="hero">
+    <img class="hero-art" src={href("/hero.webp")} alt={t.heroAlt} width="1504" height="628" fetchpriority="high" />
+    <div class="hero-text">
+      <h1>{t.brand}</h1>
+      <p>{t.tagline}</p>
+      <a class="btn btn-primary" href={href(`/${lang}/drills/d5/`)}>{t.start}</a>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>{t.week}</h2>
+    <p class="lead">{t.weekLead}</p>
+    <div class="table-wrap">
+      <table class="rotation">
+        <thead>
+          <tr>{t.weekCols.map((c) => <th scope="col">{c}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rotation.map((w) => (
+            <tr data-week={w.week}>
+              <th scope="row">{fmt.format(new Date(`${w.week}T12:00:00`))}</th>
+              {[w.mon, w.wed, w.fri].map((ids) => (
+                <td>
+                  {cell(ids).map((c) =>
+                    c.id ? (
+                      <a class="chip" href={href(`/${lang}/drills/${c.id}/`)}>
+                        <span class="chip-id">{c.id.toUpperCase()}</span> {c.label}
+                      </a>
+                    ) : (
+                      <span class="chip chip-plain">{c.label}</span>
+                    ),
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="two-col">
+    <section class="block">
+      <h2>{t.rules}</h2>
+      <ol class="rules">
+        {t.rulesList.map((r) => <li>{r}</li>)}
+      </ol>
+    </section>
+
+    <section class="block">
+      <h2>{t.grid}</h2>
+      <div class="table-wrap">
+        <table class="grid">
+          <thead>
+            <tr>{t.gridCols.map((c) => <th scope="col">{c}</th>)}</tr>
+          </thead>
+          <tbody>
+            {t.gridRows.map((row) => (
+              <tr>
+                <th scope="row">{row[0]}</th>
+                {row.slice(1).map((v) => <td>{v}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="note">{t.gridNote}</p>
+    </section>
+  </div>
+</App>

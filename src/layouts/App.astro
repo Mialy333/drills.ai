@@ -1,0 +1,108 @@
+---
+import "@fontsource/chakra-petch/400.css";
+import "@fontsource/chakra-petch/600.css";
+import "@fontsource/chakra-petch/700.css";
+import "@fontsource/vt323/400.css";
+import "../styles/global.css";
+import { CATEGORIES, drills, href, type Lang } from "../lib/drills";
+import { otherLang, ui } from "../lib/i18n";
+
+interface Props {
+  lang: Lang;
+  title: string;
+  /** Path of this page without the language prefix, e.g. "/drills/d1/". */
+  path: string;
+  activeId?: string;
+}
+const { lang, title, path, activeId } = Astro.props;
+const t = ui[lang];
+const list = drills(lang);
+const pageTitle = title === t.brand ? t.brand : `${title} | ${t.brand}`;
+---
+
+<!doctype html>
+<html lang={t.htmlLang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={t.tagline} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={t.tagline} />
+    <meta property="og:image" content={new URL(href("/og.jpg"), Astro.site)} />
+    <link rel="icon" href={href("/icons/icon.svg")} type="image/svg+xml" />
+    <link rel="apple-touch-icon" href={href("/icons/icon-192.png")} />
+    <link rel="manifest" href={href("/manifest.webmanifest")} />
+    <meta name="theme-color" content="#1C1638" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#EEE8FF" media="(prefers-color-scheme: light)" />
+    <link rel="alternate" hreflang={otherLang(lang)} href={href(`/${otherLang(lang)}${path}`)} />
+    <script is:inline>
+      // Set the theme before first paint, so the page never flashes the wrong colours.
+      (() => {
+        let theme = null;
+        try { theme = localStorage.getItem("drills.theme"); } catch {}
+        if (theme !== "light" && theme !== "dark") {
+          theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+  </head>
+  <body data-lang={lang} data-base={href("/")}>
+    <a class="skip" href="#main">{lang === "fr" ? "Aller au contenu" : "Skip to content"}</a>
+    <header class="bar">
+      <a class="brand" href={href(`/${lang}/`)}>
+        <img src={href("/icons/icon.svg")} alt="" width="28" height="28" />
+        <span>{t.brand}</span>
+      </a>
+      <nav class="bar-nav" aria-label={lang === "fr" ? "Navigation principale" : "Main navigation"}>
+        <a href={href(`/${lang}/`)} aria-current={path === "/" ? "page" : undefined}>{t.nav.home}</a>
+        <a href={href(`/${lang}/journal/`)} aria-current={path === "/journal/" ? "page" : undefined}>{t.nav.journal}</a>
+      </nav>
+      <div class="bar-tools">
+        <a class="tool" href={href(`/${otherLang(lang)}${path}`)} hreflang={otherLang(lang)} aria-label={t.switchLangLabel}>
+          {t.switchLang}
+        </a>
+        <button class="tool" type="button" id="theme-toggle" data-to-dark={t.theme.toDark} data-to-light={t.theme.toLight}>
+          <span class="theme-icon" aria-hidden="true"></span>
+          <span class="theme-label">{t.theme.toDark}</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="shell">
+      <aside class="side" aria-label={lang === "fr" ? "Liste des drills" : "Drill list"}>
+        {CATEGORIES.map((cat) => (
+          <section class="side-group">
+            <h2>{t.cats[cat]}</h2>
+            <ul>
+              {list.filter((d) => d.cat === cat).map((d) => (
+                <li>
+                  <a
+                    href={href(`/${lang}/drills/${d.id}/`)}
+                    aria-current={d.id === activeId ? "page" : undefined}
+                    data-drill-link={d.id}
+                  >
+                    <span class="side-id">{d.id.toUpperCase()}</span>
+                    <span class="side-title">{d.title}</span>
+                    <span class="side-status" data-status-for={d.id}></span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </aside>
+
+      <main id="main" class="main">
+        <slot />
+        <footer class="foot">{t.footer}</footer>
+      </main>
+    </div>
+
+    <div class="toast" role="status" aria-live="polite" id="toast"></div>
+    <script>
+      import "../scripts/app.ts";
+    </script>
+  </body>
+</html>

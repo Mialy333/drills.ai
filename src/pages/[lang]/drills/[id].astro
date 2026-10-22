@@ -1,0 +1,85 @@
+---
+import App from "../../../layouts/App.astro";
+import { drills, LANGS, type Lang } from "../../../lib/drills";
+import { ui } from "../../../lib/i18n";
+
+export function getStaticPaths() {
+  return LANGS.flatMap((lang) =>
+    drills(lang).map((d) => ({ params: { lang, id: d.id }, props: { d } })),
+  );
+}
+const lang = Astro.params.lang as Lang;
+const { d } = Astro.props;
+const t = ui[lang];
+---
+
+<App lang={lang} title={`${d.id.toUpperCase()} ${d.title}`} path={`/drills/${d.id}/`} activeId={d.id}>
+  <article class="drill" data-drill={d.id} data-minutes={d.minutes}>
+    <header class="drill-head">
+      <p class="drill-cat">{t.cats[d.cat]}, {d.id.toUpperCase()}</p>
+      <h1>{d.title}</h1>
+      <dl class="drill-meta">
+        <div><dt>{t.target}</dt><dd>{d.minutes} {t.minutes}</dd></div>
+        <div><dt>{t.source}</dt><dd set:html={d.sourceHtml} /></div>
+      </dl>
+    </header>
+
+    <section class="crt" aria-label={lang === "fr" ? "Chronomètre" : "Timer"}>
+      <div class="crt-screen">
+        <output class="crt-time" id="timer-display" aria-live="off">00:00</output>
+        <p class="crt-state" id="timer-state" data-labels={JSON.stringify(t.timerState)}>{t.timerState.idle}</p>
+        <div class="crt-bar"><span id="timer-bar"></span></div>
+      </div>
+      <div class="crt-keys">
+        <button type="button" class="key key-go" id="timer-toggle" data-labels={JSON.stringify(t.timer)}>{t.timer.start}</button>
+        <button type="button" class="key" id="timer-reset">{t.timer.reset}</button>
+      </div>
+    </section>
+
+    <section class="prose" aria-labelledby="statement-h">
+      <h2 id="statement-h">{t.statement}</h2>
+      <Fragment set:html={d.statementHtml} />
+    </section>
+
+    <section class="solution" aria-labelledby="solution-h">
+      <h2 id="solution-h">{t.solution}</h2>
+      <button type="button" class="btn" id="reveal" aria-expanded="false" aria-controls="solution-body">{t.reveal}</button>
+      <p class="solution-note" id="revealed-note" hidden>{t.revealed}</p>
+      <div class="prose" id="solution-body" hidden set:html={d.solutionHtml} />
+    </section>
+
+    <section class="score" aria-labelledby="score-h">
+      <h2 id="score-h">{t.grade}</h2>
+      <form id="grade-form">
+        <div class="criteria">
+          {t.criteria.map((c, i) => (
+            <fieldset>
+              <legend>{c}</legend>
+              <div class="pick">
+                {[0, 1, 2].map((v) => (
+                  <label>
+                    <input type="radio" name={`c${i}`} value={v} required />
+                    <span>{v}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ))}
+        </div>
+        <p class="total">
+          {t.total} <output id="total">0</output>/8
+          <span class="verdict" id="verdict" data-yes={t.acquired} data-no={t.notYet}></span>
+        </p>
+        <label class="field">
+          <span>{t.proof}</span>
+          <input type="url" name="proof" placeholder={t.proofPlaceholder} inputmode="url" />
+        </label>
+        <label class="field">
+          <span>{t.stuck}</span>
+          <textarea name="stuck" rows="3"></textarea>
+        </label>
+        <button class="btn btn-primary" type="submit" data-saved={t.saved}>{t.save}</button>
+      </form>
+    </section>
+  </article>
+</App>

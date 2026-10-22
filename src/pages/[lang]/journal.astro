@@ -1,0 +1,36 @@
+---
+import App from "../../layouts/App.astro";
+import { drills, LANGS, type Lang } from "../../lib/drills";
+import { ui } from "../../lib/i18n";
+
+export function getStaticPaths() {
+  return LANGS.map((lang) => ({ params: { lang } }));
+}
+const lang = Astro.params.lang as Lang;
+const t = ui[lang];
+const titles = Object.fromEntries(drills(lang).map((d) => [d.id, d.title]));
+---
+
+<App lang={lang} title={t.journalTitle} path="/journal/">
+  <section class="block journal" id="journal" data-titles={JSON.stringify(titles)} data-delete={t.deleteEntry}>
+    <h1>{t.journalTitle}</h1>
+    <p class="lead">{t.journalLead}</p>
+    <div class="journal-tools">
+      <button class="btn" type="button" id="export">{t.exportBtn}</button>
+      <label class="btn">
+        {t.importBtn}
+        <input type="file" id="import" accept="application/json" class="visually-hidden" data-done={t.importDone} data-error={t.importError} />
+      </label>
+    </div>
+    <p class="empty" id="journal-empty">{t.journalEmpty}</p>
+    <div class="table-wrap" id="journal-wrap" hidden>
+      <table class="log">
+        <thead>
+          <tr>{t.journalCols.map((c) => <th scope="col">{c}</th>)}<th scope="col"><span class="visually-hidden">{t.deleteEntry}</span></th></tr>
+        </thead>
+        <tbody id="journal-body"></tbody>
+      </table>
+    </div>
+    <p class="note" id="journal-note" hidden>{t.starNote}</p>
+  </section>
+</App>

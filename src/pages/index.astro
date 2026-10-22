@@ -1,0 +1,27 @@
+---
+import { href } from "../lib/drills";
+const fr = href("/fr/");
+const en = href("/en/");
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Python Drills</title>
+    <link rel="manifest" href={href("/manifest.webmanifest")} />
+    <noscript><meta http-equiv="refresh" content={`0; url=${fr}`} /></noscript>
+    <script is:inline define:vars={{ fr, en }}>
+      let lang = null;
+      try { lang = localStorage.getItem("drills.lang"); } catch {}
+      if (lang !== "fr" && lang !== "en") {
+        lang = (navigator.language || "fr").toLowerCase().startsWith("fr") ? "fr" : "en";
+      }
+      location.replace(lang === "fr" ? fr : en);
+    </script>
+  </head>
+  <body>
+    <p><a href={fr}>Français</a> · <a href={en}>English</a></p>
+  </body>
+</html>

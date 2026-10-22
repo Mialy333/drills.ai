@@ -1,0 +1,16 @@
+{
+  "name": "Python Drills",
+  "short_name": "Drills",
+  "description": "Debugging, refactoring and code-reading drills built from my own AI agent repos. FR/EN.",
+  "start_url": "/python-drills/",
+  "scope": "/python-drills/",
+  "display": "standalone",
+  "background_color": "#1C1638",
+  "theme_color": "#1C1638",
+  "icons": [
+    { "src": "/python-drills/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/python-drills/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/python-drills/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/python-drills/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
