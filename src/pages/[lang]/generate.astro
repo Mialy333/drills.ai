@@ -76,11 +76,18 @@ const lang = Astro.params.lang as Lang;
         .generator-status[data-state="error"] { border-color: var(--warn); color: var(--warn); }
     </style>
 
-    <!-- 1. Key Storage Configuration Box -->
+    <!-- Backend mode keeps the OpenAI key on the server. Browser-key mode remains as a fallback. -->
     <div class="generator-card">
-        <label for="apiKey">{lang === "fr" ? "> CLÉ API OPENAI (conservée dans ce navigateur)" : "> ENTER YOUR OPENAI_API_KEY (Stored locally in your browser)"}</label>
+        <label for="backendUrl">{lang === "fr" ? "> URL DU BACKEND FASTAPI (recommandé)" : "> FASTAPI BACKEND URL (recommended)"}</label>
+        <input type="url" id="backendUrl" placeholder="https://your-api-service.onrender.com" />
+        <p class="generator-help">{lang === "fr" ? "Si ton API est déployée, colle son URL ici. La clé OpenAI reste côté serveur. En local, utilise http://127.0.0.1:8000." : "If your API is deployed, paste its URL here. The OpenAI key stays on the server. Locally, use http://127.0.0.1:8000."}</p>
+        <button id="saveBackendBtn" class="save-key-button" type="button">{lang === "fr" ? "Enregistrer l'URL du backend" : "Save backend URL"}</button>
+    </div>
+
+    <div class="generator-card">
+        <label for="apiKey">{lang === "fr" ? "> CLÉ API OPENAI (mode de secours, conservée dans ce navigateur)" : "> OPENAI API KEY (fallback mode, stored in this browser)"}</label>
         <input type="password" id="apiKey" placeholder="sk-proj-..." />
-        <p class="generator-help">{lang === "fr" ? "Ta clé reste dans ce navigateur. La clé et l’annonce sont envoyées directement à OpenAI pour générer le contenu." : "Your key stays in this browser. The key and job posting are sent directly to OpenAI to generate the content."}</p>
+        <p class="generator-help">{lang === "fr" ? "Utilisée uniquement si aucune URL de backend n'est renseignée. Dans ce mode, la clé et l'annonce sont envoyées directement à OpenAI depuis ton navigateur." : "Used only when no backend URL is configured. In this mode, your key and job posting are sent directly to OpenAI from your browser."}</p>
         <button id="saveKeyBtn" class="save-key-button">{lang === "fr" ? "Enregistrer la clé sur cet appareil" : "Save key on this device"}</button>
     </div>
 
@@ -164,6 +171,8 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
         // UI Element Selectors
         const apiKeyInput = document.querySelector<HTMLInputElement>("#apiKey");
         const saveKeyBtn = document.querySelector<HTMLButtonElement>("#saveKeyBtn");
+        const backendUrlInput = document.querySelector<HTMLInputElement>("#backendUrl");
+        const saveBackendBtn = document.querySelector<HTMLButtonElement>("#saveBackendBtn");
         const jobDescriptionInput = document.querySelector<HTMLTextAreaElement>("#jobDescription");
         const generateBtn = document.querySelector<HTMLButtonElement>("#generateBtn");
         const launchDrill = document.querySelector<HTMLButtonElement>("#launchDrill");
@@ -177,7 +186,9 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
         const dynamicDrillStorageKey = `DRILLS_DYNAMIC_JOB_DATA_${document.documentElement.lang.toUpperCase()}`;
         const copy = {
             savedKey: isFrench ? "Clé enregistrée sur cet appareil." : "Key saved on this device.",
-            missingApiKey: isFrench ? "Saisis ta clé API OpenAI pour continuer." : "Enter your OpenAI API key to continue.",
+            missingApiKey: isFrench ? "Configure l’URL du backend ou saisis ta clé API OpenAI pour continuer." : "Configure a backend URL or enter your OpenAI API key to continue.",
+            invalidBackendUrl: isFrench ? "L’URL du backend doit commencer par http:// ou https://." : "The backend URL must start with http:// or https://.",
+            backendSaved: isFrench ? "URL du backend enregistrée sur cet appareil." : "Backend URL saved on this device.",
             invalidApiKey: isFrench ? "La clé API contient des caractères non ASCII. Recopie-la depuis OpenAI sans guillemets ni espaces." : "The API key contains non-ASCII characters. Copy it again from OpenAI without quotes or spaces.",
             missingPosting: isFrench ? "Colle l'annonce complète pour continuer." : "Paste the complete job posting to continue.",
             unsupportedPosting: isFrench
@@ -242,8 +253,10 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
             return /^[\x21-\x7E]+$/.test(value);
         }
 
-        // On boot: check if a key already exists in browser storage
+        // On boot: restore backend URL and optional browser-side API key.
         try {
+            const cachedBackendUrl = localStorage.getItem("DRILLS_API_BASE_URL");
+            if (cachedBackendUrl && backendUrlInput) backendUrlInput.value = cachedBackendUrl;
             const cachedKey = localStorage.getItem("DRILLS_OPENAI_KEY");
             if (cachedKey && apiKeyInput) apiKeyInput.value = cachedKey;
         } catch {
@@ -263,6 +276,30 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
         } catch {
             // A malformed or unavailable saved payload should not block a new generation.
         }
+
+        // Save the public API base URL; this is not a secret.
+        saveBackendBtn?.addEventListener("click", () => {
+            if (!backendUrlInput) return;
+            const url = backendUrlInput.value.trim().replace(/\\/+$/, "");
+            if (url) {
+                try {
+                    const parsed = new URL(url);
+                    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error("Unsupported protocol");
+                } catch {
+                    setStatus(copy.invalidBackendUrl, "error");
+                    backendUrlInput.focus();
+                    return;
+                }
+            }
+            try {
+                if (url) localStorage.setItem("DRILLS_API_BASE_URL", url);
+                else localStorage.removeItem("DRILLS_API_BASE_URL");
+                backendUrlInput.value = url;
+                setStatus(copy.backendSaved, "success");
+            } catch {
+                setStatus(copy.keySaveFailed, "error");
+            }
+        });
 
         // Save token handler
         saveKeyBtn?.addEventListener("click", () => {
@@ -287,14 +324,25 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
         generateBtn?.addEventListener("click", async () => {
             if (generateBtn.disabled) return;
             const key = apiKeyInput?.value.trim() ?? "";
-            const jobDesc = jobDescriptionInput?.value.trim() ?? "";
+            const backendUrl = (backendUrlInput?.value.trim() ?? "").replace(/\\/+$/, "");
 
-            if (!key) {
+            if (!backendUrl && !key) {
                 setStatus(copy.missingApiKey, "error");
-                apiKeyInput?.focus();
+                if (backendUrlInput) backendUrlInput.focus();
+                else apiKeyInput?.focus();
                 return;
             }
-            if (!isValidApiKeyHeader(key)) {
+            if (backendUrl) {
+                try {
+                    const parsed = new URL(backendUrl);
+                    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error("Unsupported protocol");
+                } catch {
+                    setStatus(copy.invalidBackendUrl, "error");
+                    backendUrlInput?.focus();
+                    return;
+                }
+            }
+            if (!backendUrl && !isValidApiKeyHeader(key)) {
                 setStatus(copy.invalidApiKey, "error");
                 apiKeyInput?.focus();
                 return;
@@ -314,12 +362,8 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
             setStatus(copy.connecting, "busy");
 
             try {
-                setStatus(copy.loadingClient, "busy");
-                const { default: OpenAI } = await import("openai");
-                const openai = new OpenAI({ apiKey: key, dangerouslyAllowBrowser: true });
-
                 setStatus(copy.sending, "busy");
-                
+
                 let learnerContext = "";
                 try {
                     const snapshot: unknown = JSON.parse(localStorage.getItem("drills.assessment.v1") ?? "null");
@@ -330,24 +374,50 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
                             const { correct, total } = score as { correct: unknown; total: unknown };
                             return typeof correct === "number" && typeof total === "number" ? [`${pillar}: ${correct}/${total} quiz answers correct`] : [];
                         });
-                        if (scores.length) learnerContext = `\n\nOPTIONAL LEARNER QUIZ SNAPSHOT (rough signal only):\n${scores.join("\n")}`;
+                        if (scores.length) learnerContext = scores.join("\\n");
                     }
                 } catch {
                     // The job-based roadmap can still be generated without a saved diagnostic.
                 }
 
-                const completion = await openai.chat.completions.create({
-                    model: "gpt-4o-2024-08-06",
-                    messages: [
-                        { role: "system", content: SYSTEM_PROMPT },
-                        { role: "user", content: `OUTPUT LANGUAGE: ${isFrench ? "French" : "English"}.\n\nJOB POSTING:\n${jobDesc}${learnerContext}` }
-                    ],
-                    response_format: zodResponseFormat(DynamicDrillSchema, "drill_generation")
-                });
+                let generatedPayload: unknown;
+                if (backendUrl) {
+                    const response = await fetch(`${backendUrl}/api/drills`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                        body: JSON.stringify({
+                            job_description: jobDesc,
+                            output_language: isFrench ? "fr" : "en",
+                            learner_snapshot: learnerContext || null
+                        })
+                    });
+                    const body: unknown = await response.json().catch(() => null);
+                    if (!response.ok) {
+                        const detail = body && typeof body === "object" && "detail" in body && typeof body.detail === "string"
+                            ? body.detail
+                            : `HTTP ${response.status}`;
+                        throw new Error(detail);
+                    }
+                    generatedPayload = body;
+                } else {
+                    setStatus(copy.loadingClient, "busy");
+                    const { default: OpenAI } = await import("openai");
+                    const openai = new OpenAI({ apiKey: key, dangerouslyAllowBrowser: true });
+                    const learnerSuffix = learnerContext ? `\\n\\nOPTIONAL LEARNER QUIZ SNAPSHOT (rough signal only):\\n${learnerContext}` : "";
+                    const completion = await openai.chat.completions.create({
+                        model: "gpt-4o-2024-08-06",
+                        messages: [
+                            { role: "system", content: SYSTEM_PROMPT },
+                            { role: "user", content: `OUTPUT LANGUAGE: ${isFrench ? "French" : "English"}.\\n\\nJOB POSTING:\\n${jobDesc}${learnerSuffix}` }
+                        ],
+                        response_format: zodResponseFormat(DynamicDrillSchema, "drill_generation")
+                    });
+                    const rawJson = completion.choices[0]?.message.content;
+                    if (!rawJson) throw new Error("Empty response received from OpenAI.");
+                    generatedPayload = JSON.parse(rawJson);
+                }
 
-                const rawJson = completion.choices[0]?.message.content;
-                if (!rawJson) throw new Error("Empty response received from OpenAI.");
-                const validation = DynamicDrillSchema.safeParse(JSON.parse(rawJson));
+                const validation = DynamicDrillSchema.safeParse(generatedPayload);
                 if (!validation.success) throw new Error(`Invalid drill response: ${validation.error.message}`);
                 const structuralDrillJson = validation.data;
                 localStorage.setItem(dynamicDrillStorageKey, JSON.stringify(structuralDrillJson));
@@ -355,7 +425,6 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
                 roadmapTitle?.focus({ preventScroll: true });
                 roadmapPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
                 setStatus(copy.ready, "success");
-
             } catch (err: unknown) {
                 setStatus(`${copy.failed} ${err instanceof Error ? err.message : String(err)}`, "error");
             } finally {
