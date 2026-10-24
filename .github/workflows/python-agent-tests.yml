@@ -6,10 +6,12 @@ on:
       - devday-codex
       - feat/agent-orchestration
       - feat/validator-hardening
+      - feat/behavioral-validator-tests
   pull_request:
     branches:
       - devday-codex
       - feat/agent-orchestration
+      - feat/validator-hardening
       - main
 
 jobs:
