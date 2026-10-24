@@ -5,9 +5,13 @@ on:
     branches:
       - devday-codex
       - feat/agent-orchestration
+      - feat/validator-hardening
+      - feat/behavioral-validator-tests
   pull_request:
     branches:
       - devday-codex
+      - feat/agent-orchestration
+      - feat/validator-hardening
       - main
 
 jobs:
@@ -19,10 +23,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-devday.txt
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-devday.txt
-      - name: Run offline agent-pipeline tests
-        run: python -m pytest -q tests/test_agent_pipeline.py
+      - name: Run complete offline Python test suite
+        run: python -m pytest -q
