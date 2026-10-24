@@ -76,9 +76,13 @@ const t = ui[lang];
         mission: lang === "fr"
           ? "Corrige normalize_tags pour supprimer les valeurs vides, retirer les espaces autour des tags, convertir en minuscules et dédupliquer les résultats."
           : "Fix normalize_tags to discard blank values, trim whitespace, lowercase tags, and remove duplicates.",
-        broken_code: "def normalize_tags(tags):\\n    return [tag.strip().lower() for tag in tags if tag]",
-        fixed_solution: "def normalize_tags(tags):\\n    return sorted({tag.strip().lower() for tag in tags if tag and tag.strip()})",
-        hidden_test_harness: "def test_normalize_tags():\\n    assert normalize_tags([\\" AI \\", \\"ai\\", \\"\\", \\" Python \"]) == [\\"ai\\", \\"python\\"]\\n    assert normalize_tags([\\"  \\", \\"PYTHON\\"]) == [\\"python\\"]",
+        broken_code: `def normalize_tags(tags):
+    return [tag.strip().lower() for tag in tags if tag]`,
+        fixed_solution: `def normalize_tags(tags):
+    return sorted({tag.strip().lower() for tag in tags if tag and tag.strip()})`,
+        hidden_test_harness: `def test_normalize_tags():
+    assert normalize_tags([" AI ", "ai", "", " Python "]) == ["ai", "python"]
+    assert normalize_tags(["  ", "PYTHON"]) == ["python"]`,
         multiple_choice: {
           question: lang === "fr" ? "Pourquoi faut-il tester tag.strip() et pas seulement tag ?" : "Why check tag.strip() instead of only tag?",
           options: lang === "fr"
