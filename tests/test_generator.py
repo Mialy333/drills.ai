@@ -102,6 +102,10 @@ def _completion(parsed=None, *, choices=True, refusal=None):
     return SimpleNamespace(choices=[SimpleNamespace(message=message)] if choices else [])
 
 
+def test_legacy_generator_fixture_uses_typed_multiple_choice(legacy_drill):
+    assert isinstance(legacy_drill.multiple_choice, MultipleChoiceQuestion)
+
+
 def test_legacy_generator_returns_first_parsed_choice(legacy_drill):
     client = Mock()
     client.beta.chat.completions.parse.return_value = _completion(legacy_drill)
