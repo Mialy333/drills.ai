@@ -67,6 +67,7 @@ const t = ui[lang];
     sampleLink?.addEventListener("click", (event) => {
       event.preventDefault();
       const sample = {
+        output_language: lang,
         drill_id: "sample-tags",
         family: "Debugging",
         title: lang === "fr" ? "Mini-exercice : normaliser des tags" : "Sample drill: normalize tags",
