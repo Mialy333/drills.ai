@@ -492,6 +492,7 @@ body:not(.has-side) .main > * {
 }
 
 .journey-card-primary { border-color: var(--accent); }
+.journey-card-sample { grid-column: 1 / -1; min-height: 0; border-color: var(--ok); }
 .journey-index { margin-bottom: 14px; }
 .journey-card h2 { margin-bottom: 8px; font-size: 1.5rem; }
 .journey-card p { margin: 0 0 22px; color: var(--muted); }
@@ -1819,7 +1820,19 @@ legend small {
     align-items: start;
   }
 
-  .journey-grid { grid-template-columns: 1fr 1fr; }
+  .journey-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .journey-card-sample {
+    display: grid;
+    grid-template-columns: minmax(110px, .7fr) minmax(0, 1.2fr) minmax(0, 2fr) auto;
+    align-items: center;
+    gap: 12px 20px;
+  }
+  .journey-card-sample .journey-index,
+  .journey-card-sample h2,
+  .journey-card-sample p,
+  .journey-card-sample .journey-action { margin: 0; }
+  .journey-card-sample h2 { font-size: 1.15rem; }
+  .journey-card-sample .journey-action { gap: 10px; }
 
   .week-list {
     grid-template-columns: repeat(3, 1fr);
