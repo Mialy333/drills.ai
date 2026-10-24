@@ -614,7 +614,15 @@ function setupDrill(): void {
   const draftKey = `drills.draft.${track}:${id}` + (article.dataset.dynamic === "true" ? `:${article.dataset.contentId ?? "dynamic"}` : "");
   const runner = new PythonRunner(base);
   const questions = [...article.querySelectorAll<HTMLElement>(".q")];
-  let draft: Draft = read<Draft>(draftKey, { answers: {}, scores: {}, hints: {} });
+  const storedDraft = read<Partial<Draft> | null>(draftKey, null);
+  // Older or partially written drafts must never prevent the rest of the page
+  // from binding its controls. Normalize each field before setup continues.
+  let draft: Draft = {
+    answers: storedDraft?.answers && typeof storedDraft.answers === "object" && !Array.isArray(storedDraft.answers) ? storedDraft.answers : {},
+    scores: storedDraft?.scores && typeof storedDraft.scores === "object" && !Array.isArray(storedDraft.scores) ? storedDraft.scores : {},
+    hints: storedDraft?.hints && typeof storedDraft.hints === "object" && !Array.isArray(storedDraft.hints) ? storedDraft.hints : {},
+    elapsed: typeof storedDraft?.elapsed === "number" && Number.isFinite(storedDraft.elapsed) && storedDraft.elapsed >= 0 ? storedDraft.elapsed : 0,
+  };
   const saveDraft = () => write(draftKey, draft);
 
   // ----- timer: starts by itself at the first answer -----
