@@ -1,0 +1,179 @@
+---
+// src/pages/generate.astro
+// Astro Component Frontmatter (Keep it empty for pure client-side interaction)
+---
+
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>⚙️ DRILLS.ai - Dynamic Generator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body {
+            background-color: #0d0e15;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            padding: 40px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 { color: #58a6ff; font-family: monospace; border-bottom: 1px solid #21262d; padding-bottom: 10px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 24px; margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 8px; font-family: monospace; color: #8b949e; }
+        input[type="password"], textarea {
+            width: 100%;
+            background: #0d0e15;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #c9d1d9;
+            padding: 10px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+        textarea { font-family: monospace; height: 180px; }
+        button {
+            background-color: #238636;
+            color: #ffffff;
+            border: 1px solid #2f81f7;
+            border-radius: 6px;
+            padding: 12px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: monospace;
+            width: 100%;
+        }
+        button:hover { background-color: #2ea043; }
+        .terminal-log { background: #000; border: 1px solid #ff007f; color: #00ff00; font-family: monospace; padding: 15px; border-radius: 4px; display: none; white-space: pre-wrap; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>> DRILLS.ai // DYNAMIC_GENERATOR</h1>
+    <p>Ingest real-world Job Descriptions and synthesize on-the-fly debugging challenges using OpenAI. Zero AI Slop.</p>
+
+    <!-- 1. Key Storage Configuration Box -->
+    <div class="card">
+        <label for="apiKey">> ENTER YOUR OPENAI_API_KEY (Stored locally in your browser)</label>
+        <input type="password" id="apiKey" placeholder="sk-proj-..." />
+        <button id="saveKeyBtn" style="background-color: #21262d; border-color: #30363d; margin-top: 5px;">Save Token Regionally</button>
+    </div>
+
+    <!-- 2. Job Ingestion Box -->
+    <div class="card">
+        <label for="jobDescription">> PASTE TARGET JOB DESCRIPTION</label>
+        <textarea id="jobDescription" placeholder="Paste the text from LinkedIn or Welcome to the Jungle here... Needs explicit Python requirements."></textarea>
+        
+        <button id="generateBtn">⚡ RUN PROTOCOL: SYNTHESIZE CUSTOM DRILL</button>
+    </div>
+
+    <!-- 3. Output / Terminal Sandbox Tracker -->
+    <div id="terminalLog" class="terminal-log"></div>
+
+    <script>
+        import OpenAI from "openai";
+        import { zodResponseFormat } from "openai/helpers/zod";
+        import { z } from "zod";
+
+        // 1. Re-declare the identical strict Pydantic blueprint into Zod format
+        const MultipleChoiceSchema = z.object({
+            question: z.string(),
+            options: z.array(z.string()),
+            correct_answer_index: z.number(),
+            reasoning: z.string()
+        });
+
+        const DynamicDrillSchema = z.object({
+            drill_id: z.string(),
+            family: z.enum(["Debugging", "Refactoring", "Code reading"]),
+            title: z.string(),
+            context: z.string(),
+            mission: z.string(),
+            broken_code: z.string(),
+            fixed_solution: z.string(),
+            hidden_test_harness: z.string(),
+            multiple_choice: MultipleChoiceSchema,
+            model_answer_ideas: z.array(z.string())
+        });
+
+        // System instructions to maintain maximum developer test rigor
+        const SYSTEM_PROMPT = `You are an Elite AI Engineering Technical Interviewer and Software Architect. 
+Your role is to ingest an unstructured Job Description and synthesize a rigorous, production-grade coding puzzle (Drill) for the player.
+You must follow these instructions with absolute zero-tolerance for fluff:
+1. NO AI SLOP: The 'broken_code' must look like it was written by an engineer in a hurry or an unvalidated agent system. Use realistic enterprise patterns (e.g., fastAPI middleware, database pool handling, multi-agent state race conditions).
+2. LOGICAL COHERENCE: The 'hidden_test_harness' must execute flawlessly in Python 3. It must FAIL when evaluated against the 'broken_code' and PASS when evaluated against the 'fixed_solution'.
+3. INDUSTRIAL FOCUS: Focus heavily on modern failures—prompt injection vulnerabilities, asynchronous processing locks, vector memory leakage, and deterministic data schema bypasses.`;
+
+        // UI Element Selectors
+        const apiKeyInput = document.getElementById("apiKey") as HTMLInputElement;
+        const saveKeyBtn = document.getElementById("saveKeyBtn");
+        const jobDescriptionInput = document.getElementById("jobDescription") as HTMLTextAreaElement;
+        const generateBtn = document.getElementById("generateBtn");
+        const terminalLog = document.getElementById("terminalLog");
+
+        function logToTerminal(message: string) {
+            if (terminalLog) {
+                terminalLog.style.display = "block";
+                terminalLog.textContent += `\n> ${message}`;
+            }
+        }
+
+        // On boot: check if a key already exists in browser storage
+        const cachedKey = localStorage.getItem("DRILLS_OPENAI_KEY");
+        if (cachedKey && apiKeyInput) {
+            apiKeyInput.value = cachedKey;
+            logToTerminal("Local cache state check: OpenAI Token decrypted and mounted.");
+        }
+
+        // Save token handler
+        saveKeyBtn?.addEventListener("click", () => {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                localStorage.setItem("DRILLS_OPENAI_KEY", key);
+                alert("Token safely cached in your local browser sandbox!");
+            }
+        });
+
+        // Core Generation Pipeline
+        generateBtn?.addEventListener("click", async () => {
+            const key = apiKeyInput.value.trim();
+            const jobDesc = jobDescriptionInput.value.trim();
+
+            if (!key || !jobDesc) {
+                alert("Error: Both API Key and Job Description fields are strictly mandatory.");
+                return;
+            }
+
+            if (terminalLog) terminalLog.textContent = ""; // Clear logs
+            logToTerminal("Executing network sandbox tunnel to OpenAI API...");
+
+            try {
+                // Initialize client targeting browser runtime clearance
+                const openai = new OpenAI({ apiKey: key, dangerouslyAllowBrowser: true });
+
+                logToTerminal("Sending context payload... Enforcing strict validation schema layout.");
+                
+                const completion = await openai.beta.chat.completions.parse({
+                    model: "gpt-4o-2024-08-06", // Version required for true Structured Outputs
+                    messages: [
+                        { role: "system", content: SYSTEM_PROMPT },
+                        { role: "user", content: `Generate a high-yield technical drill for this job description:\n\n${jobDesc}` }
+                    ],
+                    response_format: zodResponseFormat(DynamicDrillSchema, "drill_generation")
+                });
+
+                const structuralDrillJson = completion.choices.message.parsed;
+                logToTerminal("🟢 Success! Structured response received with zero AI Slop.");
+                
+                // Print the clean generated JSON object directly to the screen
+                logToTerminal(JSON.stringify(structuralDrillJson, null, 2));
+
+                // NEXT STEP SUNDAY: Inject this JSON straight into your application's active play state!
+                logToTerminal("Ready for local injection gate.");
+
+            } catch (err: any) {
+                logToTerminal(`❌ System Failure: ${err.message}`);
+            }
+        });
+    </script>
+</body>
+</html>
