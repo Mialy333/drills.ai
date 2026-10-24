@@ -21,13 +21,17 @@ The Python package in `src/ai_generator/` contains an experimental specialist pi
 4. `ValidatorAgent` runs deterministic preflight checks and requests a separate model review.
 5. `DrillOrchestrator` coordinates the stages and combines their outputs into the existing browser payload shape.
 
-The orchestrator is not a web API and is not connected to the static browser generator yet. This avoids putting a server-side API key in the static site and keeps this first step isolated from the existing learner experience. The pipeline requires a valid `OPENAI_API_KEY` environment variable when instantiated with the default OpenAI client.
+The orchestrator is not a web API and is not connected to the static browser generator yet. This avoids putting a server-side API key in the static site and keeps this first step isolated from the existing learner experience. The pipeline requires a valid `OPENAI_API_KEY` when instantiated with the default OpenAI client. The legacy `DrillGeneratorAgent` remains for compatibility; new work should prefer the specialist pipeline.
 
 ### Validator checks and remaining quality gate
 
 The deterministic preflight validates that both implementations and the test harness parse as Python, checks that the harness contains a real `assert` statement (not merely the word in a comment/string), checks that the broken and fixed implementations differ, and checks that the final roadmap skill came from the role analysis. Offline tests cover these rejection cases and ensure preflight failures skip the model review. These checks do **not** execute generated code or prove behavioural correctness.
 
-Before publishing generated exercises, run the harness against both code samples in a strongly isolated, resource-limited sandbox and require the tests to fail against `broken_code` and pass against `fixed_solution`. The current validator reports this limitation as a warning; it does not execute untrusted generated code. Do not treat an LLM review or syntax parsing as a substitute for that runtime gate.
+Before publishing generated exercises, run the harness against both code samples in a strongly isolated, resource-limited sandbox and require the tests to fail against `broken_code` and pass against `fixed_solution`. The current validator reports this limitation as a warning; it does not execute untrusted code. Do not treat an LLM review or syntax parsing as a substitute for that runtime gate.
+
+### Browser-side exercise runner
+
+Learner code is evaluated in Pyodide in a Web Worker, with a timeout that terminates and recreates the worker if execution exceeds the limit. This keeps normal exercise execution off the main UI thread, but it is **not a security boundary for arbitrary generated code** and does not replace a hardened sandbox. Do not put API keys, private data, or privileged capabilities in the worker. Do not execute model-generated code on a server or publish a generated drill solely because its syntax parses or an LLM approves it. A production-grade runtime gate needs explicit resource limits and denied network/filesystem/process capabilities, ideally in a disposable isolated runtime.
 
 ## Where exercise content comes from
 
@@ -55,7 +59,13 @@ npm run build     # static output in dist/
 npm run preview   # preview the built site
 ```
 
-Python pipeline dependencies are listed in `requirements-devday.txt`. Install them in a virtual environment before running Python tests. The offline validator suite is `python -m pytest -q tests/test_agent_pipeline.py`; it does not require an OpenAI API key or make paid API calls.
+Python pipeline dependencies are listed in `requirements-devday.txt`. Install them in a virtual environment before running Python tests. Run the complete offline suite with:
+
+```bash
+python -m pytest -q
+```
+
+These tests use mocked clients and do not require an `OPENAI_API_KEY` or make paid API calls. The GitHub Actions workflow runs the same complete test command on Python 3.12.
 
 ## Project structure
 
@@ -65,7 +75,7 @@ Python pipeline dependencies are listed in `requirements-devday.txt`. Install th
 | `src/lib/assessment.ts` | Diagnostic questions and scoring |
 | `src/lib/drills.ts` | Public drill types, routes, and base-aware links |
 | `src/scripts/app.ts` | Browser state, generated drill hydration, Pyodide execution, and progress |
-| `src/scripts/py-worker.ts` | Isolated Python test execution |
+| `src/scripts/py-worker.ts` | Worker-based Python exercise execution |
 | `src/ai_generator/agents/` | Experimental specialist agents |
 | `src/ai_generator/orchestrator.py` | Experimental sequential pipeline orchestration |
 | `src/ai_generator/pipeline_schemas.py` | Typed contracts for agent inputs and outputs |
