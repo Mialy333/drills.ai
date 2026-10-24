@@ -1,6 +1,6 @@
 # DRILLS.ai
 
-DRILLS.ai helps people moving into AI Agent Engineering identify skill gaps and practise the Python skills named in a role they want. It is a static Astro site for GitHub Pages; job-specific preparation is generated in the browser.
+DRILLS.ai helps people moving into AI Agent Engineering identify skill gaps and practise the Python skills named in a role they want. The Astro frontend remains static on GitHub Pages; job-specific preparation can run through the FastAPI multi-agent backend or, as a fallback, directly in the browser.
 
 ## Learner journey
 
@@ -11,7 +11,7 @@ DRILLS.ai helps people moving into AI Agent Engineering identify skill gaps and 
 
 The exercises should help learners build job-relevant ability, not predict interview questions or promise a hiring outcome.
 
-## Agent pipeline (experimental, not yet wired into the browser)
+## Multi-agent pipeline and FastAPI backend
 
 The Python package in `src/ai_generator/` contains an experimental specialist pipeline:
 
@@ -21,7 +21,9 @@ The Python package in `src/ai_generator/` contains an experimental specialist pi
 4. `ValidatorAgent` runs deterministic preflight checks and requests a separate model review.
 5. `DrillOrchestrator` coordinates the stages and combines their outputs into the existing browser payload shape.
 
-The orchestrator is not a web API and is not connected to the static browser generator yet. This avoids putting a server-side API key in the static site and keeps this first step isolated from the existing learner experience. The pipeline requires a valid `OPENAI_API_KEY` when instantiated with the default OpenAI client. The legacy `DrillGeneratorAgent` remains for compatibility; new work should prefer the specialist pipeline.
+The specialist pipeline is exposed through `api/main.py`. The static generator can call this backend by setting a backend URL on the generator page; the OpenAI key then stays in the backend environment. If no backend URL is configured, the existing browser-side OpenAI-key flow remains available as a fallback. The API requires a valid server-side `OPENAI_API_KEY`. The legacy `DrillGeneratorAgent` remains for compatibility; new work should prefer the specialist pipeline.
+
+The API currently runs the four specialist stages sequentially in one request. It is an MVP, not a durable job queue: long requests can fail if the hosting instance restarts, and the service should be rate-limited before public use. It does not execute generated Python code on the server.
 
 ### Validator checks and remaining quality gate
 
@@ -50,7 +52,7 @@ A small, reviewed starter set of generic AI-agent Python exercises would also le
 
 ## Privacy and API key
 
-There is no account or application server. If a learner chooses to generate a roadmap, the pasted posting and their OpenAI API key are sent from their browser to OpenAI. The key is stored in that browser's local storage when they choose to save it; generated content and progress are also stored locally. Clearing site data removes them. Do not use a key on a shared device, and revoke it with the provider when it is no longer needed.
+There is no user account system. When a backend URL is configured, the pasted job posting and optional quiz snapshot are sent to the DRILLS.ai API, which forwards the request to OpenAI using a server-side secret. Do not log or persist job postings unnecessarily. Without a backend URL, the fallback sends the posting and the learner's API key directly from the browser to OpenAI; that key is stored in local storage if saved. Generated content and progress remain in browser storage. Avoid using a personal API key on shared devices and revoke exposed keys promptly.
 
 ## Run locally
 
@@ -61,13 +63,29 @@ npm run build     # static output in dist/
 npm run preview   # preview the built site
 ```
 
-Python pipeline dependencies are listed in `requirements-devday.txt`. Install them in a virtual environment before running Python tests. Run the complete offline suite with:
+Python test dependencies are listed in `requirements-devday.txt`. Install them in a virtual environment before running Python tests. Run the complete offline suite with:
 
 ```bash
 python -m pytest -q
 ```
 
-These tests use mocked clients and do not require an `OPENAI_API_KEY` or make paid API calls. The GitHub Actions workflow runs the same complete test command on Python 3.12.
+These tests use mocked clients and do not require an `OPENAI_API_KEY` or make paid API calls.
+
+### Run the API locally
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-api.txt -r requirements-devday.txt
+export OPENAI_API_KEY="your-key"
+uvicorn api.main:app --reload --port 8000
+```
+
+Open `http://127.0.0.1:8000/docs` to inspect the API and `http://127.0.0.1:8000/health` to check its configuration. In the generator page, enter `http://127.0.0.1:8000` in the FastAPI backend URL field. Keep the key in your local environment; do not commit it to Git.
+
+### Deploy the API to Render
+
+The `render.yaml` blueprint defines a separate Python web service. In Render, create a new Blueprint from this repository and set `OPENAI_API_KEY` as a secret environment variable when prompted. After the service is live, copy its HTTPS URL into the generator page's FastAPI backend URL field. The Astro site can remain on GitHub Pages. The API URL is saved in the browser's local storage; it is not a secret.
 
 ## Project structure
 
