@@ -2,7 +2,6 @@
 import App from "../../../layouts/App.astro";
 import { drills, href, LANGS, neighbours, READY_TRACKS, type Drill, type Lang, type Track } from "../../../lib/drills";
 import { ui } from "../../../lib/i18n";
-import { reviewLinks } from "../../../lib/review";
 
 export function getStaticPaths() {
   const drillPaths = LANGS.flatMap((lang) =>
@@ -12,10 +11,24 @@ export function getStaticPaths() {
   );
   // Emit a static shell; the browser fills it from localStorage on this route.
   const dynamicPaths = LANGS.map((lang) => {
-    const shell = drills("python", lang)[0];
     return {
       params: { lang, track: "python", id: "dynamic-job" },
-      props: { d: { ...shell, id: "dynamic-job", title: lang === "fr" ? "Simulation personnalisée" : "Custom simulation" } satisfies Drill },
+      props: {
+        d: {
+          id: "dynamic-job",
+          track: "python",
+          cat: "debug",
+          order: 0,
+          minutes: 15,
+          title: lang === "fr" ? "Simulation personnalisée" : "Custom simulation",
+          source: lang === "fr" ? "Généré à partir de l'offre" : "Generated from the job posting",
+          contextHtml: "",
+          missionHtml: "",
+          criteriaHtml: [],
+          explanationHtml: "",
+          questions: [],
+        } satisfies Drill,
+      },
     };
   });
   return [...drillPaths, ...dynamicPaths];
@@ -25,7 +38,6 @@ const track = Astro.params.track as Track;
 const { d } = Astro.props;
 const t = ui[lang];
 const { prev, next } = neighbours(track, lang, d.id);
-const review = reviewLinks(d.id, lang);
 const strings = {
   attempt: t.attemptN(999).replace("999", "{n}"),
   best: t.best,
@@ -55,7 +67,7 @@ const strings = {
 };
 ---
 
-<App lang={lang} title={`${d.id.toUpperCase()} ${d.title}`} path={`/${track}/${d.id}/`} track={track} activeId={d.id} section="drills">
+<App lang={lang} title={`${d.id.toUpperCase()} ${d.title}`} path={`/${track}/${d.id}/`} track={track} activeId={d.id} showCatalogSidebar={d.id !== "dynamic-job"} section="drills">
   <article class="drill" data-drill={d.id} data-track={track} data-minutes={d.minutes} data-strings={JSON.stringify(strings)} data-dynamic={d.id === "dynamic-job" ? "true" : undefined}>
     <header class="drill-head">
       <p class="drill-cat">{t.cats[d.cat]}, {d.id.toUpperCase()} <span class="attempt-tag" id="attempt-tag"></span></p>
@@ -198,24 +210,6 @@ const strings = {
       </div>
     </section>
 
-    {review.length > 0 && (
-      <section class="review" aria-labelledby="review-h">
-        <h2 id="review-h">{t.review}</h2>
-        <p class="note">{t.reviewLead}</p>
-        <ul class="review-list">
-          {review.map((r) => (
-            <li>
-              <a href={r.href} target="_blank" rel="noopener">
-                <small>{r.book}</small>
-                <span>{r.title}</span>
-                <span class="review-arrow" aria-hidden="true">↗</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </section>
-    )}
-
     <section class="history" aria-labelledby="history-h">
       <h2 id="history-h">{t.history}</h2>
       <p class="note" id="history-empty">{t.historyEmpty}</p>
@@ -227,7 +221,12 @@ const strings = {
 
     <nav class="pager" aria-label={lang === "fr" ? "Drills voisins" : "Nearby drills"}>
       {prev ? <a class="pager-prev" href={href(`/${lang}/${track}/${prev.id}/`)}><small>{t.prev}</small><span>{prev.id.toUpperCase()} {prev.title}</span></a> : <span></span>}
-      {next && <a class="pager-next" href={href(`/${lang}/${track}/${next.id}/`)}><small>{t.next}</small><span>{next.id.toUpperCase()} {next.title}</span></a>}
+      {d.id === "dynamic-job" ? (
+        <a class="pager-next" href={href(`/${lang}/generate/`)}>
+          <small>{lang === "fr" ? "Ton parcours" : "Your roadmap"}</small>
+          <span>{lang === "fr" ? "Revoir le plan personnalisé" : "Review your tailored plan"}</span>
+        </a>
+      ) : next && <a class="pager-next" href={href(`/${lang}/${track}/${next.id}/`)}><small>{t.next}</small><span>{next.id.toUpperCase()} {next.title}</span></a>}
     </nav>
   </article>
 </App>

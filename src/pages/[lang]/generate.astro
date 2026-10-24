@@ -14,7 +14,9 @@ const lang = Astro.params.lang as Lang;
     <header class="generator-head">
       <p class="generator-kicker">{lang === "fr" ? "PROTOCOLE // GÉNÉRATEUR" : "PROTOCOL // GENERATOR"}</p>
       <h1 id="generator-title">{lang === "fr" ? "Générateur de drills dynamiques" : "Dynamic drill generator"}</h1>
-      <p>{lang === "fr" ? "Créez un exercice technique personnalisé à partir d’une offre d’emploi." : "Create a custom technical exercise from a job description."}</p>
+      <p>{lang === "fr" ? "Collez une annonce complète pour obtenir son analyse de compétences, un plan de préparation et un exercice Python ciblé." : "Paste a complete job posting to get its skill analysis, preparation roadmap, and a tailored Python exercise."}</p>
+      <p>{lang === "fr" ? "Cette version cible les postes d’AI Agent Engineer. L’annonce doit mentionner l’IA ou les agents, ainsi que des compétences techniques." : "This version targets AI Agent Engineer roles. The posting must mention AI or agents, plus technical skills."}</p>
+      <p>{lang === "fr" ? "Le parcours et l’exercice sont générés dans la langue de l’annonce, même si l’interface est dans une autre langue." : "The roadmap and exercise follow the job posting’s language, even if the interface uses another language."}</p>
     </header>
     <style>
         .generator-page { max-width: 860px; margin: 0 auto; }
@@ -47,32 +49,65 @@ const lang = Astro.params.lang as Lang;
             width: 100%;
         }
         .generator-card button:hover { filter: brightness(1.1); }
-        #launchDrill { display: none; margin-top: 14px; background: var(--code-bg); border-color: var(--ok); color: var(--ok); box-shadow: 0 0 14px color-mix(in srgb, var(--ok) 24%, transparent); }
-        #launchDrill.is-ready { display: block; }
-        .terminal-log { background: var(--code-bg); border: 1px solid var(--ok); color: var(--ok); font-family: var(--mono); padding: 15px; border-radius: var(--radius-s); display: none; white-space: pre-wrap; margin-top: 20px; overflow-wrap: anywhere; }
+        .generator-card .save-key-button { background: var(--raise); border-color: var(--line); color: var(--ink); margin-top: 5px; }
+        .generator-help { margin: 0 0 14px; color: var(--muted); font-size: .9rem; }
+        .roadmap-panel { padding: 24px; border: 1px solid var(--ok); border-radius: var(--radius-m); background: var(--panel); margin-bottom: 20px; box-shadow: 0 0 24px color-mix(in srgb, var(--ok) 10%, transparent); }
+        .roadmap-panel[hidden] { display: none; }
+        .roadmap-panel h2 { margin: 0 0 8px; }
+        .roadmap-summary { color: var(--muted); }
+        .roadmap-note { color: var(--muted); font-size: .9rem; }
+        .roadmap-skills, .roadmap-steps { display: grid; gap: 12px; padding-left: 24px; }
+        :global(.roadmap-skills li) { padding-left: 4px; }
+        :global(.roadmap-steps li) { padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--raise); line-height: 1.45; }
+        :global(.roadmap-steps li > strong) { display: block; line-height: 1.35; }
+        :global(.roadmap-skills li) { display: grid; grid-template-columns: minmax(0, 1fr) max-content; align-items: center; gap: 6px 12px; }
+        :global(.roadmap-skills small), :global(.roadmap-steps small) { display: block; color: var(--muted); margin-top: 3px; }
+        :global(.roadmap-skills small) { grid-column: 1 / -1; margin: 4px 0 0; padding-top: 8px; border-top: 1px solid var(--line); line-height: 1.5; }
+        :global(.roadmap-steps small) { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); line-height: 1.55; }
+        :global(.roadmap-priority) { display: inline-block; padding: 3px 9px; border: 1px solid currentColor; border-radius: 999px; font: .82rem var(--pixel); white-space: nowrap; }
+        :global(.roadmap-priority-core) { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+        :global(.roadmap-priority-important) { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+        :global(.roadmap-priority-supporting) { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+        #launchDrill { margin-top: 20px; background: var(--code-bg); border-color: var(--ok); color: var(--ok); box-shadow: 0 0 14px color-mix(in srgb, var(--ok) 24%, transparent); }
+        .generator-status { margin: 16px 0 20px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--panel); }
+        .generator-status[hidden] { display: none; }
+        .generator-status[data-state="busy"] { border-color: var(--accent); }
+        .generator-status[data-state="success"] { border-color: var(--ok); color: var(--ok); }
+        .generator-status[data-state="error"] { border-color: var(--warn); color: var(--warn); }
     </style>
 
     <!-- 1. Key Storage Configuration Box -->
     <div class="generator-card">
-        <label for="apiKey">> ENTER YOUR OPENAI_API_KEY (Stored locally in your browser)</label>
+        <label for="apiKey">{lang === "fr" ? "> CLÉ API OPENAI (conservée dans ce navigateur)" : "> ENTER YOUR OPENAI_API_KEY (Stored locally in your browser)"}</label>
         <input type="password" id="apiKey" placeholder="sk-proj-..." />
-        <button id="saveKeyBtn" style="background-color: #21262d; border-color: #30363d; margin-top: 5px;">Save Token Regionally</button>
+        <p class="generator-help">{lang === "fr" ? "Ta clé reste dans ce navigateur. La clé et l’annonce sont envoyées directement à OpenAI pour générer le contenu." : "Your key stays in this browser. The key and job posting are sent directly to OpenAI to generate the content."}</p>
+        <button id="saveKeyBtn" class="save-key-button">{lang === "fr" ? "Enregistrer la clé sur cet appareil" : "Save key on this device"}</button>
     </div>
 
     <!-- 2. Job Ingestion Box -->
     <div class="generator-card">
-        <label for="jobDescription">> PASTE TARGET JOB DESCRIPTION</label>
-        <textarea id="jobDescription" placeholder="Paste the text from LinkedIn or Welcome to the Jungle here... Needs explicit Python requirements."></textarea>
+        <label for="jobDescription">{lang === "fr" ? "> COLLE L'ANNONCE COMPLÈTE" : "> PASTE THE FULL JOB POSTING"}</label>
+        <textarea id="jobDescription" placeholder={lang === "fr" ? "Colle les missions et compétences requises, pas seulement les avantages ou la localisation." : "Include responsibilities and required skills, not only benefits or location."}></textarea>
         
-        <button id="generateBtn">⚡ RUN PROTOCOL: SYNTHESIZE CUSTOM DRILL</button>
-        <button id="launchDrill" type="button" data-href={href(`/${lang}/python/dynamic-job/`)}>▶ LAUNCH DRILL SIMULATION</button>
+        <button id="generateBtn" type="button">{lang === "fr" ? "⚡ ANALYSER L'ANNONCE ET CRÉER MON PARCOURS" : "⚡ ANALYZE POSTING AND BUILD MY ROADMAP"}</button>
+        <div id="generatorStatus" class="generator-status" role="status" aria-live="polite" hidden></div>
     </div>
 
-    <!-- 3. Output / Terminal Sandbox Tracker -->
-    <div id="terminalLog" class="terminal-log"></div>
+    <section class="roadmap-panel" id="roadmapPanel" hidden aria-live="polite" aria-labelledby="roadmapTitle">
+        <p class="generator-kicker">{lang === "fr" ? "PLAN DE PRÉPARATION // FONDÉ SUR L'ANNONCE" : "PREPARATION ROADMAP // GROUNDED IN THE POSTING"}</p>
+        <h2 id="roadmapTitle" tabindex="-1"></h2>
+        <p class="roadmap-summary" id="roadmapSummary"></p>
+        <h3>{lang === "fr" ? "Compétences demandées" : "Skills requested"}</h3>
+        <ul class="roadmap-skills" id="roadmapSkills"></ul>
+        <h3>{lang === "fr" ? "Étapes de préparation" : "Preparation steps"}</h3>
+        <ol class="roadmap-steps" id="roadmapSteps"></ol>
+        <p class="roadmap-note">{lang === "fr" ? "Les priorités tiennent compte du diagnostic s'il a été effectué. Sans diagnostic, ce plan reflète uniquement les exigences de l'annonce." : "Priorities use your diagnostic if available. Without one, this plan reflects the job posting only."}</p>
+        <button id="launchDrill" class="btn btn-primary btn-big" type="button" data-href={href(`/${lang}/python/dynamic-job/`)}>
+          {lang === "fr" ? "▶ LANCER L'EXERCICE CIBLÉ" : "▶ LAUNCH THE TAILORED DRILL"}
+        </button>
+    </section>
 
     <script>
-        import OpenAI from "openai";
         import { zodResponseFormat } from "openai/helpers/zod";
         import { z } from "zod";
 
@@ -80,11 +115,28 @@ const lang = Astro.params.lang as Lang;
         const MultipleChoiceSchema = z.object({
             question: z.string(),
             options: z.array(z.string()),
-            correct_answer_index: z.number(),
+            correct_answer_index: z.number().int().min(0),
             reasoning: z.string()
         });
 
+        const RequiredSkillSchema = z.object({
+            name: z.string(),
+            priority: z.enum(["Core", "Important", "Supporting"]),
+            evidence: z.string()
+        });
+
+        const RoadmapStepSchema = z.object({
+            title: z.string(),
+            skill: z.string(),
+            objective: z.string(),
+            minutes: z.number().int().min(5).max(240)
+        });
+
         const DynamicDrillSchema = z.object({
+            role_title: z.string(),
+            role_summary: z.string(),
+            required_skills: z.array(RequiredSkillSchema).min(3).max(8),
+            roadmap: z.array(RoadmapStepSchema).min(3).max(6),
             drill_id: z.string(),
             family: z.enum(["Debugging", "Refactoring", "Code reading"]),
             title: z.string(),
@@ -98,12 +150,15 @@ const lang = Astro.params.lang as Lang;
         });
 
         // System instructions to maintain maximum developer test rigor
-        const SYSTEM_PROMPT = `You are an Elite AI Engineering Technical Interviewer and Software Architect. 
-Your role is to ingest an unstructured Job Description and synthesize a rigorous, production-grade coding puzzle (Drill) for the player.
-You must follow these instructions with absolute zero-tolerance for fluff:
-1. NO AI SLOP: The 'broken_code' must look like it was written by an engineer in a hurry or an unvalidated agent system. Use realistic enterprise patterns (e.g., fastAPI middleware, database pool handling, multi-agent state race conditions).
-2. LOGICAL COHERENCE: The 'hidden_test_harness' must execute flawlessly in Python 3. It must FAIL when evaluated against the 'broken_code' and PASS when evaluated against the 'fixed_solution'.
-3. INDUSTRIAL FOCUS: Focus heavily on modern failures—prompt injection vulnerabilities, asynchronous processing locks, vector memory leakage, and deterministic data schema bypasses.`;
+        const SYSTEM_PROMPT = `You are an AI engineering interviewer. Analyze the job posting, prepare a concise role-based learning roadmap, and create one rigorous Python drill aligned with a high-priority requirement.
+Return every user-facing string in the output language explicitly specified in the user message, regardless of the job posting's language. For French output, use natural, grammatically correct French with correct accents; do not leave explanatory prose in English. Keep established technical names, identifiers, and code syntax unchanged. Translate evidence phrases faithfully into the output language instead of quoting text in another language. Follow the exact JSON schema.
+Treat this as a fresh, isolated assessment. Use only technical requirements supported by the job posting. Do not use or mention bundled drills, archives, saved exercises, portfolio projects, or presumed personal history. Do not reuse an old exercise or introduce a company, product, or technology that the posting does not support.
+1. Extract 3-8 concrete skills actually requested by the posting. Set priorities to Core, Important, or Supporting, and include a short quote or faithful evidence phrase from the posting for each.
+2. Create 3-6 ordered preparation steps. Each must name a skill, a concrete objective, and a realistic estimate in minutes (5-240). The last step must correspond to the generated drill.
+3. The role summary must be concise and grounded in the posting. Do not invent requirements.
+4. If a learner diagnostic snapshot is provided, use it only as a rough quiz signal to order practice. Do not call it a measured competency or claim a hiring match. If none is provided, make the roadmap role-based only.
+5. The broken_code must demonstrate a realistic Python failure related to a core requirement. The hidden_test_harness must run in Python 3, fail against broken_code, and pass against fixed_solution.
+6. Use realistic production patterns and avoid generic advice, unsupported claims, and filler.`;
 
         // UI Element Selectors
         const apiKeyInput = document.querySelector<HTMLInputElement>("#apiKey");
@@ -111,20 +166,87 @@ You must follow these instructions with absolute zero-tolerance for fluff:
         const jobDescriptionInput = document.querySelector<HTMLTextAreaElement>("#jobDescription");
         const generateBtn = document.querySelector<HTMLButtonElement>("#generateBtn");
         const launchDrill = document.querySelector<HTMLButtonElement>("#launchDrill");
-        const terminalLog = document.querySelector<HTMLDivElement>("#terminalLog");
+        const generatorStatus = document.querySelector<HTMLDivElement>("#generatorStatus");
+        const roadmapPanel = document.querySelector<HTMLElement>("#roadmapPanel");
+        const roadmapTitle = document.querySelector<HTMLElement>("#roadmapTitle");
+        const roadmapSummary = document.querySelector<HTMLElement>("#roadmapSummary");
+        const roadmapSkills = document.querySelector<HTMLUListElement>("#roadmapSkills");
+        const roadmapSteps = document.querySelector<HTMLOListElement>("#roadmapSteps");
+        const isFrench = document.documentElement.lang === "fr";
+        const dynamicDrillStorageKey = `DRILLS_DYNAMIC_JOB_DATA_${document.documentElement.lang.toUpperCase()}`;
+        const copy = {
+            savedKey: isFrench ? "Clé enregistrée sur cet appareil." : "Key saved on this device.",
+            missingApiKey: isFrench ? "Saisis ta clé API OpenAI pour continuer." : "Enter your OpenAI API key to continue.",
+            invalidApiKey: isFrench ? "La clé API contient des caractères non ASCII. Recopie-la depuis OpenAI sans guillemets ni espaces." : "The API key contains non-ASCII characters. Copy it again from OpenAI without quotes or spaces.",
+            missingPosting: isFrench ? "Colle l'annonce complète pour continuer." : "Paste the complete job posting to continue.",
+            unsupportedPosting: isFrench
+                ? "Je ne trouve pas de compétences IA/agents et techniques dans ce texte. Colle l'annonce complète avec l'intitulé du poste, les missions et les compétences requises — pas seulement les avantages ou la localisation."
+                : "I couldn't find AI/agent and technical requirements in this text. Paste the full posting, including the role title, responsibilities, and required skills—not just benefits or location.",
+            connecting: isFrench ? "Analyse de l'annonce et préparation du parcours…" : "Analyzing the posting and preparing your roadmap…",
+            sending: isFrench ? "Création du parcours et de l'exercice Python ciblé…" : "Creating the roadmap and tailored Python drill…",
+            ready: isFrench ? "Parcours prêt. Consulte les compétences et les étapes ci-dessous, puis lance l'exercice ciblé." : "Roadmap ready. Review the skills and steps below, then launch the tailored drill.",
+            keySaveFailed: isFrench ? "Impossible d'enregistrer la clé dans le stockage de ce navigateur." : "Could not save the key in this browser's storage.",
+            loadingClient: isFrench ? "Connexion au générateur IA…" : "Loading the AI generator…",
+            failed: isFrench ? "La génération a échoué :" : "Generation failed:",
+        };
 
-        function logToTerminal(message: string) {
-            if (terminalLog) {
-                terminalLog.style.display = "block";
-                terminalLog.textContent += `\n> ${message}`;
-            }
+        type DynamicDrill = z.infer<typeof DynamicDrillSchema>;
+
+        function renderRoadmap(drill: DynamicDrill) {
+            if (!roadmapPanel || !roadmapTitle || !roadmapSummary || !roadmapSkills || !roadmapSteps) return;
+            const language = document.documentElement.lang;
+            roadmapTitle.textContent = drill.role_title;
+            roadmapSummary.textContent = drill.role_summary;
+            roadmapSkills.replaceChildren(...drill.required_skills.map((skill) => {
+                const item = document.createElement("li");
+                const name = document.createElement("strong");
+                name.textContent = skill.name;
+                const priority = document.createElement("span");
+                priority.className = `roadmap-priority roadmap-priority-${skill.priority.toLowerCase()}`;
+                priority.textContent = language === "fr"
+                    ? ({ Core: "Essentielle", Important: "Importante", Supporting: "Complémentaire" } as const)[skill.priority]
+                    : skill.priority;
+                const evidence = document.createElement("small");
+                evidence.textContent = skill.evidence;
+                item.append(name, priority, evidence);
+                return item;
+            }));
+            roadmapSteps.replaceChildren(...drill.roadmap.map((step, index) => {
+                const item = document.createElement("li");
+                const title = document.createElement("strong");
+                title.textContent = step.title;
+                const detail = document.createElement("small");
+                detail.textContent = `${step.skill} · ${step.objective} · ${step.minutes} min`;
+                item.append(title, detail);
+                item.value = index + 1;
+                return item;
+            }));
+            roadmapPanel.hidden = false;
+        }
+
+        function isSupportedPosting(text: string): boolean {
+            const aiAgentSignal = /\b(?:ai|ia|llm|rag|langchain|langgraph|mcp|openai|anthropic|gemini)\b|intelligence artificielle|artificial intelligence|agents?\s+(?:ia|ai|conversationnels?|autonomes?|intelligents?)/i;
+            const technicalSignal = /\b(?:python|fastapi|django|flask|api|backend|software|programming|programmer|code|engineering|developer|engineer)\b|développ(?:ement|eur|euse)|programmation|ingénieur|ingénierie|logiciel(?:s)?|développement logiciel/i;
+            return aiAgentSignal.test(text) && technicalSignal.test(text);
+        }
+
+        function setStatus(message: string, state: "busy" | "success" | "error") {
+            if (!generatorStatus) return;
+            generatorStatus.hidden = false;
+            generatorStatus.dataset.state = state;
+            generatorStatus.textContent = message;
+        }
+
+        function isValidApiKeyHeader(value: string): boolean {
+            return /^[\x21-\x7E]+$/.test(value);
         }
 
         // On boot: check if a key already exists in browser storage
-        const cachedKey = localStorage.getItem("DRILLS_OPENAI_KEY");
-        if (cachedKey && apiKeyInput) {
-            apiKeyInput.value = cachedKey;
-            logToTerminal("Local cache state check: OpenAI Token decrypted and mounted.");
+        try {
+            const cachedKey = localStorage.getItem("DRILLS_OPENAI_KEY");
+            if (cachedKey && apiKeyInput) apiKeyInput.value = cachedKey;
+        } catch {
+            // Private browsing or storage policies can disable localStorage; manual entry still works.
         }
 
         launchDrill?.addEventListener("click", () => {
@@ -132,40 +254,92 @@ You must follow these instructions with absolute zero-tolerance for fluff:
             if (target) window.location.assign(target);
         });
 
+        // Restore the generated roadmap when returning from its drill.
+        try {
+            const cached: unknown = JSON.parse(localStorage.getItem(dynamicDrillStorageKey) ?? "null");
+            const previous = DynamicDrillSchema.safeParse(cached);
+            if (previous.success) renderRoadmap(previous.data);
+        } catch {
+            // A malformed or unavailable saved payload should not block a new generation.
+        }
+
         // Save token handler
         saveKeyBtn?.addEventListener("click", () => {
             if (!apiKeyInput) return;
             const key = apiKeyInput.value.trim();
             if (key) {
-                localStorage.setItem("DRILLS_OPENAI_KEY", key);
-                alert("Token safely cached in your local browser sandbox!");
+                if (!isValidApiKeyHeader(key)) {
+                    setStatus(copy.invalidApiKey, "error");
+                    apiKeyInput.focus();
+                    return;
+                }
+                try {
+                    localStorage.setItem("DRILLS_OPENAI_KEY", key);
+                    setStatus(copy.savedKey, "success");
+                } catch {
+                    setStatus(copy.keySaveFailed, "error");
+                }
             }
         });
 
         // Core Generation Pipeline
         generateBtn?.addEventListener("click", async () => {
+            if (generateBtn.disabled) return;
             const key = apiKeyInput?.value.trim() ?? "";
             const jobDesc = jobDescriptionInput?.value.trim() ?? "";
 
-            if (!key || !jobDesc) {
-                alert("Error: Both API Key and Job Description fields are strictly mandatory.");
+            if (!key) {
+                setStatus(copy.missingApiKey, "error");
+                apiKeyInput?.focus();
+                return;
+            }
+            if (!isValidApiKeyHeader(key)) {
+                setStatus(copy.invalidApiKey, "error");
+                apiKeyInput?.focus();
+                return;
+            }
+            if (!jobDesc) {
+                setStatus(copy.missingPosting, "error");
+                jobDescriptionInput?.focus();
+                return;
+            }
+            if (!isSupportedPosting(jobDesc)) {
+                setStatus(copy.unsupportedPosting, "error");
                 return;
             }
 
-            if (terminalLog) terminalLog.textContent = ""; // Clear logs
-            logToTerminal("Executing network sandbox tunnel to OpenAI API...");
+            if (roadmapPanel) roadmapPanel.hidden = true;
+            generateBtn.disabled = true;
+            setStatus(copy.connecting, "busy");
 
             try {
-                // Initialize client targeting browser runtime clearance
+                setStatus(copy.loadingClient, "busy");
+                const { default: OpenAI } = await import("openai");
                 const openai = new OpenAI({ apiKey: key, dangerouslyAllowBrowser: true });
 
-                logToTerminal("Sending context payload... Enforcing strict validation schema layout.");
+                setStatus(copy.sending, "busy");
                 
+                let learnerContext = "";
+                try {
+                    const snapshot: unknown = JSON.parse(localStorage.getItem("drills.assessment.v1") ?? "null");
+                    if (snapshot && typeof snapshot === "object" && "pillars" in snapshot && snapshot.pillars && typeof snapshot.pillars === "object") {
+                        const pillars = snapshot.pillars as Record<string, unknown>;
+                        const scores = Object.entries(pillars).flatMap(([pillar, score]) => {
+                            if (!score || typeof score !== "object" || !("correct" in score) || !("total" in score)) return [];
+                            const { correct, total } = score as { correct: unknown; total: unknown };
+                            return typeof correct === "number" && typeof total === "number" ? [`${pillar}: ${correct}/${total} quiz answers correct`] : [];
+                        });
+                        if (scores.length) learnerContext = `\n\nOPTIONAL LEARNER QUIZ SNAPSHOT (rough signal only):\n${scores.join("\n")}`;
+                    }
+                } catch {
+                    // The job-based roadmap can still be generated without a saved diagnostic.
+                }
+
                 const completion = await openai.chat.completions.create({
                     model: "gpt-4o-2024-08-06",
                     messages: [
                         { role: "system", content: SYSTEM_PROMPT },
-                        { role: "user", content: jobDesc }
+                        { role: "user", content: `OUTPUT LANGUAGE: ${isFrench ? "French" : "English"}.\n\nJOB POSTING:\n${jobDesc}${learnerContext}` }
                     ],
                     response_format: zodResponseFormat(DynamicDrillSchema, "drill_generation")
                 });
@@ -175,18 +349,16 @@ You must follow these instructions with absolute zero-tolerance for fluff:
                 const validation = DynamicDrillSchema.safeParse(JSON.parse(rawJson));
                 if (!validation.success) throw new Error(`Invalid drill response: ${validation.error.message}`);
                 const structuralDrillJson = validation.data;
-                localStorage.setItem("DRILLS_DYNAMIC_JOB_DATA", JSON.stringify(structuralDrillJson));
-                launchDrill?.classList.add("is-ready");
-                logToTerminal("🟢 Success! Structured response received with zero AI Slop.");
-                
-                // Print the clean generated JSON object directly to the screen
-                logToTerminal(JSON.stringify(structuralDrillJson, null, 2));
-
-                // NEXT STEP SUNDAY: Inject this JSON straight into your application's active play state!
-                logToTerminal("Ready for local injection gate.");
+                localStorage.setItem(dynamicDrillStorageKey, JSON.stringify(structuralDrillJson));
+                renderRoadmap(structuralDrillJson);
+                roadmapTitle?.focus({ preventScroll: true });
+                roadmapPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+                setStatus(copy.ready, "success");
 
             } catch (err: unknown) {
-                logToTerminal(`❌ System Failure: ${err instanceof Error ? err.message : String(err)}`);
+                setStatus(`${copy.failed} ${err instanceof Error ? err.message : String(err)}`, "error");
+            } finally {
+                generateBtn.disabled = false;
             }
         });
     </script>

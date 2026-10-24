@@ -512,17 +512,6 @@ body:not(.has-side) .main > * {
   text-align: center;
 }
 
-.creator-archive {
-  padding: 16px 18px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-m);
-  color: var(--muted);
-}
-
-.creator-archive summary { color: var(--muted); cursor: pointer; }
-.creator-archive p { margin: 10px 0; }
-
-
 .track-grid {
   display: grid;
   gap: 14px;

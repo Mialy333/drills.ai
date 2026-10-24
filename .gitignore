@@ -6,3 +6,4 @@ dist/
 public/pyodide/
 __pycache__/
 .env
+private-archives/

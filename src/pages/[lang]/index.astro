@@ -46,12 +46,6 @@ const t = ui[lang];
 
   <p class="home-privacy">{lang === "fr" ? "Aucun compte requis · progression conservée sur cet appareil · Python s'exécute dans ton navigateur" : "No account required · progress stays on this device · Python runs in your browser"}</p>
 
-  <details class="creator-archive">
-    <summary>{lang === "fr" ? "Parcourir les cas de projets de la créatrice" : "Browse the creator's project cases"}</summary>
-    <p>{lang === "fr" ? "Ces 27 exercices viennent des projets personnels de la créatrice. Ils restent disponibles dans cette archive." : "These 27 exercises are based on the creator's own projects and remain available in this archive."}</p>
-    <a class="btn" href={href(`/${lang}/python/`)}>{lang === "fr" ? "Ouvrir les archives Python" : "Open the Python archive"}</a>
-  </details>
-
   <script>
     type SavedAttempt = { track: string; id: string; date: string };
     const resumePanel = document.getElementById("resume-panel");
@@ -73,7 +67,7 @@ const t = ui[lang];
           let title = `${latest.track} · ${latest.id.toUpperCase()}`;
           if (latest.id === "dynamic-job") {
             try {
-              const dynamic: unknown = JSON.parse(localStorage.getItem("DRILLS_DYNAMIC_JOB_DATA") ?? "null");
+              const dynamic: unknown = JSON.parse(localStorage.getItem(`DRILLS_DYNAMIC_JOB_DATA_${lang.toUpperCase()}`) ?? "null");
               if (dynamic && typeof dynamic === "object" && "title" in dynamic && typeof dynamic.title === "string") title = dynamic.title;
             } catch {}
           }

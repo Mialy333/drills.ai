@@ -15,11 +15,12 @@ interface Props {
   path: string;
   track?: Track;
   activeId?: string;
+  showCatalogSidebar?: boolean;
   section: "home" | "drills" | "journal" | "progress" | "generate" | "assess";
 }
-const { lang, title, path, track, activeId, section } = Astro.props;
+const { lang, title, path, track, activeId, section, showCatalogSidebar = true } = Astro.props;
 const t = ui[lang];
-const list = track ? drills(track, lang) : [];
+const list = track && showCatalogSidebar ? drills(track, lang) : [];
 const pageTitle = title === t.brand ? t.brand : `${title} | ${t.brand}`;
 const strings = {
   acquired: t.status.acquired,
@@ -36,7 +37,10 @@ const strings = {
 };
 // What the browser needs to compute XP and badges on every page.
 const game = {
-  catalog: READY_TRACKS.flatMap((tr) => drills(tr, lang).map((d) => ({ id: d.id, cat: d.cat, minutes: d.minutes, track: tr }))),
+  catalog: [
+    ...READY_TRACKS.flatMap((tr) => drills(tr, lang).map((d) => ({ id: d.id, cat: d.cat, minutes: d.minutes, track: tr }))),
+    { id: "dynamic-job", cat: "debug", minutes: 15, track: "python" },
+  ],
   badges: Object.fromEntries(BADGES.map((b) => [b.id, { icon: b.icon, tier: b.tier, name: b.name[lang], how: b.how[lang] }])),
   levels: LEVELS.map((l) => l.name[lang]),
 };
@@ -76,7 +80,7 @@ const game = {
     data-base={href("/")}
     data-track={track}
     data-strings={JSON.stringify(strings)}
-    class:list={[track && "has-side"]}
+    class:list={[track && showCatalogSidebar && "has-side"]}
   >
     <a class="skip" href="#main">{lang === "fr" ? "Aller au contenu" : "Skip to content"}</a>
     <header class="bar">
@@ -106,7 +110,7 @@ const game = {
     </header>
 
     <div class="shell">
-      {track && (
+      {track && showCatalogSidebar && list.length > 0 && (
         <aside class="side" aria-label={lang === "fr" ? "Liste des drills" : "Drill list"}>
           {CATEGORIES.map((cat) => (
             <section class="side-group">

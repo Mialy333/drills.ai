@@ -419,14 +419,23 @@ function isDynamicDrillData(value: unknown): value is DynamicDrillData {
 /** Hydrate the static dynamic-job shell before the standard drill game loop binds its handlers. */
 function mountDynamicJob(article: HTMLElement): boolean {
   if (article.dataset.dynamic !== "true") return true;
+  const isFrench = document.documentElement.lang === "fr";
+  const dynamicDrillStorageKey = `DRILLS_DYNAMIC_JOB_DATA_${document.documentElement.lang.toUpperCase()}`;
   let raw: string | null = null;
-  try { raw = localStorage.getItem("DRILLS_DYNAMIC_JOB_DATA"); } catch {}
+  try { raw = localStorage.getItem(dynamicDrillStorageKey); } catch {}
   let data: unknown;
   try { data = raw ? JSON.parse(raw) : null; } catch { data = null; }
   if (!isDynamicDrillData(data)) {
     const prompt = document.createElement("p");
     prompt.className = "note is-error";
-    prompt.textContent = "No valid generated drill was found in this browser. Generate a drill first.";
+    prompt.textContent = isFrench
+      ? "Aucun exercice personnalisé n'a encore été créé en français."
+      : "No tailored exercise has been created in English yet.";
+    const link = document.createElement("a");
+    link.className = "btn btn-primary";
+    link.href = `${document.body.dataset.base ?? "/"}${document.body.dataset.lang ?? "en"}/generate/`;
+    link.textContent = isFrench ? "Préparer une offre d'emploi" : "Prepare for a job posting";
+    prompt.append(document.createTextNode(" "), link);
     article.querySelector(".brief")?.prepend(prompt);
     return false;
   }
@@ -439,13 +448,16 @@ function mountDynamicJob(article: HTMLElement): boolean {
   const category = article.querySelector<HTMLElement>(".drill-head .drill-cat");
   if (category) {
     const attemptTag = category.querySelector("#attempt-tag");
-    category.replaceChildren(document.createTextNode(`${data.family}, DYNAMIC `));
+    const family = isFrench
+      ? ({ Debugging: "Débogage", Refactoring: "Refactorisation", "Code reading": "Lecture de code" } as const)[data.family]
+      : data.family;
+    category.replaceChildren(document.createTextNode(`${family}, DYNAMIC `));
     if (attemptTag) category.append(attemptTag);
   }
   text(".brief .prose", data.context);
   text(".brief .mission", data.mission);
   const source = article.querySelector<HTMLElement>(".drill-meta div:nth-child(2) dd");
-  if (source) source.textContent = "AI generated";
+  if (source) source.textContent = isFrench ? "Généré par l'IA" : "AI generated";
   const criteria = article.querySelector(".criteria-list");
   if (criteria) criteria.replaceChildren();
   text(".solution #solution-body .prose", data.fixed_solution);
@@ -466,7 +478,7 @@ function mountDynamicJob(article: HTMLElement): boolean {
     const head = document.createElement("header");
     head.className = "q-head";
     const title = document.createElement("h3");
-    title.textContent = `Deliverable ${index}`;
+    title.textContent = `${isFrench ? "Livrable" : "Deliverable"} ${index}`;
     const score = document.createElement("span");
     score.className = "q-score";
     score.dataset.qScore = "";
@@ -492,7 +504,9 @@ function mountDynamicJob(article: HTMLElement): boolean {
     feedback.setAttribute("aria-live", "polite");
     q.append(actions, feedback);
   };
-  const code = addQuestion(1, "code", "Repair the Python implementation, then run the hidden tests.");
+  const code = addQuestion(1, "code", isFrench
+    ? "Corrige le code Python, puis lance les tests cachés."
+    : "Repair the Python implementation, then run the hidden tests.");
   const codeArea = document.createElement("textarea");
   codeArea.id = "a-q1";
   codeArea.className = "code-input";
@@ -542,7 +556,9 @@ function mountDynamicJob(article: HTMLElement): boolean {
   addCheck(choice, s.validate);
   questions.insertBefore(choice, questions.querySelector(".note"));
 
-  const written = addQuestion(3, "text", "Explain the technical fix. Include the key ideas listed by the generated drill.");
+  const written = addQuestion(3, "text", isFrench
+    ? "Explique la correction technique en intégrant les idées clés de l'exercice."
+    : "Explain the technical fix. Include the key ideas listed by the generated drill.");
   const answer = document.createElement("textarea");
   answer.id = "a-q3";
   answer.className = "text-input";

@@ -1,6 +1,6 @@
 ---
 import App from "../../layouts/App.astro";
-import { CATEGORIES, drills, href, LANGS, READY_TRACKS, TRACKS, type Lang } from "../../lib/drills";
+import { drills, href, LANGS, READY_TRACKS, TRACKS, type Lang } from "../../lib/drills";
 import { BADGES } from "../../lib/game";
 import { ui } from "../../lib/i18n";
 
@@ -22,8 +22,12 @@ const strings = {
   attempt: t.attemptN(999).replace("999", "{n}"),
 };
 const titles = Object.fromEntries(
-  READY_TRACKS.flatMap((track) => drills(track, lang).map((d) => [`${track}:${d.id}`, d.title])),
+  [
+    ...READY_TRACKS.flatMap((track) => drills(track, lang).map((d) => [`${track}:${d.id}`, d.title])),
+    ["python:dynamic-job", lang === "fr" ? "Exercice ciblé" : "Tailored job drill"],
+  ],
 );
+const dynamicDrillTitle = lang === "fr" ? "Exercice ciblé" : "Tailored job drill";
 ---
 
 <App lang={lang} title={t.progressTitle} path="/progress/" section="progress">
@@ -69,19 +73,6 @@ const titles = Object.fromEntries(
       </div>
     </section>
 
-    <section class="panel" aria-labelledby="cat-h">
-      <h2 id="cat-h">{t.byCategory}</h2>
-      <ul class="cat-bars">
-        {CATEGORIES.map((cat) => (
-          <li data-cat={cat}>
-            <span class="cat-name">{t.cats[cat]}</span>
-            <span class="cat-meter"><span></span></span>
-            <span class="cat-count">0/0</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-
     <section class="panel" aria-labelledby="map-h">
       <h2 id="map-h">{t.drillMap}</h2>
       <p class="note">{t.drillMapLead}</p>
@@ -94,6 +85,12 @@ const titles = Object.fromEntries(
             </a>
           </li>
         ))}
+        <li>
+          <a href={href(`/${lang}/python/dynamic-job/`)} data-map="python:dynamic-job" title={dynamicDrillTitle}>
+            <span class="map-fill"></span>
+            <span class="map-id">{lang === "fr" ? "OFFRE" : "JOB"}</span>
+          </a>
+        </li>
       </ol>
     </section>
 

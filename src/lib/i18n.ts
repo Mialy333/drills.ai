@@ -29,7 +29,7 @@ export const ui = {
     heroAlt:
       "Illustration rétro-futuriste : une développeuse code sur deux ordinateurs cathodiques, devant une ville violette au coucher du soleil.",
     trackLead:
-      "Archives de cas construits à partir des projets de la créatrice. Ces exercices ne font pas partie du parcours par défaut.",
+      "Prépare-toi à partir de tes compétences ou d'une offre d'emploi avec des exercices ciblés.",
     begin: "Commencer",
     resume: (id: string) => `Continuer avec ${id}`,
     resumePractice: (title: string) => `Reprendre : ${title}`,
@@ -202,7 +202,7 @@ export const ui = {
     heroAlt:
       "Retro-futuristic illustration: a developer codes on two CRT computers in front of a purple city at sunset.",
     trackLead:
-      "Archived case studies based on the creator's projects. These exercises are separate from the main learning path.",
+      "Build role-focused practice from your skills or a target job posting.",
     begin: "Start",
     resume: (id: string) => `Continue with ${id}`,
     resumePractice: (title: string) => `Continue: ${title}`,
@@ -350,16 +350,6 @@ export const ui = {
 };
 
 export type UI = (typeof ui)["fr"];
-
-/** Weekly rotation, Monday dates in ISO form. */
-export const rotation: { week: string; mon: string[]; wed: string[]; fri: string[] }[] = [
-  { week: "2026-10-26", mon: ["d5", "d2"], wed: ["l5"], fri: ["f1"] },
-  { week: "2026-11-02", mon: ["d1"], wed: ["l2"], fri: ["r2"] },
-  { week: "2026-11-09", mon: ["d3"], wed: ["l1"], fri: ["f4"] },
-  { week: "2026-11-16", mon: ["d4", "d6"], wed: ["l3"], fri: ["r5"] },
-  { week: "2026-11-23", mon: ["d7"], wed: ["l4"], fri: ["f2"] },
-  { week: "2026-11-30", mon: ["catch-up"], wed: ["l5"], fri: ["mock"] },
-];
 
 export function otherLang(lang: Lang): Lang {
   return lang === "fr" ? "en" : "fr";
