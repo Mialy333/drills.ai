@@ -375,7 +375,7 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
                             const { correct, total } = score as { correct: unknown; total: unknown };
                             return typeof correct === "number" && typeof total === "number" ? [`${pillar}: ${correct}/${total} quiz answers correct`] : [];
                         });
-                        if (scores.length) learnerContext = scores.join("\\n");
+                        if (scores.length) learnerContext = scores.join("; ");
                     }
                 } catch {
                     // The job-based roadmap can still be generated without a saved diagnostic.
