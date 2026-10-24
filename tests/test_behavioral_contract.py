@@ -61,7 +61,5 @@ def test_smoke_only_harness_is_not_behaviorally_discriminating():
     broken_result = run_trusted_fixture(BROKEN_IMPLEMENTATION, smoke_only_harness)
     fixed_result = run_trusted_fixture(FIXED_IMPLEMENTATION, smoke_only_harness)
 
-    assert broken_result.returncode == 0
-    assert fixed_result.returncode == 0
-    # This fixture explicitly records that the harness does not distinguish them.
-    assert not (broken_result.returncode != 0 and fixed_result.returncode == 0)
+    # Both pass, so this harness cannot distinguish the broken implementation.
+    assert broken_result.returncode == fixed_result.returncode == 0
