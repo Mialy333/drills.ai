@@ -19,7 +19,7 @@ from src.ai_generator.pipeline_schemas import (
     RoleAnalysis,
     RoadmapStep,
 )
-from src.ai_generator.schemas import DrillGeneratorSchema
+from src.ai_generator.schemas import DrillGeneratorSchema, MultipleChoiceQuestion as LegacyMultipleChoiceQuestion
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ def legacy_drill() -> DrillGeneratorSchema:
             "    return payload['name']"
         ),
         hidden_test_harness="assert read_name({'name': 'Ada'}) == 'Ada'",
-        multiple_choice=MultipleChoiceQuestion(
+        multiple_choice=LegacyMultipleChoiceQuestion(
             question="Why validate input?",
             options=["Safety", "Decoration", "Latency", "Formatting"],
             correct_answer_index=0,
@@ -103,7 +103,7 @@ def _completion(parsed=None, *, choices=True, refusal=None):
 
 
 def test_legacy_generator_fixture_uses_typed_multiple_choice(legacy_drill):
-    assert isinstance(legacy_drill.multiple_choice, MultipleChoiceQuestion)
+    assert isinstance(legacy_drill.multiple_choice, LegacyMultipleChoiceQuestion)
 
 
 def test_legacy_generator_returns_first_parsed_choice(legacy_drill):
