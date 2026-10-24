@@ -4,9 +4,12 @@ on:
   push:
     branches:
       - feat/fastapi-multi-agent-backend
+      - feat/drills-ai-ux-refactor
   pull_request:
     branches:
       - feat/offline-first-session
+      - feat/fastapi-multi-agent-backend
+      - feat/drills-ai-ux-refactor
       - main
 
 jobs:

@@ -1,136 +1,306 @@
 ---
 import App from "../../layouts/App.astro";
+import CompanionPanel from "../../components/CompanionPanel.astro";
 import { href, LANGS, type Lang } from "../../lib/drills";
 import { ui } from "../../lib/i18n";
 
 export function getStaticPaths() {
   return LANGS.map((lang) => ({ params: { lang } }));
 }
+
 const lang = Astro.params.lang as Lang;
 const t = ui[lang];
+const french = lang === "fr";
 ---
 
 <App lang={lang} title={t.brand} path="/" section="home">
-  <section class="welcome">
-    <div class="welcome-text">
-      <p class="home-kicker">{lang === "fr" ? "PARCOURS PYTHON · AI ENGINEERING" : "PYTHON PATH · AI ENGINEERING"}</p>
-      <h1 class="welcome-title">{t.welcomeTitle}</h1>
-      <p class="welcome-lead">{t.welcomeLead}</p>
-      <ol class="home-steps" aria-label={lang === "fr" ? "Ton parcours" : "Your learning path"}>
-        {t.welcomeHow.map((step, index) => <li><span>{String(index + 1).padStart(2, "0")}</span>{step}</li>)}
-      </ol>
-    </div>
-  </section>
+  <div class="home-page">
+    <section class="welcome" aria-labelledby="welcome-title">
+      <div class="welcome-text">
+        <p class="home-kicker">{french ? "PARCOURS GUIDÉ · AI AGENT ENGINEERING" : "GUIDED PRACTICE · AI AGENT ENGINEERING"}</p>
+        <h1 class="welcome-title" id="welcome-title">{french ? "Construis les compétences. Prouve-les en pratiquant." : "Build the skills. Prove them through practice."}</h1>
+        <p class="welcome-lead">{french
+          ? "Un parcours Python guidé pour préparer une reconversion vers les métiers d’ingénierie des agents IA, à ton rythme et à partir de ton niveau actuel."
+          : "A guided Python path for people moving into AI Agent Engineering, shaped around your starting point and the role you want."}</p>
+        <div class="welcome-actions">
+          <a class="btn btn-primary" href={href(`/${lang}/python/dynamic-job/`)} id="sample-drill-link">{french ? "Essayer un exercice gratuit" : "Try a free practice exercise"}</a>
+          <a class="btn btn-secondary" href={href(`/${lang}/assess/`)}>{french ? "Faire le diagnostic" : "Take the skill check"}</a>
+        </div>
+        <p class="welcome-note">{french ? "Sans compte ni clé API. Tu peux aussi coller une annonce pour créer un parcours ciblé." : "No account or API key needed. You can also paste a job posting to build a focused roadmap."}</p>
+      </div>
+    </section>
 
-  <section class="resume-panel" id="resume-panel" hidden aria-labelledby="resume-title">
-    <p class="home-kicker">{lang === "fr" ? "REPRENDRE" : "PICK UP WHERE YOU LEFT OFF"}</p>
-    <h2 id="resume-title">{lang === "fr" ? "Ta dernière session" : "Your last session"}</h2>
-    <p id="resume-detail">{lang === "fr" ? "Retrouve ton dernier exercice." : "Return to your most recent exercise."}</p>
-    <a class="btn btn-primary" id="resume-link" href={href(`/${lang}/python/`)}>{lang === "fr" ? "Reprendre" : "Continue"}</a>
-  </section>
+    <section class="learner-dashboard" id="learner-dashboard" hidden aria-labelledby="dashboard-title">
+      <div class="dashboard-heading">
+        <div>
+          <p class="section-eyebrow">{french ? "TON POINT DE DÉPART" : "YOUR STARTING POINT"}</p>
+          <h2 id="dashboard-title">{french ? "Ton parcours" : "Your learning path"}</h2>
+          <p class="dashboard-disclaimer">{french ? "Ton expérience déclarée et tes résultats au diagnostic sont suivis séparément." : "Your self-reported experience and diagnostic results are kept separate."}</p>
+        </div>
+        <a class="text-link" href={href(`/${lang}/progress/`)}>{french ? "Voir ma progression" : "View progress"} →</a>
+      </div>
+      <div class="dashboard-grid">
+        <section class="dashboard-item" aria-labelledby="profile-snapshot-title">
+          <h3 id="profile-snapshot-title">{french ? "Expérience déclarée" : "Self-reported experience"}</h3>
+          <p id="profile-summary"></p>
+          <button type="button" class="text-button" id="edit-profile">{french ? "Modifier mon profil" : "Edit my profile"}</button>
+        </section>
+        <section class="dashboard-item dashboard-next" aria-labelledby="next-step-title">
+          <p class="section-eyebrow">{french ? "PROCHAINE ÉTAPE" : "NEXT STEP"}</p>
+          <h3 id="next-step-title"></h3>
+          <p id="next-step-detail"></p>
+          <a class="btn btn-primary" id="next-step-link" href={href(`/${lang}/assess/`)}></a>
+        </section>
+      </div>
+    </section>
 
-  <section class="journey-grid" aria-label={lang === "fr" ? "Commencer à pratiquer" : "Start practising"}>
-    <a class="journey-card journey-card-primary" id="sample-drill-link" href={href(`/${lang}/python/dynamic-job/`)}>
-      <span class="journey-index">{lang === "fr" ? "01 / PREMIER EXERCICE" : "01 / FIRST EXERCISE"}</span>
-      <h2>{lang === "fr" ? "Commencer un exercice" : "Start an exercise"}</h2>
-      <p>{lang === "fr" ? "Essaie un mini-exercice Python guidé. Pas de compte, pas de clé API, pas d'offre à coller." : "Try a guided Python mini-exercise. No account, API key, or job posting needed."}</p>
-      <span class="journey-action">{lang === "fr" ? "Commencer maintenant" : "Start now"}<span aria-hidden="true">↗</span></span>
-    </a>
-    <a class="journey-card journey-card-secondary" href={href(`/${lang}/assess/`)}>
-      <span class="journey-index">{lang === "fr" ? "02 / DIAGNOSTIC" : "02 / SKILL CHECK"}</span>
-      <h2>{lang === "fr" ? "Situer mon niveau" : "Check my level"}</h2>
-      <p>{lang === "fr" ? "Réponds à 8 questions pour obtenir un premier repère sur tes compétences d'AI Agent Engineer." : "Answer 8 questions for an initial snapshot of your AI Agent Engineer skills."}</p>
-      <span class="journey-action">{lang === "fr" ? "Faire le diagnostic" : "Start the diagnostic"}<span aria-hidden="true">↗</span></span>
-    </a>
-    <a class="journey-card journey-card-secondary" href={href(`/${lang}/generate/`)}>
-      <span class="journey-index">{lang === "fr" ? "03 / OFFRE D'EMPLOI" : "03 / JOB POSTING"}</span>
-      <h2>{lang === "fr" ? "Préparer une offre" : "Prepare for a job posting"}</h2>
-      <p>{lang === "fr" ? "Repère les compétences demandées et prépare-toi avec un exercice Python adapté." : "Map the role's requirements and prepare with a tailored Python exercise."}</p>
-      <span class="journey-action">{lang === "fr" ? "Analyser mon offre" : "Analyse my job posting"}<span aria-hidden="true">↗</span></span>
-    </a>
-  </section>
-  <p id="sample-drill-error" class="note is-error" role="status" hidden>{lang === "fr" ? "Le stockage local est indisponible. Autorise le stockage pour lancer l'exercice d'exemple." : "Local storage is unavailable. Allow local storage to launch the sample drill."}</p>
+    <section class="profile-card" id="profile-card" aria-labelledby="profile-title">
+      <div class="profile-intro">
+        <p class="section-eyebrow">{french ? "FACULTATIF · 1 MINUTE" : "OPTIONAL · 1 MINUTE"}</p>
+        <h2 id="profile-title">{french ? "Personnalise ton point de départ" : "Personalize your starting point"}</h2>
+        <p>{french
+          ? "Indique ton objectif, ton expérience et le temps disponible. Ces réponses sont une autoévaluation, pas une preuve de maîtrise."
+          : "Share your goal, experience, and available time. These answers are self-reported, not proof of proficiency."}</p>
+      </div>
+      <form id="profile-form" class="profile-form">
+        <label class="field">
+          <span>{french ? "Mon objectif" : "My goal"}</span>
+          <select name="goal" required>
+            <option value="career-change">{french ? "Me reconvertir vers l’AI Engineering" : "Move into AI Engineering"}</option>
+            <option value="target-role">{french ? "Me préparer à un poste précis" : "Prepare for a target role"}</option>
+            <option value="skill-building">{french ? "Développer mes compétences techniques" : "Build my technical skills"}</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>{french ? "Mon expérience en Python" : "My Python experience"}</span>
+          <select name="pythonExperience" required>
+            <option value="new">{french ? "Je débute" : "I’m new to Python"}</option>
+            <option value="some">{french ? "J’en ai déjà pratiqué" : "I’ve practised it before"}</option>
+            <option value="regular">{french ? "Je l’utilise régulièrement" : "I use it regularly"}</option>
+            <option value="professional">{french ? "Je l’utilise au travail" : "I use it professionally"}</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>{french ? "Mon expérience des agents IA" : "My AI agent experience"}</span>
+          <select name="agentExperience" required>
+            <option value="new">{french ? "Je découvre le sujet" : "I’m new to the topic"}</option>
+            <option value="learning">{french ? "Je suis en train d’apprendre" : "I’m learning the basics"}</option>
+            <option value="built-projects">{french ? "J’ai déjà construit des projets" : "I’ve built projects"}</option>
+            <option value="professional">{french ? "Je travaille déjà avec des agents" : "I work with agents professionally"}</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>{french ? "Temps disponible par semaine (heures)" : "Available time each week (hours)"}</span>
+          <input name="weeklyHours" type="number" min="0.5" max="40" step="0.5" value="3" required />
+        </label>
+        <label class="field">
+          <span>{french ? "Mon rythme préféré" : "My preferred pace"}</span>
+          <select name="pace" required>
+            <option value="steady">{french ? "Régulier et progressif" : "Steady and gradual"}</option>
+            <option value="focused">{french ? "Intensif et concentré" : "Focused and intensive"}</option>
+          </select>
+        </label>
+        <button class="btn btn-primary" type="submit">{french ? "Enregistrer mon profil" : "Save my profile"}</button>
+        <p class="profile-status" id="profile-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
 
-  <p class="home-privacy">{lang === "fr" ? "Aucun compte requis · progression conservée sur cet appareil · Python s'exécute dans ton navigateur" : "No account required · progress stays on this device · Python runs in your browser"}</p>
+    <section class="journey-section" aria-labelledby="journey-title">
+      <div class="section-heading">
+        <p class="section-eyebrow">{french ? "CHOISIS TON PROCHAIN PAS" : "CHOOSE YOUR NEXT STEP"}</p>
+        <h2 id="journey-title">{french ? "Apprendre en faisant" : "Learn by doing"}</h2>
+      </div>
+      <div class="journey-grid">
+        <a class="journey-card journey-card-primary" href={href(`/${lang}/python/dynamic-job/`)}>
+          <span class="journey-index">{french ? "COMMENCER SANS PRÉREQUIS" : "START WITH NO SETUP"}</span>
+          <h3>{french ? "Essayer un exercice" : "Try a practice exercise"}</h3>
+          <p>{french ? "Un mini-défi Python guidé, sans compte, clé API ni annonce à coller." : "A guided Python mini-challenge. No account, API key, or job posting required."}</p>
+          <span class="journey-action">{french ? "Commencer" : "Start practising"}<span aria-hidden="true">→</span></span>
+        </a>
+        <a class="journey-card" href={href(`/${lang}/assess/`)}>
+          <span class="journey-index">{french ? "DIAGNOSTIC TECHNIQUE" : "TECHNICAL DIAGNOSTIC"}</span>
+          <h3>{french ? "Repérer mes priorités" : "Find my priorities"}</h3>
+          <p>{french ? "Huit questions donnent un premier signal sur Python, les outils, le contexte et la fiabilité." : "Eight questions give an initial signal across Python, tools, context, and reliability."}</p>
+          <span class="journey-action">{french ? "Faire le diagnostic" : "Take the skill check"}<span aria-hidden="true">→</span></span>
+        </a>
+        <a class="journey-card" href={href(`/${lang}/generate/`)}>
+          <span class="journey-index">{french ? "OBJECTIF PROFESSIONNEL" : "ROLE-BASED PREPARATION"}</span>
+          <h3>{french ? "Préparer une offre" : "Prepare for a role"}</h3>
+          <p>{french ? "Colle une annonce pour relier ses exigences à un plan de préparation et un exercice ciblé." : "Paste a job posting to connect its requirements to a preparation plan and a tailored exercise."}</p>
+          <span class="journey-action">{french ? "Analyser l’annonce" : "Analyse a posting"}<span aria-hidden="true">→</span></span>
+        </a>
+      </div>
+    </section>
+
+    <CompanionPanel lang={lang} scope="dashboard" />
+    <p id="sample-drill-error" class="note is-error" role="status" hidden>{french ? "Le stockage local est indisponible. Autorise-le pour lancer l'exercice d'exemple." : "Local storage is unavailable. Allow it to launch the sample exercise."}</p>
+    <p class="home-privacy">{french ? "Pas de compte · progression sur cet appareil · code Python exécuté dans ton navigateur" : "No account · progress on this device · Python runs in your browser"}</p>
+  </div>
 
   <script>
+    import { readLearnerProfile, writeLearnerProfile } from "../../lib/learner";
+    import { LearnerProfileSchema } from "../../lib/contracts";
+
     type SavedAttempt = { track: string; id: string; date: string };
-    const resumePanel = document.getElementById("resume-panel");
-    const resumeLink = document.getElementById("resume-link") as HTMLAnchorElement | null;
-    const resumeDetail = document.getElementById("resume-detail");
+    const pageLang = document.body.dataset.lang === "fr" ? "fr" : "en";
     const base = document.body.dataset.base ?? "/";
-    const lang = document.body.dataset.lang ?? "en";
-    const copy = JSON.parse(document.body.dataset.strings ?? "{}") as { resumePractice?: string };
+    const profileForm = document.querySelector<HTMLFormElement>("#profile-form");
+    const profileCard = document.querySelector<HTMLElement>("#profile-card");
+    const dashboard = document.querySelector<HTMLElement>("#learner-dashboard");
+    const profileSummary = document.querySelector<HTMLElement>("#profile-summary");
+    const profileStatus = document.querySelector<HTMLElement>("#profile-status");
+    const editProfile = document.querySelector<HTMLButtonElement>("#edit-profile");
+    const nextTitle = document.querySelector<HTMLElement>("#next-step-title");
+    const nextDetail = document.querySelector<HTMLElement>("#next-step-detail");
+    const nextLink = document.querySelector<HTMLAnchorElement>("#next-step-link");
+
+    const profileCopy = pageLang === "fr"
+      ? {
+          goal: { "career-change": "reconversion", "target-role": "poste ciblé", "skill-building": "développement de compétences" },
+          python: { new: "débutant·e en Python", some: "quelques bases Python", regular: "Python régulier", professional: "Python professionnel" },
+          agent: { new: "découverte des agents IA", learning: "apprentissage des agents IA", "built-projects": "projets d’agents IA", professional: "expérience professionnelle en agents IA" },
+          saved: "Profil enregistré sur cet appareil.",
+          storageError: "Impossible d’enregistrer le profil dans ce navigateur.",
+          resumeTitle: "Reprendre mon exercice",
+          resumeDetail: "Continue là où tu t’es arrêté·e.",
+          diagnosticTitle: "Faire mon diagnostic technique",
+          diagnosticDetail: "Commence par un repère fondé sur tes réponses au quiz.",
+          roleTitle: "Préparer une offre d’emploi",
+          roleDetail: "Relie les exigences d’un poste à un exercice Python ciblé.",
+          resumeButton: "Reprendre l’exercice",
+          diagnosticButton: "Faire le diagnostic",
+          roleButton: "Préparer une offre",
+        }
+      : {
+          goal: { "career-change": "career transition", "target-role": "target role", "skill-building": "skill building" },
+          python: { new: "new to Python", some: "some Python practice", regular: "regular Python use", professional: "professional Python use" },
+          agent: { new: "new to AI agents", learning: "learning AI agents", "built-projects": "AI agent projects", professional: "professional AI agent experience" },
+          saved: "Profile saved on this device.",
+          storageError: "This browser could not save your profile.",
+          resumeTitle: "Continue my exercise",
+          resumeDetail: "Pick up where you left off.",
+          diagnosticTitle: "Take my technical diagnostic",
+          diagnosticDetail: "Start with a snapshot based on your quiz answers.",
+          roleTitle: "Prepare for a job posting",
+          roleDetail: "Connect a role’s requirements to a tailored Python exercise.",
+          resumeButton: "Continue the exercise",
+          diagnosticButton: "Take the diagnostic",
+          roleButton: "Prepare for a role",
+        };
+
+    function showDashboard(): void {
+      const profile = readLearnerProfile();
+      if (!profile || !dashboard || !profileSummary || !profileForm) return;
+      dashboard.hidden = false;
+      profileCard?.classList.add("is-saved");
+      const goal = profileCopy.goal[profile.goal];
+      const python = profileCopy.python[profile.pythonExperience];
+      const agent = profileCopy.agent[profile.agentExperience];
+      const weeklyTime = pageLang === "fr" ? "h / semaine" : "h / week";
+      profileSummary.textContent = `${goal} · ${python} · ${agent} · ${Math.round(profile.weeklyMinutes / 60)} ${weeklyTime}`;
+      (profileForm.elements.namedItem("goal") as HTMLSelectElement).value = profile.goal;
+      (profileForm.elements.namedItem("pythonExperience") as HTMLSelectElement).value = profile.pythonExperience;
+      (profileForm.elements.namedItem("agentExperience") as HTMLSelectElement).value = profile.agentExperience;
+      (profileForm.elements.namedItem("weeklyHours") as HTMLInputElement).value = String(profile.weeklyMinutes / 60);
+      (profileForm.elements.namedItem("pace") as HTMLSelectElement).value = profile.pace;
+
+      let hasAssessment = false;
+      let hasGeneratedDrill = false;
+      let latestAttempt: SavedAttempt | undefined;
+      try {
+        const assessment: unknown = JSON.parse(localStorage.getItem("drills.assessment.v1") ?? "null");
+        hasAssessment = !!assessment && typeof assessment === "object" && "pillars" in assessment;
+        const payload = localStorage.getItem(`DRILLS_DYNAMIC_JOB_DATA_${pageLang.toUpperCase()}`);
+        hasGeneratedDrill = !!payload && JSON.parse(payload).drill_id !== undefined;
+        const attempts: unknown = JSON.parse(localStorage.getItem("drills.journal") ?? "null");
+        if (Array.isArray(attempts)) {
+          latestAttempt = attempts
+            .filter((item): item is SavedAttempt => !!item && typeof item === "object" && typeof item.track === "string" && typeof item.id === "string" && typeof item.date === "string")
+            .sort((a, b) => b.date.localeCompare(a.date))[0];
+        }
+      } catch {
+        // A malformed or unavailable saved item does not block the learner path.
+      }
+
+      const resume = latestAttempt?.track === "python" && (latestAttempt.id === "dynamic-job" || hasGeneratedDrill);
+      const destination = resume
+        ? `${base}${pageLang}/python/dynamic-job/`
+        : hasAssessment ? `${base}${pageLang}/generate/` : `${base}${pageLang}/assess/`;
+      if (nextTitle) nextTitle.textContent = resume ? profileCopy.resumeTitle : hasAssessment ? profileCopy.roleTitle : profileCopy.diagnosticTitle;
+      if (nextDetail) nextDetail.textContent = resume ? profileCopy.resumeDetail : hasAssessment ? profileCopy.roleDetail : profileCopy.diagnosticDetail;
+      if (nextLink) {
+        nextLink.href = destination;
+        nextLink.textContent = resume ? profileCopy.resumeButton : hasAssessment ? profileCopy.roleButton : profileCopy.diagnosticButton;
+      }
+    }
+
+    profileForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const data = new FormData(profileForm);
+      const hours = Number(data.get("weeklyHours"));
+      const candidate = {
+        version: 1 as const,
+        goal: data.get("goal"),
+        pythonExperience: data.get("pythonExperience"),
+        agentExperience: data.get("agentExperience"),
+        weeklyMinutes: Math.round(hours * 60),
+        pace: data.get("pace"),
+        updatedAt: new Date().toISOString(),
+      };
+      const result = LearnerProfileSchema.safeParse(candidate);
+      if (!result.success) {
+        if (profileStatus) profileStatus.textContent = profileCopy.storageError;
+        return;
+      }
+      const saved = writeLearnerProfile(result.data);
+      if (profileStatus) profileStatus.textContent = saved ? profileCopy.saved : profileCopy.storageError;
+      if (saved) showDashboard();
+    });
+
+    editProfile?.addEventListener("click", () => {
+      profileCard?.scrollIntoView({ behavior: "smooth", block: "start" });
+      (profileForm?.elements.namedItem("goal") as HTMLSelectElement | null)?.focus();
+    });
+    showDashboard();
 
     const sampleLink = document.getElementById("sample-drill-link") as HTMLAnchorElement | null;
     const sampleError = document.getElementById("sample-drill-error");
     sampleLink?.addEventListener("click", (event) => {
       event.preventDefault();
       const sample = {
-        output_language: lang,
-        // A fresh id isolates timer/progress state for each sample launch.
+        output_language: pageLang,
         drill_id: `sample-tags-${Date.now()}`,
         family: "Debugging",
-        title: lang === "fr" ? "Mini-exercice : normaliser des tags" : "Sample drill: normalize tags",
-        context: lang === "fr"
+        title: pageLang === "fr" ? "Mini-exercice : normaliser des tags" : "Sample drill: normalize tags",
+        context: pageLang === "fr"
           ? "Une API reçoit des tags saisis par des utilisateurs. Les espaces et les doublons créent des catégories incohérentes."
           : "An API receives user-submitted tags. Whitespace and duplicates create inconsistent categories.",
-        mission: lang === "fr"
+        mission: pageLang === "fr"
           ? "Corrige normalize_tags pour supprimer les valeurs vides, retirer les espaces autour des tags, convertir en minuscules et dédupliquer les résultats."
           : "Fix normalize_tags to discard blank values, trim whitespace, lowercase tags, and remove duplicates.",
-        broken_code: `def normalize_tags(tags):
-    return [tag.strip().lower() for tag in tags if tag]`,
-        fixed_solution: `def normalize_tags(tags):
-    return sorted({tag.strip().lower() for tag in tags if tag and tag.strip()})`,
-        hidden_test_harness: `def test_normalize_tags():
-    assert normalize_tags([" AI ", "ai", "", " Python "]) == ["ai", "python"]
-    assert normalize_tags(["  ", "PYTHON"]) == ["python"]`,
+        broken_code: `def normalize_tags(tags):\n    return [tag.strip().lower() for tag in tags if tag]`,
+        fixed_solution: `def normalize_tags(tags):\n    return sorted({tag.strip().lower() for tag in tags if tag and tag.strip()})`,
+        hidden_test_harness: `def test_normalize_tags():\n    assert normalize_tags([" AI ", "ai", "", " Python "]) == ["ai", "python"]\n    assert normalize_tags(["  ", "PYTHON"]) == ["python"]`,
         multiple_choice: {
-          question: lang === "fr" ? "Pourquoi faut-il tester tag.strip() et pas seulement tag ?" : "Why check tag.strip() instead of only tag?",
-          options: lang === "fr"
+          question: pageLang === "fr" ? "Pourquoi faut-il tester tag.strip() et pas seulement tag ?" : "Why check tag.strip() instead of only tag?",
+          options: pageLang === "fr"
             ? ["Une chaîne composée d'espaces est truthy en Python", "strip() trie automatiquement la liste", "strip() transforme la chaîne en nombre", "Les chaînes vides provoquent toujours une exception"]
             : ["A whitespace-only string is truthy in Python", "strip() automatically sorts the list", "strip() converts the string to a number", "Empty strings always raise an exception"],
           correct_answer_index: 0,
-          reasoning: lang === "fr"
+          reasoning: pageLang === "fr"
             ? "Une chaîne contenant des espaces n'est pas vide pour Python : il faut vérifier le résultat de strip()."
-            : "A string containing spaces is not empty to Python, so check the result of strip()."
+            : "A string containing spaces is not empty to Python, so check the result of strip().",
         },
-        model_answer_ideas: lang === "fr"
+        model_answer_ideas: pageLang === "fr"
           ? ["Filtrer les valeurs vides ou composées d'espaces", "Normaliser avec strip() et lower()", "Dédupliquer les tags"]
-          : ["Filter empty or whitespace-only values", "Normalize with strip() and lower()", "Deduplicate tags"]
+          : ["Filter empty or whitespace-only values", "Normalize with strip() and lower()", "Deduplicate tags"],
       };
       try {
-        localStorage.setItem(`DRILLS_DYNAMIC_JOB_DATA_${lang.toUpperCase()}`, JSON.stringify(sample));
+        localStorage.setItem(`DRILLS_DYNAMIC_JOB_DATA_${pageLang.toUpperCase()}`, JSON.stringify(sample));
         window.location.assign(sampleLink.href);
       } catch {
         if (sampleError) sampleError.hidden = false;
       }
     });
-
-    try {
-      const stored: unknown = JSON.parse(localStorage.getItem("drills.journal") ?? "null");
-      if (Array.isArray(stored)) {
-        const attempts = stored.filter((item): item is SavedAttempt =>
-          !!item && typeof item === "object" &&
-          typeof item.track === "string" && typeof item.id === "string" && typeof item.date === "string",
-        );
-        const latest = attempts.sort((a, b) => b.date.localeCompare(a.date))[0];
-        if (latest && resumePanel && resumeLink && resumeDetail) {
-          let title = `${latest.track} · ${latest.id.toUpperCase()}`;
-          if (latest.id === "dynamic-job") {
-            try {
-              const dynamic: unknown = JSON.parse(localStorage.getItem(`DRILLS_DYNAMIC_JOB_DATA_${lang.toUpperCase()}`) ?? "null");
-              if (dynamic && typeof dynamic === "object" && "title" in dynamic && typeof dynamic.title === "string") title = dynamic.title;
-            } catch {}
-          }
-          resumeLink.href = `${base}${lang}/${latest.track}/${latest.id}/`;
-          resumeLink.textContent = copy.resumePractice?.replace("{title}", title) ?? title;
-          resumeDetail.textContent = title;
-          resumePanel.hidden = false;
-        }
-      }
-    } catch {
-      // The learning path stays usable when local storage is unavailable.
-    }
   </script>
 </App>

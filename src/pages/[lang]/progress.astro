@@ -23,7 +23,7 @@ const strings = {
 };
 const titles = Object.fromEntries(
   [
-    ...READY_TRACKS.flatMap((track) => drills(track, lang).map((d) => [`${track}:${d.id}`, d.title])),
+    ...(import.meta.env.DEV ? READY_TRACKS.flatMap((track) => drills(track, lang).map((d) => [`${track}:${d.id}`, d.title])) : []),
     ["python:dynamic-job", lang === "fr" ? "Exercice ciblé" : "Tailored job drill"],
   ],
 );
@@ -77,7 +77,7 @@ const dynamicDrillTitle = lang === "fr" ? "Exercice ciblé" : "Tailored job dril
       <h2 id="map-h">{t.drillMap}</h2>
       <p class="note">{t.drillMapLead}</p>
       <ol class="drill-map">
-        {drills("python", lang).map((d) => (
+        {import.meta.env.DEV && drills("python", lang).map((d) => (
           <li>
             <a href={href(`/${lang}/python/${d.id}/`)} data-map={`python:${d.id}`} title={d.title}>
               <span class="map-fill"></span>

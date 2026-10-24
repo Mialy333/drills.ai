@@ -7,10 +7,13 @@ on:
       - feat/agent-orchestration
       - feat/validator-hardening
       - feat/behavioral-validator-tests
+      - feat/drills-ai-ux-refactor
   pull_request:
     branches:
       - devday-codex
       - feat/agent-orchestration
+      - feat/fastapi-multi-agent-backend
+      - feat/drills-ai-ux-refactor
       - feat/validator-hardening
       - main
 

@@ -115,47 +115,9 @@ const lang = Astro.params.lang as Lang;
     </section>
 
     <script>
+        import { DynamicDrillSchema, type DynamicDrill } from "../../lib/contracts";
+        import { profileSnapshot, readLearnerProfile, ASSESSMENT_KEY } from "../../lib/learner";
         import { zodResponseFormat } from "openai/helpers/zod";
-        import { z } from "zod";
-
-        // 1. Re-declare the identical strict Pydantic blueprint into Zod format
-        const MultipleChoiceSchema = z.object({
-            question: z.string(),
-            options: z.array(z.string()),
-            correct_answer_index: z.number().int().min(0),
-            reasoning: z.string()
-        });
-
-        const RequiredSkillSchema = z.object({
-            name: z.string(),
-            priority: z.enum(["Core", "Important", "Supporting"]),
-            evidence: z.string()
-        });
-
-        const RoadmapStepSchema = z.object({
-            title: z.string(),
-            skill: z.string(),
-            objective: z.string(),
-            minutes: z.number().int().min(5).max(240)
-        });
-
-        const DynamicDrillSchema = z.object({
-            output_language: z.enum(["fr", "en"]),
-            role_title: z.string(),
-            role_summary: z.string(),
-            required_skills: z.array(RequiredSkillSchema).min(3).max(8),
-            roadmap: z.array(RoadmapStepSchema).min(3).max(6),
-            drill_id: z.string(),
-            family: z.enum(["Debugging", "Refactoring", "Code reading"]),
-            title: z.string(),
-            context: z.string(),
-            mission: z.string(),
-            broken_code: z.string(),
-            fixed_solution: z.string(),
-            hidden_test_harness: z.string(),
-            multiple_choice: MultipleChoiceSchema,
-            model_answer_ideas: z.array(z.string())
-        });
 
         // System instructions to maintain maximum developer test rigor
         const SYSTEM_PROMPT = `You are an AI engineering interviewer. Analyze the job posting, prepare a concise role-based learning roadmap, and create one rigorous Python drill aligned with a high-priority requirement.
@@ -201,8 +163,6 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
             loadingClient: isFrench ? "Connexion au générateur IA…" : "Loading the AI generator…",
             failed: isFrench ? "La génération a échoué :" : "Generation failed:",
         };
-
-        type DynamicDrill = z.infer<typeof DynamicDrillSchema>;
 
         function renderRoadmap(drill: DynamicDrill) {
             if (!roadmapPanel || !roadmapTitle || !roadmapSummary || !roadmapSkills || !roadmapSteps) return;
@@ -367,7 +327,9 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
 
                 let learnerContext = "";
                 try {
-                    const snapshot: unknown = JSON.parse(localStorage.getItem("drills.assessment.v1") ?? "null");
+                    const profile = readLearnerProfile();
+                    if (profile) learnerContext = profileSnapshot(profile, isFrench ? "fr" : "en");
+                    const snapshot: unknown = JSON.parse(localStorage.getItem(ASSESSMENT_KEY) ?? "null");
                     if (snapshot && typeof snapshot === "object" && "pillars" in snapshot && snapshot.pillars && typeof snapshot.pillars === "object") {
                         const pillars = snapshot.pillars as Record<string, unknown>;
                         const scores = Object.entries(pillars).flatMap(([pillar, score]) => {
@@ -375,7 +337,12 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
                             const { correct, total } = score as { correct: unknown; total: unknown };
                             return typeof correct === "number" && typeof total === "number" ? [`${pillar}: ${correct}/${total} quiz answers correct`] : [];
                         });
-                        if (scores.length) learnerContext = scores.join("; ");
+                        if (scores.length) {
+                            const demonstrated = isFrench
+                                ? `Résultat du quiz (compétences démontrées uniquement par ces questions) : ${scores.join(" ; ")}.`
+                                : `Quiz result (demonstrated only on these questions): ${scores.join("; ")}.`;
+                            learnerContext = [learnerContext, demonstrated].filter(Boolean).join(" ");
+                        }
                     }
                 } catch {
                     // The job-based roadmap can still be generated without a saved diagnostic.

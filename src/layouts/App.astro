@@ -38,7 +38,9 @@ const strings = {
 // What the browser needs to compute XP and badges on every page.
 const game = {
   catalog: [
-    ...READY_TRACKS.flatMap((tr) => drills(tr, lang).map((d) => ({ id: d.id, cat: d.cat, minutes: d.minutes, track: tr }))),
+    ...(import.meta.env.DEV
+      ? READY_TRACKS.flatMap((tr) => drills(tr, lang).map((d) => ({ id: d.id, cat: d.cat, minutes: d.minutes, track: tr })))
+      : []),
     { id: "dynamic-job", cat: "debug", minutes: 15, track: "python" },
   ],
   badges: Object.fromEntries(BADGES.map((b) => [b.id, { icon: b.icon, tier: b.tier, name: b.name[lang], how: b.how[lang] }])),
@@ -60,17 +62,14 @@ const game = {
     <link rel="apple-touch-icon" href={href("/icons/icon-192.png")} />
     <link rel="manifest" href={href("/manifest.webmanifest")} />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#1C1638" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#EEE8FF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#fbfaf7" />
     <link rel="alternate" hreflang={otherLang(lang)} href={href(`/${otherLang(lang)}${path}`)} />
     <script is:inline>
       // Set the theme before first paint, so the page never flashes the wrong colours.
       (() => {
         let theme = null;
         try { theme = localStorage.getItem("drills.theme"); } catch {}
-        if (theme !== "light" && theme !== "dark") {
-          theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-        }
+        if (theme !== "light" && theme !== "dark") theme = "light";
         document.documentElement.dataset.theme = theme;
       })();
     </script>

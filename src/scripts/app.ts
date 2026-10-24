@@ -3,6 +3,7 @@
 // missing (private windows) or full.
 
 import { compute, type CatalogEntry, type GameState } from "../lib/game";
+import { initializeCompanionPanels } from "./companion";
 
 type Attempt = {
   v: 2;
@@ -1402,6 +1403,7 @@ rememberLang();
 paintProgress();
 markCurrentWeek();
 setupDrill();
+initializeCompanionPanels();
 setupJournal();
 setupProgress();
 setupUnlock();

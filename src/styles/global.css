@@ -1,6 +1,4 @@
-/* Mobile first: the base rules are for a phone; wider screens add the side list
-   and the top navigation. Palette taken from the illustration: dusk violet,
-   sunset magenta, CRT phosphor green, teal suit, cream monitor plastic. */
+/* Mobile first; shared tokens keep the learning interface quiet and consistent. */
 :root {
   --sunset: #e4569e;
   --phosphor: #5cf0a2;
@@ -36,18 +34,18 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #eee8ff;
-  --panel: #e2d9ff;
-  --raise: #f8f5ff;
-  --ink: #221a4c;
-  --muted: #554a8c;
-  --line: #c4b8f0;
-  --accent: #b8306f;
+  --bg: #fbfaf7;
+  --panel: #ffffff;
+  --raise: #f5f3fa;
+  --ink: #25243a;
+  --muted: #5b5b70;
+  --line: #dedbe8;
+  --accent: #5141a6;
   --accent-ink: #ffffff;
-  --link: #6a2fb0;
-  --code-bg: #f8f5ff;
-  --ok: #1c7a52;
-  --warn: #9a5800;
+  --link: #44358f;
+  --code-bg: #f2f1f7;
+  --ok: #216a4f;
+  --warn: #824700;
 }
 
 *,
@@ -1091,6 +1089,8 @@ legend {
 }
 
 input[type="url"],
+input[type="number"],
+select,
 textarea {
   width: 100%;
   padding: 10px 12px;
@@ -1111,6 +1111,72 @@ textarea {
   display: grid;
   gap: 10px;
   max-width: 640px;
+}
+
+/* ---------- learner path and contextual mentor ---------- */
+
+.home-page { --home-width: 920px; max-width: var(--home-width); margin-inline: auto; }
+.welcome { margin: 14px 0 30px; }
+.welcome-title { max-width: 18ch; font-size: clamp(2.45rem, 1.9rem + 4vw, 4.1rem); line-height: 1.04; letter-spacing: -.035em; }
+.welcome-lead { max-width: 62ch; font-size: 1.1rem; }
+.welcome-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.welcome-note, .dashboard-disclaimer, .home-privacy { color: var(--muted); font-size: .9rem; }
+.welcome-note { margin: 10px 0 0; }
+.section-eyebrow { margin: 0 0 8px; color: var(--muted); font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.text-link, .text-button { color: var(--link); font: inherit; font-weight: 600; }
+.text-button { padding: 0; border: 0; background: none; text-align: left; text-decoration: underline; text-underline-offset: .2em; cursor: pointer; }
+.learner-dashboard, .profile-card, .companion-panel { margin: 28px 0; padding: clamp(18px, 3vw, 28px); border: 1px solid var(--line); border-radius: var(--radius-m); background: var(--panel); }
+.learner-dashboard[hidden] { display: none; }
+.dashboard-heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 10px 24px; margin-bottom: 18px; }
+.dashboard-heading h2, .profile-intro h2, .section-heading h2, .companion-header h2 { margin-bottom: 6px; font-size: clamp(1.35rem, 1.1rem + 1.2vw, 1.75rem); letter-spacing: -.02em; }
+.dashboard-heading p, .profile-intro p, .companion-header p { margin: 0; color: var(--muted); }
+.dashboard-heading .dashboard-disclaimer { margin-top: 6px; font-size: .88rem; }
+.dashboard-grid { display: grid; gap: 12px; }
+.dashboard-item { padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--raise); }
+.dashboard-item h3 { margin-bottom: 8px; font-size: 1rem; }
+.dashboard-item > p:not(.section-eyebrow) { margin: 0 0 12px; color: var(--muted); }
+.dashboard-next { border-left: 3px solid var(--accent); }
+.dashboard-next .section-eyebrow { color: var(--accent); }
+.profile-card { display: grid; gap: 22px; }
+.profile-card.is-saved { scroll-margin-top: 72px; }
+.profile-intro { max-width: 68ch; }
+.profile-form { display: grid; gap: 14px; }
+.profile-form .field { max-width: none; margin: 0; }
+.profile-form select, .profile-form input { min-height: 46px; font: inherit; font-size: 1rem; }
+.profile-form button { justify-self: start; }
+.profile-status { min-height: 1.5em; margin: 0; color: var(--ok); font-size: .9rem; }
+.journey-section { margin-top: 36px; }
+.section-heading { margin-bottom: 16px; }
+.journey-grid { grid-template-columns: 1fr; gap: 12px; margin-bottom: 30px; }
+.journey-card { min-height: 0; padding: 20px; background: var(--panel); }
+.journey-card h3 { margin: 0 0 8px; font-size: 1.2rem; }
+.journey-card p { margin-bottom: 18px; }
+.journey-card-primary { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.journey-index { color: var(--muted); font: inherit; font-size: .75rem; font-weight: 700; letter-spacing: .06em; }
+.journey-action { color: var(--link); }
+.home-privacy { margin: 22px 0; text-align: left; }
+.companion-panel { display: grid; gap: 14px; }
+.companion-header { max-width: 68ch; }
+.companion-header .section-eyebrow { color: var(--accent); }
+.companion-transcript { display: grid; gap: 10px; max-height: 360px; overflow-y: auto; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--raise); }
+.companion-message { max-width: min(76ch, 92%); margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--panel); white-space: pre-wrap; overflow-wrap: anywhere; }
+.companion-message-user { justify-self: end; background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
+.companion-message-guide { color: var(--muted); }
+.companion-form { display: grid; gap: 10px; }
+.companion-form textarea { min-height: 72px; resize: vertical; }
+.companion-form button { justify-self: end; min-width: 112px; }
+.companion-form button:disabled, .profile-form button:disabled { cursor: not-allowed; opacity: .65; }
+.companion-status, .companion-setup, .companion-privacy { margin: 0; color: var(--muted); font-size: .88rem; }
+.companion-setup a { margin-left: 4px; color: var(--link); font-weight: 600; }
+.companion-setup[hidden] { display: none; }
+
+@media (min-width: 720px) {
+  .dashboard-grid { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); }
+  .profile-card { grid-template-columns: minmax(220px, .8fr) minmax(0, 1.2fr); align-items: start; }
+  .profile-form { grid-template-columns: 1fr 1fr; }
+  .profile-form button, .profile-status { grid-column: 1 / -1; }
+  .journey-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .journey-card { padding: 20px; }
 }
 
 .history-list li {

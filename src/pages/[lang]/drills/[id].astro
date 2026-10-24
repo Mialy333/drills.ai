@@ -3,7 +3,9 @@
 import { drills, href, LANGS, type Lang } from "../../../lib/drills";
 
 export function getStaticPaths() {
-  return LANGS.flatMap((lang) => drills("python", lang).map((d) => ({ params: { lang, id: d.id } })));
+  return import.meta.env.DEV
+    ? LANGS.flatMap((lang) => drills("python", lang).map((d) => ({ params: { lang, id: d.id } })))
+    : [];
 }
 const lang = Astro.params.lang as Lang;
 const target = href(`/${lang}/python/${Astro.params.id}/`);

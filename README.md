@@ -1,13 +1,14 @@
 # DRILLS.ai
 
-DRILLS.ai helps people moving into AI Agent Engineering identify skill gaps and practise the Python skills named in a role they want. The Astro frontend remains static on GitHub Pages; job-specific preparation can run through the FastAPI multi-agent backend or, as a fallback, directly in the browser.
+DRILLS.ai helps career changers prepare for AI Agent Engineering through guided Python practice. The Astro frontend is a static GitHub Pages site. Learners can start with a sample exercise, take a short diagnostic, and build a role-specific roadmap from a job posting.
 
 ## Learner journey
 
 1. Take a short diagnostic to get an initial skills snapshot.
 2. Paste a job posting to map its technical requirements into a focused preparation roadmap.
 3. Generate a Python exercise tied to those requirements, then run tests, answer a concept check, and explain the approach.
-4. Save attempts and track progress in the browser.
+4. Ask the contextual learning companion for progressive hints and explanations.
+5. Save attempts and track progress in the browser.
 
 The exercises should help learners build job-relevant ability, not predict interview questions or promise a hiring outcome.
 
@@ -24,6 +25,12 @@ The Python package in `src/ai_generator/` contains an experimental specialist pi
 The specialist pipeline is exposed through `api/main.py`. The static generator can call this backend by setting a backend URL on the generator page; the OpenAI key then stays in the backend environment. If no backend URL is configured, the existing browser-side OpenAI-key flow remains available as a fallback. The API requires a valid server-side `OPENAI_API_KEY`. The legacy `DrillGeneratorAgent` remains for compatibility; new work should prefer the specialist pipeline.
 
 The API currently runs the four specialist stages sequentially in one request. It is an MVP, not a durable job queue: long requests can fail if the hosting instance restarts, and the service should be rate-limited before public use. It does not execute generated Python code on the server.
+
+### Contextual learning companion
+
+The optional `/api/coach` endpoint powers the learning companion on the home and exercise pages. It receives the learner's optional self-reported profile, diagnostic summary, roadmap, visible exercise instructions, current answer, and recent feedback. It does not receive the reference solution or hidden tests. The endpoint is stateless; the short conversation history stays in the current browser page only. The same server-side `OPENAI_API_KEY` is used as the drill generator. Configure the backend URL on the generator page to enable both backend features.
+
+The public production build contains only the guided routes and the `dynamic-job` exercise shell; legacy catalog routes and the drill map are included in local development builds. This is a static-build visibility boundary, not access control. Progress and profile data stay in each browser's local storage.
 
 ### Validator checks and remaining quality gate
 
@@ -95,6 +102,10 @@ The `render.yaml` blueprint defines a separate Python web service. In Render, cr
 | `src/lib/assessment.ts` | Diagnostic questions and scoring |
 | `src/lib/drills.ts` | Public drill types, routes, and base-aware links |
 | `src/scripts/app.ts` | Browser state, generated drill hydration, Pyodide execution, and progress |
+| `src/scripts/companion.ts` | Context-limited browser client for the learning companion |
+| `src/components/CompanionPanel.astro` | Shared companion UI for the learner path and exercises |
+| `src/lib/contracts.ts` | Zod contracts for generated content, profiles, and companion requests |
+| `src/lib/learner.ts` | Validated local learner profile storage and snapshots |
 | `src/scripts/py-worker.ts` | Worker-based Python exercise execution |
 | `src/ai_generator/agents/` | Experimental specialist agents |
 | `src/ai_generator/orchestrator.py` | Experimental sequential pipeline orchestration |
@@ -102,7 +113,7 @@ The `render.yaml` blueprint defines a separate Python web service. In Render, cr
 | `src/styles/global.css` | Shared responsive UI and theme styles |
 | `public/` | Static assets and web app metadata |
 
-Personal archive material is excluded from the public source tree and build. The site is deployed from the `main` branch by `.github/workflows/deploy.yml`; changes on other branches do not update the live GitHub Pages site until they reach `main`.
+Legacy drill routes and titles are available in local development but omitted from the public static build. The source data remains in the repository; this is not access control. The site is deployed from the `main` branch by `.github/workflows/deploy.yml`; changes on other branches do not update the live GitHub Pages site until they reach `main`.
 
 ## Deployment
 

@@ -1,14 +1,15 @@
 ---
 import App from "../../../layouts/App.astro";
+import CompanionPanel from "../../../components/CompanionPanel.astro";
 import { drills, href, LANGS, neighbours, READY_TRACKS, type Drill, type Lang, type Track } from "../../../lib/drills";
 import { ui } from "../../../lib/i18n";
 
 export function getStaticPaths() {
-  const drillPaths = LANGS.flatMap((lang) =>
+  const drillPaths = import.meta.env.DEV ? LANGS.flatMap((lang) =>
     READY_TRACKS.flatMap((track) =>
       drills(track, lang).map((d) => ({ params: { lang, track, id: d.id }, props: { d } })),
     ),
-  );
+  ) : [];
   // Emit a static shell; the browser fills it from localStorage on this route.
   const dynamicPaths = LANGS.map((lang) => {
     return {
@@ -157,6 +158,8 @@ const strings = {
       ))}
       <p class="note">{t.rubricNote}</p>
     </section>
+
+    <CompanionPanel lang={lang} scope="exercise" />
 
     <section class="score" aria-labelledby="score-h">
       <h2 id="score-h">{t.resultTitle}</h2>

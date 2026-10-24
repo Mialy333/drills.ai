@@ -1,0 +1,41 @@
+---
+import { href, type Lang } from "../lib/drills";
+
+interface Props {
+  lang: Lang;
+  scope: "dashboard" | "exercise";
+}
+
+const { lang, scope } = Astro.props;
+const french = lang === "fr";
+---
+
+<section
+  class="companion-panel"
+  data-companion
+  data-scope={scope}
+  aria-labelledby={`companion-title-${scope}`}
+>
+  <header class="companion-header">
+    <p class="section-eyebrow">{french ? "AIDE CONTEXTUELLE" : "CONTEXTUAL SUPPORT"}</p>
+    <h2 id={`companion-title-${scope}`}>{french ? "Ton compagnon d’apprentissage" : "Your learning companion"}</h2>
+    <p>{french ? "Demande une explication, un indice progressif ou de l'aide pour comprendre un retour." : "Ask for an explanation, a progressive hint, or help understanding feedback."}</p>
+  </header>
+
+  <div class="companion-transcript" data-companion-transcript role="log" aria-live="polite" aria-relevant="additions text">
+    <p class="companion-message companion-message-guide">{french ? "Je peux t'aider à raisonner étape par étape. Je n'enverrai pas la solution de référence ni les tests cachés." : "I can help you reason step by step. The reference solution and hidden tests are never sent."}</p>
+  </div>
+
+  <form class="companion-form" data-companion-form>
+    <label class="visually-hidden" for={`companion-input-${scope}`}>{french ? "Ta question" : "Your question"}</label>
+    <textarea id={`companion-input-${scope}`} data-companion-input rows="2" maxlength="2000" required placeholder={french ? "Pose une question sur ton parcours ou cet exercice…" : "Ask about your roadmap or this exercise…"}></textarea>
+    <button class="btn btn-primary" type="submit" data-companion-submit>{french ? "Envoyer" : "Send"}</button>
+  </form>
+
+  <p class="companion-status" data-companion-status role="status" aria-live="polite"></p>
+  <p class="companion-setup" data-companion-setup hidden>
+    {french ? "Le compagnon nécessite une URL d'API sécurisée." : "The companion needs a secure API URL."}
+    <a href={href(`/${lang}/generate/`)}>{french ? "Configurer le service" : "Configure the service"}</a>
+  </p>
+  <p class="companion-privacy">{french ? "La conversation reste en mémoire le temps de cette page. Le message et le contexte affiché sont envoyés au service API configuré." : "Conversation stays in memory for this page. Your message and the visible context are sent to the configured API service."}</p>
+</section>
