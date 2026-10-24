@@ -8,9 +8,12 @@ import logging
 import os
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from src.ai_generator.orchestrator import DrillOrchestrator, DrillPipelineError
 from src.ai_generator.pipeline_schemas import DynamicDrillSchema
@@ -30,11 +33,16 @@ ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
+limiter = Limiter(key_func=get_remote_address, default_limits=["30/minute"])
+
 app = FastAPI(
     title="DRILLS.ai API",
     description="Server-side API for generating job-grounded Python drills with specialist agents.",
     version="0.1.0",
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -65,7 +73,8 @@ async def health() -> dict[str, str | bool]:
 
 
 @app.post("/api/drills", response_model=DynamicDrillSchema)
-async def generate_drill(request: DrillRequest) -> DynamicDrillSchema:
+@limiter.limit("5/minute")
+async def generate_drill(http_request: Request, payload: DrillRequest) -> DynamicDrillSchema:
     """Run the existing Analyst → Coach → Creator → Validator pipeline."""
     if not os.getenv("OPENAI_API_KEY"):
         raise HTTPException(
@@ -76,14 +85,14 @@ async def generate_drill(request: DrillRequest) -> DynamicDrillSchema:
     try:
         # The orchestrator and OpenAI SDK are synchronous; run them off the
         # event loop so other requests (including /health) remain responsive.
-        language_label = "French" if request.output_language == "fr" else "English"
+        language_label = "French" if payload.output_language == "fr" else "English"
         result = await asyncio.to_thread(
             DrillOrchestrator().generate,
-            job_description=request.job_description,
+            job_description=payload.job_description,
             output_language=language_label,
-            learner_snapshot=request.learner_snapshot,
+            learner_snapshot=payload.learner_snapshot,
         )
-        return result.model_copy(update={"output_language": request.output_language})
+        return result.model_copy(update={"output_language": payload.output_language})
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DrillPipelineError as exc:
