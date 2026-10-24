@@ -384,9 +384,188 @@ const fold = (s: string) =>
 
 type Draft = { answers: Record<string, string>; scores: Record<string, number>; hints: Record<string, number>; elapsed?: number };
 
+type DynamicJobDrill = {
+  drill_id: string;
+  family: "Debugging" | "Refactoring" | "Code reading";
+  title: string;
+  context: string;
+  mission: string;
+  broken_code: string;
+  fixed_solution: string;
+  hidden_test_harness: string;
+  multiple_choice: { question: string; options: string[]; correct_answer_index: number; reasoning: string };
+  model_answer_ideas: string[];
+};
+
+function isDynamicJobDrill(value: unknown): value is DynamicJobDrill {
+  if (!value || typeof value !== "object") return false;
+  const d = value as Partial<DynamicJobDrill>;
+  return typeof d.drill_id === "string" &&
+    (d.family === "Debugging" || d.family === "Refactoring" || d.family === "Code reading") &&
+    typeof d.title === "string" &&
+    typeof d.context === "string" && typeof d.mission === "string" &&
+    typeof d.broken_code === "string" && typeof d.fixed_solution === "string" &&
+    typeof d.hidden_test_harness === "string" && d.hidden_test_harness.trim().length > 0 && Array.isArray(d.model_answer_ideas) &&
+    d.model_answer_ideas.length > 0 && d.model_answer_ideas.length <= 5 &&
+    d.model_answer_ideas.every((idea) => typeof idea === "string") &&
+    !!d.multiple_choice && typeof d.multiple_choice.question === "string" &&
+    Array.isArray(d.multiple_choice.options) && d.multiple_choice.options.length > 0 &&
+    Number.isInteger(d.multiple_choice.correct_answer_index) &&
+    d.multiple_choice.correct_answer_index >= 0 &&
+    d.multiple_choice.correct_answer_index < d.multiple_choice.options.length &&
+    d.multiple_choice.options.every((option) => typeof option === "string");
+}
+
+function mountDynamicJob(article: HTMLElement): boolean {
+  if (article.dataset.dynamic !== "true") return true;
+  let raw: string | null = null;
+  try { raw = localStorage.getItem("DRILLS_DYNAMIC_JOB_DATA"); } catch {}
+  let data: unknown;
+  try { data = raw ? JSON.parse(raw) : null; } catch { data = null; }
+  if (!isDynamicJobDrill(data)) {
+    const prompt = document.createElement("p");
+    prompt.className = "note is-error";
+    prompt.textContent = "No valid generated drill was found in this browser. Generate a drill first.";
+    article.querySelector(".brief")?.prepend(prompt);
+    return false;
+  }
+
+  const text = (selector: string, value: string) => {
+    const node = article.querySelector<HTMLElement>(selector);
+    if (node) node.textContent = value;
+  };
+  text(".drill-head h1", data.title);
+  const category = article.querySelector<HTMLElement>(".drill-head .drill-cat");
+  if (category) {
+    const attemptTag = category.querySelector("#attempt-tag");
+    category.replaceChildren(document.createTextNode(`${data.family}, DYNAMIC `));
+    if (attemptTag) category.append(attemptTag);
+  }
+  text(".brief .prose", data.context);
+  text(".brief .mission", data.mission);
+  const source = article.querySelector<HTMLElement>(".drill-meta div:nth-child(2) dd");
+  if (source) source.textContent = "AI generated";
+  const criteria = article.querySelector(".criteria-list");
+  if (criteria) criteria.replaceChildren();
+  text(".solution #solution-body .prose", data.fixed_solution);
+  article.dataset.minutes = "15";
+  if (gameData && !gameData.catalog.some((entry) => entry.track === "python" && entry.id === "dynamic-job")) {
+    gameData.catalog.push({ id: "dynamic-job", cat: "debug", minutes: 15, track: "python" });
+  }
+
+  const questions = article.querySelector<HTMLElement>(".deliverables");
+  if (!questions) return false;
+  questions.querySelectorAll("article.q").forEach((q) => q.remove());
+  const s = strings<DrillStrings>(article);
+  const addQuestion = (index: number, kind: "code" | "choice" | "text", prompt: string) => {
+    const q = document.createElement("article");
+    q.className = `q q-${kind}`;
+    q.dataset.qid = `q${index}`;
+    q.dataset.type = kind;
+    const head = document.createElement("header");
+    head.className = "q-head";
+    const title = document.createElement("h3");
+    title.textContent = `Deliverable ${index}`;
+    const score = document.createElement("span");
+    score.className = "q-score";
+    score.dataset.qScore = "";
+    head.append(title, score);
+    const promptNode = document.createElement("div");
+    promptNode.className = "prose q-prompt";
+    promptNode.textContent = prompt;
+    q.append(head, promptNode);
+    return q;
+  };
+  const addCheck = (q: HTMLElement, label: string) => {
+    const actions = document.createElement("div");
+    actions.className = "q-actions";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-primary";
+    button.dataset.check = "";
+    button.textContent = label;
+    actions.append(button);
+    const feedback = document.createElement("div");
+    feedback.className = "q-feedback";
+    feedback.dataset.feedback = "";
+    feedback.setAttribute("aria-live", "polite");
+    q.append(actions, feedback);
+  };
+  const code = addQuestion(1, "code", "Repair the Python implementation, then run the hidden tests.");
+  const codeArea = document.createElement("textarea");
+  codeArea.id = "a-q1";
+  codeArea.className = "code-input";
+  codeArea.dataset.answer = "";
+  codeArea.dataset.starter = data.broken_code;
+  codeArea.value = data.broken_code;
+  codeArea.spellcheck = false;
+  codeArea.rows = Math.max(8, data.broken_code.split("\n").length + 2);
+  code.append(codeArea);
+  const tests = document.createElement("script");
+  tests.type = "application/json";
+  tests.dataset.tests = "";
+  const harness = /\bdef\s+test_[A-Za-z0-9_]*\s*\(/.test(data.hidden_test_harness)
+    ? data.hidden_test_harness
+    : `def test_generated():\n${data.hidden_test_harness.split("\n").map((line) => `    ${line}`).join("\n")}`;
+  tests.textContent = JSON.stringify({ tests: harness, labels: {} });
+  code.append(tests);
+  addCheck(code, s.runTests);
+  questions.insertBefore(code, questions.querySelector(".note"));
+
+  const choice = addQuestion(2, "choice", data.multiple_choice.question);
+  const fieldset = document.createElement("fieldset");
+  fieldset.className = "options";
+  fieldset.dataset.answerChoice = "";
+  fieldset.dataset.correct = String(data.multiple_choice.correct_answer_index);
+  data.multiple_choice.options.forEach((option, index) => {
+    const label = document.createElement("label");
+    label.className = "option";
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = "a-q2";
+    radio.value = String(index);
+    const span = document.createElement("span");
+    span.textContent = option;
+    label.append(radio, span);
+    fieldset.append(label);
+  });
+  choice.append(fieldset);
+  const modelChoice = document.createElement("div");
+  modelChoice.className = "q-model";
+  modelChoice.dataset.model = "";
+  modelChoice.hidden = true;
+  const why = document.createElement("p");
+  why.textContent = data.multiple_choice.reasoning;
+  modelChoice.append(why);
+  choice.append(modelChoice);
+  addCheck(choice, s.validate);
+  questions.insertBefore(choice, questions.querySelector(".note"));
+
+  const written = addQuestion(3, "text", "Explain the technical fix. Include the key ideas listed by the generated drill.");
+  const answer = document.createElement("textarea");
+  answer.id = "a-q3";
+  answer.className = "text-input";
+  answer.dataset.answer = "";
+  answer.rows = 5;
+  answer.placeholder = s.validate;
+  written.append(answer);
+  const concepts = document.createElement("script");
+  concepts.type = "application/json";
+  concepts.dataset.concepts = "";
+  concepts.textContent = JSON.stringify(data.model_answer_ideas.map((idea) => ({
+    label: idea,
+    any: [idea.trim().split(/\s+/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+")],
+  })));
+  written.append(concepts);
+  addCheck(written, s.validate);
+  questions.insertBefore(written, questions.querySelector(".note"));
+  return true;
+}
+
 function setupDrill(): void {
   const article = document.querySelector<HTMLElement>("article.drill");
   if (!article) return;
+  if (!mountDynamicJob(article)) return;
   const id = article.dataset.drill!;
   const track = article.dataset.track!;
   const target = Number(article.dataset.minutes) * 60;

@@ -1,15 +1,24 @@
 ---
 import App from "../../../layouts/App.astro";
-import { drills, href, LANGS, neighbours, READY_TRACKS, type Lang, type Track } from "../../../lib/drills";
+import { drills, href, LANGS, neighbours, READY_TRACKS, type Drill, type Lang, type Track } from "../../../lib/drills";
 import { ui } from "../../../lib/i18n";
 import { reviewLinks } from "../../../lib/review";
 
 export function getStaticPaths() {
-  return LANGS.flatMap((lang) =>
+  const drillPaths = LANGS.flatMap((lang) =>
     READY_TRACKS.flatMap((track) =>
       drills(track, lang).map((d) => ({ params: { lang, track, id: d.id }, props: { d } })),
     ),
   );
+  // Emit a static shell; the browser fills it from localStorage on this route.
+  const dynamicPaths = LANGS.map((lang) => {
+    const shell = drills("python", lang)[0];
+    return {
+      params: { lang, track: "python", id: "dynamic-job" },
+      props: { d: { ...shell, id: "dynamic-job", title: lang === "fr" ? "Simulation personnalisée" : "Custom simulation" } satisfies Drill },
+    };
+  });
+  return [...drillPaths, ...dynamicPaths];
 }
 const lang = Astro.params.lang as Lang;
 const track = Astro.params.track as Track;
@@ -47,7 +56,7 @@ const strings = {
 ---
 
 <App lang={lang} title={`${d.id.toUpperCase()} ${d.title}`} path={`/${track}/${d.id}/`} track={track} activeId={d.id} section="drills">
-  <article class="drill" data-drill={d.id} data-track={track} data-minutes={d.minutes} data-strings={JSON.stringify(strings)}>
+  <article class="drill" data-drill={d.id} data-track={track} data-minutes={d.minutes} data-strings={JSON.stringify(strings)} data-dynamic={d.id === "dynamic-job" ? "true" : undefined}>
     <header class="drill-head">
       <p class="drill-cat">{t.cats[d.cat]}, {d.id.toUpperCase()} <span class="attempt-tag" id="attempt-tag"></span></p>
       <h1>{d.title}</h1>

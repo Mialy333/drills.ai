@@ -5,3 +5,4 @@ dist/
 .env
 public/pyodide/
 __pycache__/
+.env

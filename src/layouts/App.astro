@@ -15,7 +15,7 @@ interface Props {
   path: string;
   track?: Track;
   activeId?: string;
-  section: "home" | "drills" | "journal" | "progress";
+  section: "home" | "drills" | "journal" | "progress" | "generate";
 }
 const { lang, title, path, track, activeId, section } = Astro.props;
 const t = ui[lang];

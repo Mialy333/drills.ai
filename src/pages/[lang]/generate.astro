@@ -1,40 +1,44 @@
 ---
-// src/pages/generate.astro
-// Astro Component Frontmatter (Keep it empty for pure client-side interaction)
+import App from "../../layouts/App.astro";
+import { href, LANGS, type Lang } from "../../lib/drills";
+
+export function getStaticPaths() {
+  return LANGS.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Lang;
 ---
 
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <title>⚙️ DRILLS.ai - Dynamic Generator</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+<App lang={lang} title={lang === "fr" ? "Générateur de drills" : "Drill generator"} path="/generate/" section="generate">
+  <section class="generator-page" aria-labelledby="generator-title">
+    <header class="generator-head">
+      <p class="generator-kicker">{lang === "fr" ? "PROTOCOLE // GÉNÉRATEUR" : "PROTOCOL // GENERATOR"}</p>
+      <h1 id="generator-title">{lang === "fr" ? "Générateur de drills dynamiques" : "Dynamic drill generator"}</h1>
+      <p>{lang === "fr" ? "Créez un exercice technique personnalisé à partir d’une offre d’emploi." : "Create a custom technical exercise from a job description."}</p>
+    </header>
     <style>
-        body {
-            background-color: #0d0e15;
-            color: #c9d1d9;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-            padding: 40px 20px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        h1 { color: #58a6ff; font-family: monospace; border-bottom: 1px solid #21262d; padding-bottom: 10px; }
-        .card { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 24px; margin-bottom: 20px; }
-        label { display: block; font-weight: bold; margin-bottom: 8px; font-family: monospace; color: #8b949e; }
-        input[type="password"], textarea {
+        .generator-page { max-width: 860px; margin: 0 auto; }
+        .generator-head { margin-bottom: 28px; }
+        .generator-head h1 { color: var(--ink); text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 55%, transparent); }
+        .generator-head > p:last-child { color: var(--muted); }
+        .generator-kicker { color: var(--ok); font: 1rem var(--pixel); letter-spacing: .08em; }
+        .generator-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 24px; margin-bottom: 20px; box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 10%, transparent); }
+        label { display: block; font-weight: bold; margin-bottom: 8px; font-family: var(--mono); color: var(--muted); }
+        .generator-card input[type="password"], .generator-card textarea {
             width: 100%;
-            background: #0d0e15;
-            border: 1px solid #30363d;
+            background: var(--code-bg);
+            border: 1px solid var(--line);
             border-radius: 6px;
-            color: #c9d1d9;
+            color: var(--ink);
             padding: 10px;
             box-sizing: border-box;
             margin-bottom: 15px;
         }
-        textarea { font-family: monospace; height: 180px; }
-        button {
-            background-color: #238636;
-            color: #ffffff;
-            border: 1px solid #2f81f7;
+        .generator-card textarea { font-family: var(--mono); height: 180px; }
+        .generator-card button {
+            background: var(--accent);
+            color: var(--accent-ink);
+            border: 1px solid var(--accent);
             border-radius: 6px;
             padding: 12px 20px;
             font-weight: bold;
@@ -42,28 +46,26 @@
             font-family: monospace;
             width: 100%;
         }
-        button:hover { background-color: #2ea043; }
-        .terminal-log { background: #000; border: 1px solid #ff007f; color: #00ff00; font-family: monospace; padding: 15px; border-radius: 4px; display: none; white-space: pre-wrap; margin-top: 20px; }
+        .generator-card button:hover { filter: brightness(1.1); }
+        #launchDrill { display: none; margin-top: 14px; background: var(--code-bg); border-color: var(--ok); color: var(--ok); box-shadow: 0 0 14px color-mix(in srgb, var(--ok) 24%, transparent); }
+        #launchDrill.is-ready { display: block; }
+        .terminal-log { background: var(--code-bg); border: 1px solid var(--ok); color: var(--ok); font-family: var(--mono); padding: 15px; border-radius: var(--radius-s); display: none; white-space: pre-wrap; margin-top: 20px; overflow-wrap: anywhere; }
     </style>
-</head>
-<body>
-
-    <h1>> DRILLS.ai // DYNAMIC_GENERATOR</h1>
-    <p>Ingest real-world Job Descriptions and synthesize on-the-fly debugging challenges using OpenAI. Zero AI Slop.</p>
 
     <!-- 1. Key Storage Configuration Box -->
-    <div class="card">
+    <div class="generator-card">
         <label for="apiKey">> ENTER YOUR OPENAI_API_KEY (Stored locally in your browser)</label>
         <input type="password" id="apiKey" placeholder="sk-proj-..." />
         <button id="saveKeyBtn" style="background-color: #21262d; border-color: #30363d; margin-top: 5px;">Save Token Regionally</button>
     </div>
 
     <!-- 2. Job Ingestion Box -->
-    <div class="card">
+    <div class="generator-card">
         <label for="jobDescription">> PASTE TARGET JOB DESCRIPTION</label>
         <textarea id="jobDescription" placeholder="Paste the text from LinkedIn or Welcome to the Jungle here... Needs explicit Python requirements."></textarea>
         
         <button id="generateBtn">⚡ RUN PROTOCOL: SYNTHESIZE CUSTOM DRILL</button>
+        <button id="launchDrill" type="button" data-href={href(`/${lang}/python/dynamic-job/`)}>▶ LAUNCH DRILL SIMULATION</button>
     </div>
 
     <!-- 3. Output / Terminal Sandbox Tracker -->
@@ -104,11 +106,12 @@ You must follow these instructions with absolute zero-tolerance for fluff:
 3. INDUSTRIAL FOCUS: Focus heavily on modern failures—prompt injection vulnerabilities, asynchronous processing locks, vector memory leakage, and deterministic data schema bypasses.`;
 
         // UI Element Selectors
-        const apiKeyInput = document.getElementById("apiKey") as HTMLInputElement;
-        const saveKeyBtn = document.getElementById("saveKeyBtn");
-        const jobDescriptionInput = document.getElementById("jobDescription") as HTMLTextAreaElement;
-        const generateBtn = document.getElementById("generateBtn");
-        const terminalLog = document.getElementById("terminalLog");
+        const apiKeyInput = document.querySelector<HTMLInputElement>("#apiKey");
+        const saveKeyBtn = document.querySelector<HTMLButtonElement>("#saveKeyBtn");
+        const jobDescriptionInput = document.querySelector<HTMLTextAreaElement>("#jobDescription");
+        const generateBtn = document.querySelector<HTMLButtonElement>("#generateBtn");
+        const launchDrill = document.querySelector<HTMLButtonElement>("#launchDrill");
+        const terminalLog = document.querySelector<HTMLDivElement>("#terminalLog");
 
         function logToTerminal(message: string) {
             if (terminalLog) {
@@ -124,8 +127,14 @@ You must follow these instructions with absolute zero-tolerance for fluff:
             logToTerminal("Local cache state check: OpenAI Token decrypted and mounted.");
         }
 
+        launchDrill?.addEventListener("click", () => {
+            const target = launchDrill.dataset.href;
+            if (target) window.location.assign(target);
+        });
+
         // Save token handler
         saveKeyBtn?.addEventListener("click", () => {
+            if (!apiKeyInput) return;
             const key = apiKeyInput.value.trim();
             if (key) {
                 localStorage.setItem("DRILLS_OPENAI_KEY", key);
@@ -135,8 +144,8 @@ You must follow these instructions with absolute zero-tolerance for fluff:
 
         // Core Generation Pipeline
         generateBtn?.addEventListener("click", async () => {
-            const key = apiKeyInput.value.trim();
-            const jobDesc = jobDescriptionInput.value.trim();
+            const key = apiKeyInput?.value.trim() ?? "";
+            const jobDesc = jobDescriptionInput?.value.trim() ?? "";
 
             if (!key || !jobDesc) {
                 alert("Error: Both API Key and Job Description fields are strictly mandatory.");
@@ -152,16 +161,22 @@ You must follow these instructions with absolute zero-tolerance for fluff:
 
                 logToTerminal("Sending context payload... Enforcing strict validation schema layout.");
                 
-                const completion = await openai.beta.chat.completions.parse({
-                    model: "gpt-4o-2024-08-06", // Version required for true Structured Outputs
+                const completion = await openai.chat.completions.create({
+                    model: "gpt-4o-2024-08-06",
                     messages: [
                         { role: "system", content: SYSTEM_PROMPT },
-                        { role: "user", content: `Generate a high-yield technical drill for this job description:\n\n${jobDesc}` }
+                        { role: "user", content: jobDesc }
                     ],
                     response_format: zodResponseFormat(DynamicDrillSchema, "drill_generation")
                 });
 
-                const structuralDrillJson = completion.choices.message.parsed;
+                const rawJson = completion.choices[0]?.message.content;
+                if (!rawJson) throw new Error("Empty response received from OpenAI.");
+                const validation = DynamicDrillSchema.safeParse(JSON.parse(rawJson));
+                if (!validation.success) throw new Error(`Invalid drill response: ${validation.error.message}`);
+                const structuralDrillJson = validation.data;
+                localStorage.setItem("DRILLS_DYNAMIC_JOB_DATA", JSON.stringify(structuralDrillJson));
+                launchDrill?.classList.add("is-ready");
                 logToTerminal("🟢 Success! Structured response received with zero AI Slop.");
                 
                 // Print the clean generated JSON object directly to the screen
@@ -170,10 +185,10 @@ You must follow these instructions with absolute zero-tolerance for fluff:
                 // NEXT STEP SUNDAY: Inject this JSON straight into your application's active play state!
                 logToTerminal("Ready for local injection gate.");
 
-            } catch (err: any) {
-                logToTerminal(`❌ System Failure: ${err.message}`);
+            } catch (err: unknown) {
+                logToTerminal(`❌ System Failure: ${err instanceof Error ? err.message : String(err)}`);
             }
         });
     </script>
-</body>
-</html>
+  </section>
+</App>
