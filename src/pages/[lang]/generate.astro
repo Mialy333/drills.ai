@@ -404,12 +404,12 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
                     setStatus(copy.loadingClient, "busy");
                     const { default: OpenAI } = await import("openai");
                     const openai = new OpenAI({ apiKey: key, dangerouslyAllowBrowser: true });
-                    const learnerSuffix = learnerContext ? `\\n\\nOPTIONAL LEARNER QUIZ SNAPSHOT (rough signal only):\\n${learnerContext}` : "";
+                    const learnerSuffix = learnerContext ? ` OPTIONAL LEARNER QUIZ SNAPSHOT (rough signal only): ${learnerContext}` : "";
                     const completion = await openai.chat.completions.create({
                         model: "gpt-4o-2024-08-06",
                         messages: [
                             { role: "system", content: SYSTEM_PROMPT },
-                            { role: "user", content: `OUTPUT LANGUAGE: ${isFrench ? "French" : "English"}.\\n\\nJOB POSTING:\\n${jobDesc}${learnerSuffix}` }
+                            { role: "user", content: `OUTPUT LANGUAGE: ${isFrench ? "French" : "English"}. JOB POSTING: ${jobDesc}${learnerSuffix}` }
                         ],
                         response_format: zodResponseFormat(DynamicDrillSchema, "drill_generation")
                     });
