@@ -384,7 +384,7 @@ const fold = (s: string) =>
 
 type Draft = { answers: Record<string, string>; scores: Record<string, number>; hints: Record<string, number>; elapsed?: number };
 
-type DynamicJobDrill = {
+interface DynamicDrillData {
   drill_id: string;
   family: "Debugging" | "Refactoring" | "Code reading";
   title: string;
@@ -397,9 +397,9 @@ type DynamicJobDrill = {
   model_answer_ideas: string[];
 };
 
-function isDynamicJobDrill(value: unknown): value is DynamicJobDrill {
+function isDynamicDrillData(value: unknown): value is DynamicDrillData {
   if (!value || typeof value !== "object") return false;
-  const d = value as Partial<DynamicJobDrill>;
+  const d = value as Partial<DynamicDrillData>;
   return typeof d.drill_id === "string" &&
     (d.family === "Debugging" || d.family === "Refactoring" || d.family === "Code reading") &&
     typeof d.title === "string" &&
@@ -416,13 +416,14 @@ function isDynamicJobDrill(value: unknown): value is DynamicJobDrill {
     d.multiple_choice.options.every((option) => typeof option === "string");
 }
 
+/** Hydrate the static dynamic-job shell before the standard drill game loop binds its handlers. */
 function mountDynamicJob(article: HTMLElement): boolean {
   if (article.dataset.dynamic !== "true") return true;
   let raw: string | null = null;
   try { raw = localStorage.getItem("DRILLS_DYNAMIC_JOB_DATA"); } catch {}
   let data: unknown;
   try { data = raw ? JSON.parse(raw) : null; } catch { data = null; }
-  if (!isDynamicJobDrill(data)) {
+  if (!isDynamicDrillData(data)) {
     const prompt = document.createElement("p");
     prompt.className = "note is-error";
     prompt.textContent = "No valid generated drill was found in this browser. Generate a drill first.";

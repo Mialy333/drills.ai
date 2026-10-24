@@ -15,13 +15,12 @@ interface Props {
   path: string;
   track?: Track;
   activeId?: string;
-  section: "home" | "drills" | "journal" | "progress" | "generate";
+  section: "home" | "drills" | "journal" | "progress" | "generate" | "assess";
 }
 const { lang, title, path, track, activeId, section } = Astro.props;
 const t = ui[lang];
 const list = track ? drills(track, lang) : [];
 const pageTitle = title === t.brand ? t.brand : `${title} | ${t.brand}`;
-const drillsHref = href(`/${lang}/${track ?? "python"}/`);
 const strings = {
   acquired: t.status.acquired,
   tried: t.status.tried,
@@ -33,6 +32,7 @@ const strings = {
   levelUp: t.levelUp,
   badgeUnlocked: t.badgeUnlocked,
   close: t.close,
+  resumePractice: t.resumePractice("{title}"),
 };
 // What the browser needs to compute XP and badges on every page.
 const game = {
@@ -85,8 +85,7 @@ const game = {
         <span>{t.brand}</span>
       </a>
       <nav class="bar-nav" aria-label={lang === "fr" ? "Navigation principale" : "Main navigation"}>
-        <a href={href(`/${lang}/`)} aria-current={section === "home" ? "page" : undefined}>{t.nav.home}</a>
-        <a href={drillsHref} aria-current={section === "drills" ? "page" : undefined}>{t.nav.drills}</a>
+        <a href={href(`/${lang}/`)} aria-current={["home", "generate", "assess"].includes(section) ? "page" : undefined}>{t.nav.home}</a>
         <a href={href(`/${lang}/progress/`)} aria-current={section === "progress" ? "page" : undefined}>{t.nav.progress}</a>
         <a href={href(`/${lang}/journal/`)} aria-current={section === "journal" ? "page" : undefined}>{t.nav.journal}</a>
       </nav>
@@ -135,13 +134,9 @@ const game = {
     </div>
 
     <nav class="tabbar" aria-label={lang === "fr" ? "Navigation" : "Navigation"}>
-      <a href={href(`/${lang}/`)} aria-current={section === "home" ? "page" : undefined}>
+      <a href={href(`/${lang}/`)} aria-current={["home", "generate", "assess"].includes(section) ? "page" : undefined}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z" /></svg>
         <span>{t.nav.home}</span>
-      </a>
-      <a href={drillsHref} aria-current={section === "drills" ? "page" : undefined}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v12H3zM8 21h8M12 17v4" /><path d="m7 9 3 2-3 2M12 13h4" /></svg>
-        <span>{t.nav.drills}</span>
       </a>
       <a href={href(`/${lang}/progress/`)} aria-current={section === "progress" ? "page" : undefined}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>

@@ -5,7 +5,7 @@ import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "astro/config";
 
-const BASE = "/python-drills/";
+const BASE = "/drills.ai/";
 
 /** Writes dist/sw.js with every built file precached, so the installed app works offline. */
 function offline() {

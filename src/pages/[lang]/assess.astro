@@ -1,0 +1,206 @@
+---
+import App from "../../layouts/App.astro";
+import { href, LANGS, type Lang } from "../../lib/drills";
+import { ASSESSMENT, PILLARS } from "../../lib/assessment";
+
+export function getStaticPaths() {
+  return LANGS.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Lang;
+const questions = ASSESSMENT.map((question) => ({
+  ...question,
+  pillarLabel: PILLARS[lang][question.pillar],
+  prompt: question.prompt[lang],
+  options: question.options[lang],
+  explanation: question.explanation[lang],
+}));
+const copy = lang === "fr"
+  ? { back: "Retour", eyebrow: "DIAGNOSTIC · PYTHON POUR L'IA", title: "Où en es-tu aujourd'hui ?", intro: "8 questions, environ 5 minutes. Ce premier repère n'est ni un examen ni une certification : il t'aide à choisir quoi travailler ensuite.", progress: "Question", next: "Valider", continue: "Continuer", finish: "Voir mon bilan", correct: "Bonne réponse", review: "À revoir", score: "Bonnes réponses", first: "Priorité de départ", redo: "Recommencer le diagnostic", job: "Préparer une offre d'emploi", note: "Le résultat reste dans ce navigateur. Il ne mesure pas encore les compétences comportementales." }
+  : { back: "Back", eyebrow: "DIAGNOSTIC · PYTHON FOR AI", title: "Where are you starting from?", intro: "8 questions, about 5 minutes. This snapshot is not an exam or certification; it helps you choose what to practise next.", progress: "Question", next: "Check answer", continue: "Continue", finish: "See my results", correct: "Correct answer", review: "Review this", score: "Correct answers", first: "Best place to start", redo: "Retake the diagnostic", job: "Prepare for a job posting", note: "Your result stays in this browser. This first version does not assess soft skills." };
+---
+
+<App lang={lang} title={copy.title} path="/assess/" section="assess">
+  <section class="diagnostic-page" aria-labelledby="diagnostic-title">
+    <a class="diagnostic-back" href={href(`/${lang}/`)}>← {copy.back}</a>
+    <header class="diagnostic-header">
+      <p class="home-kicker">{copy.eyebrow}</p>
+      <h1 id="diagnostic-title">{copy.title}</h1>
+      <p>{copy.intro}</p>
+    </header>
+
+    <div class="diagnostic-card" id="diagnostic">
+      <div class="diagnostic-progress-label"><span id="progress-label">{copy.progress} 1 / 8</span><span id="progress-percent">0%</span></div>
+      <div class="diagnostic-progress"><span id="progress-fill"></span></div>
+      <div id="question-panel"></div>
+      <button class="btn btn-primary diagnostic-next" id="next-question" type="button" disabled>{copy.next}</button>
+    </div>
+
+    <section id="diagnostic-results" class="diagnostic-results" hidden aria-live="polite"></section>
+    <p class="diagnostic-note">{copy.note}</p>
+    <script type="application/json" id="assessment-data" set:html={JSON.stringify({ questions, copy, generatorHref: href(`/${lang}/generate/`) })} />
+    <script>
+      type AssessmentQuestion = { id: string; pillar: string; pillarLabel: string; prompt: string; options: string[]; answer: number; explanation: string };
+      type AssessmentCopy = { back: string; eyebrow: string; title: string; intro: string; progress: string; next: string; continue: string; finish: string; correct: string; review: string; score: string; first: string; redo: string; job: string; note: string };
+      const appData = JSON.parse(document.getElementById("assessment-data")?.textContent ?? "{}") as { questions: AssessmentQuestion[]; copy: AssessmentCopy; generatorHref: string };
+      const { questions, copy, generatorHref } = appData;
+      const panel = document.getElementById("question-panel")!;
+      const next = document.getElementById("next-question") as HTMLButtonElement;
+      const progressLabel = document.getElementById("progress-label")!;
+      const progressPercent = document.getElementById("progress-percent")!;
+      const progressFill = document.getElementById("progress-fill") as HTMLElement;
+      const resultPanel = document.getElementById("diagnostic-results")!;
+      const answerByQuestion: number[] = [];
+      let current = 0;
+      let selected: number | undefined;
+      let checked = false;
+
+      function renderQuestion() {
+        const q = questions[current];
+        selected = undefined;
+        checked = false;
+        next.disabled = true;
+        next.textContent = copy.next;
+        progressLabel.textContent = `${copy.progress} ${current + 1} / ${questions.length}`;
+        progressPercent.textContent = `${Math.round((current / questions.length) * 100)}%`;
+        progressFill.style.width = `${(current / questions.length) * 100}%`;
+        const eyebrow = document.createElement("p");
+        eyebrow.className = "diagnostic-pillar";
+        eyebrow.textContent = q.pillarLabel;
+        const prompt = document.createElement("h2");
+        prompt.className = "diagnostic-question";
+        prompt.textContent = q.prompt;
+        const fieldset = document.createElement("fieldset");
+        fieldset.className = "diagnostic-options";
+        const legend = document.createElement("legend");
+        legend.textContent = q.pillarLabel;
+        fieldset.append(legend);
+        q.options.forEach((option, index) => {
+          const label = document.createElement("label");
+          label.className = "diagnostic-option";
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = q.id;
+          input.value = String(index);
+          input.addEventListener("change", () => {
+            selected = index;
+            next.disabled = false;
+          });
+          const text = document.createElement("span");
+          text.textContent = option;
+          label.append(input, text);
+          fieldset.append(label);
+        });
+        const feedback = document.createElement("p");
+        feedback.className = "diagnostic-feedback";
+        feedback.id = "answer-feedback";
+        feedback.hidden = true;
+        panel.replaceChildren(eyebrow, prompt, fieldset, feedback);
+      }
+
+      function showResults() {
+        const scores = new Map<string, { correct: number; total: number }>();
+        questions.forEach((q, index) => {
+          const score = scores.get(q.pillar) ?? { correct: 0, total: 0 };
+          score.total += 1;
+          if (answerByQuestion[index] === q.answer) score.correct += 1;
+          scores.set(q.pillar, score);
+        });
+        const correct = questions.filter((q, index) => answerByQuestion[index] === q.answer).length;
+        const date = new Date().toISOString();
+        try {
+          localStorage.setItem("drills.assessment.v1", JSON.stringify({ date, correct, answers: answerByQuestion, pillars: Object.fromEntries(scores) }));
+        } catch {}
+
+        const heading = document.createElement("h2");
+        heading.textContent = `${copy.score}: ${correct} / ${questions.length}`;
+        const weakest = [...scores.entries()].sort((a, b) => a[1].correct / a[1].total - b[1].correct / b[1].total)[0]?.[0];
+        const lead = document.createElement("p");
+        lead.className = "diagnostic-result-lead";
+        lead.textContent = `${copy.first}: ${questions.find((q) => q.pillar === weakest)?.pillarLabel ?? ""}`;
+        const list = document.createElement("ul");
+        list.className = "diagnostic-skill-list";
+        for (const [pillar, score] of scores) {
+          const item = document.createElement("li");
+          const label = document.createElement("span");
+          label.textContent = questions.find((q) => q.pillar === pillar)?.pillarLabel ?? pillar;
+          const value = document.createElement("strong");
+          value.textContent = `${score.correct} / ${score.total}`;
+          const meter = document.createElement("span");
+          meter.className = "diagnostic-skill-meter";
+          const fill = document.createElement("span");
+          fill.style.width = `${(score.correct / score.total) * 100}%`;
+          meter.append(fill);
+          item.append(label, value, meter);
+          list.append(item);
+        }
+        const actions = document.createElement("div");
+        actions.className = "diagnostic-actions";
+        const jobLink = document.createElement("a");
+        jobLink.className = "btn btn-primary";
+        jobLink.href = generatorHref;
+        jobLink.textContent = copy.job;
+        const redo = document.createElement("button");
+        redo.className = "btn";
+        redo.type = "button";
+        redo.textContent = copy.redo;
+        redo.addEventListener("click", () => window.location.reload());
+        actions.append(jobLink, redo);
+        resultPanel.replaceChildren(heading, lead, list, actions);
+        resultPanel.hidden = false;
+        document.getElementById("diagnostic")!.hidden = true;
+      }
+
+      next.addEventListener("click", () => {
+        const q = questions[current];
+        if (!checked) {
+          if (selected === undefined) return;
+          answerByQuestion[current] = selected;
+          checked = true;
+          const feedback = document.getElementById("answer-feedback")!;
+          feedback.textContent = `${selected === q.answer ? copy.correct : copy.review}. ${q.explanation}`;
+          feedback.hidden = false;
+          next.textContent = current === questions.length - 1 ? copy.finish : copy.continue;
+          panel.querySelectorAll<HTMLInputElement>("input[type=radio]").forEach((input) => { input.disabled = true; });
+          progressPercent.textContent = `${Math.round(((current + 1) / questions.length) * 100)}%`;
+          progressFill.style.width = `${((current + 1) / questions.length) * 100}%`;
+          return;
+        }
+        if (current === questions.length - 1) {
+          showResults();
+          return;
+        }
+        current += 1;
+        renderQuestion();
+      });
+
+      renderQuestion();
+    </script>
+    <style>
+      .diagnostic-page { max-width: 820px; margin: 0 auto; }
+      .diagnostic-back { display: inline-block; margin-bottom: 22px; text-decoration: none; }
+      .diagnostic-header { margin-bottom: 24px; }
+      .diagnostic-header > p:last-child, .diagnostic-note, .diagnostic-result-lead { color: var(--muted); }
+      .diagnostic-card, .diagnostic-results { padding: 22px; border: 1px solid var(--line); border-radius: var(--radius-m); background: var(--raise); }
+      .diagnostic-progress-label { display: flex; justify-content: space-between; color: var(--muted); font-size: .9rem; }
+      .diagnostic-progress, .diagnostic-skill-meter { display: block; height: 8px; overflow: hidden; border-radius: 8px; background: var(--line); }
+      .diagnostic-progress { margin: 8px 0 26px; }
+      .diagnostic-progress span, .diagnostic-skill-meter span { display: block; height: 100%; background: var(--ok); transition: width .2s ease; }
+      .diagnostic-pillar { color: var(--accent); font: 1rem var(--pixel); }
+      .diagnostic-question { margin: 8px 0 20px; font-size: 1.3rem; }
+      .diagnostic-options { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; }
+      .diagnostic-options legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+      .diagnostic-option { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--panel); cursor: pointer; }
+      .diagnostic-option:has(input:checked) { border-color: var(--accent); }
+      .diagnostic-option input { margin-top: 5px; accent-color: var(--accent); }
+      .diagnostic-feedback { padding: 12px; border-left: 3px solid var(--ok); background: var(--panel); }
+      .diagnostic-next { width: 100%; margin-top: 16px; }
+      .diagnostic-next:disabled { opacity: .5; cursor: not-allowed; }
+      .diagnostic-note { margin-top: 14px; font-size: .9rem; }
+      .diagnostic-skill-list { display: grid; gap: 14px; margin: 20px 0; padding: 0; list-style: none; }
+      .diagnostic-skill-list li { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; }
+      .diagnostic-skill-meter { grid-column: 1 / -1; }
+      .diagnostic-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    </style>
+  </section>
+</App>

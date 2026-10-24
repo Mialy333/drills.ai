@@ -4,9 +4,9 @@
 
 **Interview reps for AI engineers. Real bugs from real agents, real Python in your browser, a score that does not lie.**
 
-[![Play now](https://img.shields.io/badge/%E2%96%B6%20PLAY-mialy333.github.io%2Fpython--drills-ff7ab8?style=for-the-badge&labelColor=1c1638)](https://mialy333.github.io/python-drills/)
-[![Drills](https://img.shields.io/badge/drills-27-5cf0a2?style=for-the-badge&labelColor=1c1638)](https://mialy333.github.io/python-drills/fr/python/)
-[![Badges](https://img.shields.io/badge/badges-22-f2c14e?style=for-the-badge&labelColor=1c1638)](https://mialy333.github.io/python-drills/fr/progress/)
+[![Play now](https://img.shields.io/badge/%E2%96%B6%20PLAY-mialy333.github.io%2Fdrills.ai-ff7ab8?style=for-the-badge&labelColor=1c1638)](https://mialy333.github.io/drills.ai/)
+[![Drills](https://img.shields.io/badge/drills-27-5cf0a2?style=for-the-badge&labelColor=1c1638)](https://mialy333.github.io/drills.ai/fr/python/)
+[![Badges](https://img.shields.io/badge/badges-22-f2c14e?style=for-the-badge&labelColor=1c1638)](https://mialy333.github.io/drills.ai/fr/progress/)
 [![FR · EN](https://img.shields.io/badge/FR%20%C2%B7%20EN-offline%20PWA-8ef5bf?style=for-the-badge&labelColor=1c1638)](#install-it)
 
 ![Retro-futuristic illustration: a developer codes on two CRT computers in front of a purple city at sunset](public/og.jpg)
@@ -129,7 +129,7 @@ Python runtime (about 13 MB) is cached the first time you run code.
 ```bash
 npm ci
 npm run content   # rebuild drill JSON and check every model answer (27 drills, 70 questions, 0 problem)
-npm run dev       # http://localhost:4321/python-drills/
+npm run dev       # http://localhost:4321/drills.ai/
 npm run build     # static site in dist/, plus dist/sw.js
 ```
 

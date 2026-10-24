@@ -2,30 +2,30 @@
   "name": "Drills",
   "short_name": "Drills",
   "description": "Python and TypeScript drills for AI engineering interviews: debugging, refactoring, code reading. FR/EN, works offline.",
-  "start_url": "/python-drills/",
-  "scope": "/python-drills/",
+  "start_url": "/drills.ai/",
+  "scope": "/drills.ai/",
   "display": "standalone",
   "background_color": "#1C1638",
   "theme_color": "#1C1638",
   "icons": [
     {
-      "src": "/python-drills/icons/icon-192.png",
+      "src": "/drills.ai/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/python-drills/icons/icon-512.png",
+      "src": "/drills.ai/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/python-drills/icons/icon-512-maskable.png",
+      "src": "/drills.ai/icons/icon-512-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/python-drills/icons/icon.svg",
+      "src": "/drills.ai/icons/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     }

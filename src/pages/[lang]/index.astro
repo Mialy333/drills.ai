@@ -1,6 +1,6 @@
 ---
 import App from "../../layouts/App.astro";
-import { drills, href, LANGS, READY_TRACKS, TRACKS, type Lang } from "../../lib/drills";
+import { href, LANGS, type Lang } from "../../lib/drills";
 import { ui } from "../../lib/i18n";
 
 export function getStaticPaths() {
@@ -12,49 +12,79 @@ const t = ui[lang];
 
 <App lang={lang} title={t.brand} path="/" section="home">
   <section class="welcome">
-    <img class="welcome-art" src={href("/hero.webp")} alt={t.heroAlt} width="1504" height="628" fetchpriority="high" />
     <div class="welcome-text">
+      <p class="home-kicker">{lang === "fr" ? "PARCOURS PYTHON · AI ENGINEERING" : "PYTHON PATH · AI ENGINEERING"}</p>
       <h1 class="welcome-title">{t.welcomeTitle}</h1>
       <p class="welcome-lead">{t.welcomeLead}</p>
-      <ol class="steps">
-        {t.welcomeHow.map((s) => <li>{s}</li>)}
+      <ol class="home-steps" aria-label={lang === "fr" ? "Ton parcours" : "Your learning path"}>
+        {t.welcomeHow.map((step, index) => <li><span>{String(index + 1).padStart(2, "0")}</span>{step}</li>)}
       </ol>
     </div>
   </section>
 
-  <section class="generator-cta" aria-label={lang === "fr" ? "Générateur de drills" : "Drill generator"}>
-    <div>
-      <p class="generator-cta-kicker">{lang === "fr" ? "NOUVEAU // DRILL PERSONNALISÉ" : "NEW // CUSTOM DRILL"}</p>
-      <h2>{lang === "fr" ? "Entraînez-vous sur votre prochain poste" : "Train for your next role"}</h2>
-      <p>{lang === "fr" ? "Transformez une offre d’emploi en exercice technique interactif." : "Turn a job description into an interactive technical exercise."}</p>
-    </div>
-    <a class="btn btn-primary btn-big generator-cta-button" href={href(`/${lang}/generate/`)}>
-      {lang === "fr" ? "Créer un drill" : "Generate a drill"} <span aria-hidden="true">↗</span>
+  <section class="resume-panel" id="resume-panel" hidden aria-labelledby="resume-title">
+    <p class="home-kicker">{lang === "fr" ? "REPRENDRE" : "PICK UP WHERE YOU LEFT OFF"}</p>
+    <h2 id="resume-title">{lang === "fr" ? "Ta dernière session" : "Your last session"}</h2>
+    <p id="resume-detail">{lang === "fr" ? "Retrouve ton dernier exercice." : "Return to your most recent exercise."}</p>
+    <a class="btn btn-primary" id="resume-link" href={href(`/${lang}/python/`)}>{lang === "fr" ? "Reprendre" : "Continue"}</a>
+  </section>
+
+  <section class="journey-grid" aria-label={lang === "fr" ? "Choisis ton point de départ" : "Choose your starting point"}>
+    <a class="journey-card journey-card-primary" href={href(`/${lang}/assess/`)}>
+      <span class="journey-index">01 / SKILL CHECK</span>
+      <h2>{lang === "fr" ? "Je veux situer mon niveau" : "I want to check my level"}</h2>
+      <p>{lang === "fr" ? "Réponds à 8 questions pour obtenir un premier repère sur tes compétences d'AI Agent Engineer." : "Answer 8 questions for an initial snapshot of your AI Agent Engineer skills."}</p>
+      <span class="journey-action">{lang === "fr" ? "Faire le diagnostic" : "Start the diagnostic"}<span aria-hidden="true">↗</span></span>
+    </a>
+    <a class="journey-card journey-card-secondary" href={href(`/${lang}/generate/`)}>
+      <span class="journey-index">02 / JOB TARGET</span>
+      <h2>{lang === "fr" ? "J'ai une offre d'emploi" : "I have a job posting"}</h2>
+      <p>{lang === "fr" ? "Repère les compétences demandées et prépare-toi avec un exercice Python adapté." : "Map the role's requirements and prepare with a tailored Python exercise."}</p>
+      <span class="journey-action">{lang === "fr" ? "Préparer cette offre" : "Prepare for this role"}<span aria-hidden="true">↗</span></span>
     </a>
   </section>
 
-  <section class="tracks" aria-labelledby="tracks-h">
-    <h2 id="tracks-h">{t.chooseTrack}</h2>
-    <div class="track-grid">
-      {TRACKS.map((track) => {
-        const ready = READY_TRACKS.includes(track);
-        const total = drills(track, lang).length;
-        return ready ? (
-          <a class={`track track-${track}`} href={href(`/${lang}/${track}/`)} data-track-card={track} data-total={total}
-             data-progress-template={t.progressOf(999, total).replace("999", "{n}")} data-empty={t.noProgress}>
-            <span class="track-badge" aria-hidden="true">{track === "python" ? "py" : "ts"}</span>
-            <span class="track-name">{t.tracks[track].name}</span>
-            <span class="track-blurb">{t.tracks[track].blurb}</span>
-            <span class="track-progress"><span class="track-meter"><span></span></span><span class="track-count">{t.noProgress}</span></span>
-          </a>
-        ) : (
-          <div class={`track track-${track} is-soon`} aria-disabled="true">
-            <span class="track-badge" aria-hidden="true">{track === "python" ? "py" : "ts"}</span>
-            <span class="track-name">{t.tracks[track].name} <span class="soon">{t.soon}</span></span>
-            <span class="track-blurb">{t.tracks[track].blurb}</span>
-          </div>
+  <p class="home-privacy">{lang === "fr" ? "Aucun compte requis · progression conservée sur cet appareil · Python s'exécute dans ton navigateur" : "No account required · progress stays on this device · Python runs in your browser"}</p>
+
+  <details class="creator-archive">
+    <summary>{lang === "fr" ? "Parcourir les cas de projets de la créatrice" : "Browse the creator's project cases"}</summary>
+    <p>{lang === "fr" ? "Ces 27 exercices viennent des projets personnels de la créatrice. Ils restent disponibles dans cette archive." : "These 27 exercises are based on the creator's own projects and remain available in this archive."}</p>
+    <a class="btn" href={href(`/${lang}/python/`)}>{lang === "fr" ? "Ouvrir les archives Python" : "Open the Python archive"}</a>
+  </details>
+
+  <script>
+    type SavedAttempt = { track: string; id: string; date: string };
+    const resumePanel = document.getElementById("resume-panel");
+    const resumeLink = document.getElementById("resume-link") as HTMLAnchorElement | null;
+    const resumeDetail = document.getElementById("resume-detail");
+    const base = document.body.dataset.base ?? "/";
+    const lang = document.body.dataset.lang ?? "en";
+    const copy = JSON.parse(document.body.dataset.strings ?? "{}") as { resumePractice?: string };
+
+    try {
+      const stored: unknown = JSON.parse(localStorage.getItem("drills.journal") ?? "null");
+      if (Array.isArray(stored)) {
+        const attempts = stored.filter((item): item is SavedAttempt =>
+          !!item && typeof item === "object" &&
+          typeof item.track === "string" && typeof item.id === "string" && typeof item.date === "string",
         );
-      })}
-    </div>
-  </section>
+        const latest = attempts.sort((a, b) => b.date.localeCompare(a.date))[0];
+        if (latest && resumePanel && resumeLink && resumeDetail) {
+          let title = `${latest.track} · ${latest.id.toUpperCase()}`;
+          if (latest.id === "dynamic-job") {
+            try {
+              const dynamic: unknown = JSON.parse(localStorage.getItem("DRILLS_DYNAMIC_JOB_DATA") ?? "null");
+              if (dynamic && typeof dynamic === "object" && "title" in dynamic && typeof dynamic.title === "string") title = dynamic.title;
+            } catch {}
+          }
+          resumeLink.href = `${base}${lang}/${latest.track}/${latest.id}/`;
+          resumeLink.textContent = copy.resumePractice?.replace("{title}", title) ?? title;
+          resumeDetail.textContent = title;
+          resumePanel.hidden = false;
+        }
+      }
+    } catch {
+      // The learning path stays usable when local storage is unavailable.
+    }
+  </script>
 </App>

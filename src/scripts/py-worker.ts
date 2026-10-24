@@ -6,10 +6,34 @@ type RunRequest = { id: number; base: string; code: string; tests: string };
 const HARNESS = `
 import json
 
+MOCKS = '''
+import sys
+from types import ModuleType
+
+# Mock Pydantic
+pydantic_mock = ModuleType('pydantic')
+class BaseModel:
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items(): setattr(self, k, v)
+    def model_dump(self): return self.__dict__
+pydantic_mock.BaseModel = BaseModel
+pydantic_mock.Field = lambda default=None, **kwargs: default
+sys.modules['pydantic'] = pydantic_mock
+
+# Mock FastAPI
+fastapi_mock = ModuleType('fastapi')
+class FastAPI:
+    def __init__(self): self.routes = []
+    def post(self, path): return lambda func: func
+fastapi_mock.FastAPI = FastAPI
+sys.modules['fastapi'] = fastapi_mock
+'''
+
 def __run(user_code, tests_code):
     out = {"error": None, "tests": []}
     ns = {"__name__": "answer"}
     try:
+        exec(MOCKS, ns)
         exec(compile(user_code, "<your answer>", "exec"), ns)
     except Exception as e:
         out["error"] = f"{type(e).__name__}: {e}"
