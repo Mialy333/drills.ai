@@ -5,9 +5,11 @@ on:
     branches:
       - devday-codex
       - feat/agent-orchestration
+      - feat/validator-hardening
   pull_request:
     branches:
       - devday-codex
+      - feat/agent-orchestration
       - main
 
 jobs:
@@ -19,7 +21,9 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-devday.txt
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
