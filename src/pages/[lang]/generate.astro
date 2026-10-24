@@ -133,6 +133,7 @@ const lang = Astro.params.lang as Lang;
         });
 
         const DynamicDrillSchema = z.object({
+            output_language: z.enum(["fr", "en"]),
             role_title: z.string(),
             role_summary: z.string(),
             required_skills: z.array(RequiredSkillSchema).min(3).max(8),
