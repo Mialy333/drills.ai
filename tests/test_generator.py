@@ -7,8 +7,13 @@ import pytest
 from src.ai_generator.agent import DrillGeneratorAgent
 from src.ai_generator.agents.base import structured_completion
 from src.ai_generator.agents.creator import DrillCreatorAgent
+from src.ai_generator.agents.analyst import AnalystAgent
+from src.ai_generator.orchestrator import DrillOrchestrator, DrillPipelineError
 from src.ai_generator.pipeline_schemas import (
     DrillContent,
+    DynamicDrillSchema,
+    LearningRoadmap,
+    ValidationReport,
     MultipleChoiceQuestion,
     RequiredSkill,
     RoleAnalysis,
@@ -199,3 +204,72 @@ def test_structured_completion_wraps_provider_errors():
     client.beta.chat.completions.parse.side_effect = ValueError("offline mock failure")
     with pytest.raises(RuntimeError, match="Structured generation failed"):
         structured_completion(client, "offline-test", DrillGeneratorSchema, "system", "user")
+
+
+
+def test_analyst_rejects_blank_job_posting_without_model_call():
+    client = Mock()
+    agent = AnalystAgent(client=client)
+    with pytest.raises(ValueError, match="must not be empty"):
+        agent.analyze("  \n ")
+    client.beta.chat.completions.parse.assert_not_called()
+
+
+def test_orchestrator_composes_stages_and_returns_browser_payload(
+    role_analysis, target_step, pipeline_drill
+):
+    roadmap = LearningRoadmap(
+        roadmap=[
+            RoadmapStep(title="Python basics", skill="Python", objective="Review Python error handling.", minutes=20),
+            RoadmapStep(title="Test APIs", skill="API design", objective="Test malformed requests.", minutes=25),
+            target_step,
+        ]
+    )
+    analyst = Mock()
+    analyst.analyze.return_value = role_analysis
+    coach = Mock()
+    coach.create_roadmap.return_value = roadmap
+    creator = Mock()
+    creator.create_drill.return_value = pipeline_drill
+    validator = Mock()
+    validator.validate.return_value = ValidationReport(passed=True, errors=[], warnings=["offline mock"])
+
+    result = DrillOrchestrator(
+        analyst=analyst, coach=coach, creator=creator, validator=validator
+    ).generate("Python engineer role", output_language="French", learner_snapshot="rough quiz signal")
+
+    assert isinstance(result, DynamicDrillSchema)
+    assert result.role_title == role_analysis.role_title
+    assert result.roadmap[-1].skill == target_step.skill
+    assert result.drill_id == pipeline_drill.drill_id
+    analyst.analyze.assert_called_once_with("Python engineer role", "French")
+    coach.create_roadmap.assert_called_once_with(role_analysis, "French", "rough quiz signal")
+    creator.create_drill.assert_called_once_with(role_analysis, target_step, "French")
+    validator.validate.assert_called_once_with(role_analysis, roadmap, pipeline_drill)
+
+
+def test_orchestrator_rejects_validator_failure_without_returning_payload(
+    role_analysis, target_step, pipeline_drill
+):
+    roadmap = LearningRoadmap(
+        roadmap=[
+            RoadmapStep(title="Python basics", skill="Python", objective="Review Python error handling.", minutes=20),
+            RoadmapStep(title="Test APIs", skill="API design", objective="Test malformed requests.", minutes=25),
+            target_step,
+        ]
+    )
+    analyst, coach, creator, validator = Mock(), Mock(), Mock(), Mock()
+    analyst.analyze.return_value = role_analysis
+    coach.create_roadmap.return_value = roadmap
+    creator.create_drill.return_value = pipeline_drill
+    validator.validate.return_value = ValidationReport(
+        passed=False, errors=["synthetic validation failure"], warnings=[]
+    )
+    orchestrator = DrillOrchestrator(
+        analyst=analyst, coach=coach, creator=creator, validator=validator
+    )
+
+    with pytest.raises(DrillPipelineError, match="synthetic validation failure"):
+        orchestrator.generate("Python engineer role")
+
+    validator.validate.assert_called_once_with(role_analysis, roadmap, pipeline_drill)
