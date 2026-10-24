@@ -11,6 +11,22 @@ DRILLS.ai helps people moving into AI Agent Engineering identify skill gaps and 
 
 The exercises should help learners build job-relevant ability, not predict interview questions or promise a hiring outcome.
 
+## Agent pipeline (experimental, not yet wired into the browser)
+
+The Python package in `src/ai_generator/` contains an experimental specialist pipeline:
+
+1. `AnalystAgent` extracts evidence-grounded skills from a job posting.
+2. `CoachAgent` turns the analysis into an ordered learning roadmap.
+3. `DrillCreatorAgent` creates a synthetic Python exercise for the final roadmap step.
+4. `ValidatorAgent` runs deterministic preflight checks and requests a separate model review.
+5. `DrillOrchestrator` coordinates the stages and combines their outputs into the existing browser payload shape.
+
+The orchestrator is not a web API and is not connected to the static browser generator yet. This avoids putting a server-side API key in the static site and keeps this first step isolated from the existing learner experience. The pipeline requires a valid `OPENAI_API_KEY` environment variable when instantiated with the default OpenAI client.
+
+### Quality gate still required
+
+Pydantic validation and model review do not prove that generated Python code works. Before publishing generated exercises, run the harness against both code samples in an isolated sandbox and require the tests to fail against `broken_code` and pass against `fixed_solution`. The current validator reports this limitation as a warning; it does not execute untrusted generated code.
+
 ## Where exercise content comes from
 
 The job posting is the source of role-specific requirements. The generator should use only skills supported by the posting, then create a new, synthetic scenario and Python task. It must not rely on a creator's portfolio or private archives, and should not reproduce proprietary company code or interview questions.
@@ -22,7 +38,7 @@ Generated content needs quality checks before it is treated as learning material
 - Run the tests against both implementations: they should fail for the flawed code and pass for the solution.
 - Review the explanation and expected difficulty against the skill the posting actually names. Schema validity alone does not establish correctness.
 
-The current client-side generator validates the structured response and creates a targeted exercise. Automated execution of generated tests against both code samples is a quality gate to add before expanding the exercise catalog. A small, reviewed starter set of generic AI-agent Python exercises would also let new learners try the product before supplying an API key or job posting.
+A small, reviewed starter set of generic AI-agent Python exercises would also let new learners try the product before supplying an API key or job posting.
 
 ## Privacy and API key
 
@@ -37,6 +53,8 @@ npm run build     # static output in dist/
 npm run preview   # preview the built site
 ```
 
+Python pipeline dependencies are listed in `requirements-devday.txt`. Install them in a virtual environment before running Python tests.
+
 ## Project structure
 
 | Path | Purpose |
@@ -46,6 +64,9 @@ npm run preview   # preview the built site
 | `src/lib/drills.ts` | Public drill types, routes, and base-aware links |
 | `src/scripts/app.ts` | Browser state, generated drill hydration, Pyodide execution, and progress |
 | `src/scripts/py-worker.ts` | Isolated Python test execution |
+| `src/ai_generator/agents/` | Experimental specialist agents |
+| `src/ai_generator/orchestrator.py` | Experimental sequential pipeline orchestration |
+| `src/ai_generator/pipeline_schemas.py` | Typed contracts for agent inputs and outputs |
 | `src/styles/global.css` | Shared responsive UI and theme styles |
 | `public/` | Static assets and web app metadata |
 
