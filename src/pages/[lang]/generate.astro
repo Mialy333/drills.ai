@@ -280,7 +280,7 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
         // Save the public API base URL; this is not a secret.
         saveBackendBtn?.addEventListener("click", () => {
             if (!backendUrlInput) return;
-            const url = backendUrlInput.value.trim().replace(/\\/+$/, "");
+            const url = backendUrlInput.value.trim().replace(/\/+$/, "");
             if (url) {
                 try {
                     const parsed = new URL(url);
@@ -325,7 +325,7 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
             if (generateBtn.disabled) return;
             const key = apiKeyInput?.value.trim() ?? "";
             const jobDesc = jobDescriptionInput?.value.trim() ?? "";
-            const backendUrl = (backendUrlInput?.value.trim() ?? "").replace(/\\/+$/, "");
+            const backendUrl = (backendUrlInput?.value.trim() ?? "").replace(/\/+$/, "");
 
             if (!backendUrl && !key) {
                 setStatus(copy.missingApiKey, "error");
