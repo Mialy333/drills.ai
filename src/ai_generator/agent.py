@@ -38,7 +38,7 @@ class DrillGeneratorAgent:
                     {
                         "role": "user",
                         "content": (
-                            "Generate a high-yield technical drill for this job description:\\n\\n"
+                            "Generate a high-yield technical drill for this job description:\n\n"
                             f"{job_description.strip()}"
                         ),
                     },
