@@ -5,7 +5,6 @@ from src.ai_generator.agents.base import structured_completion
 from src.ai_generator.config import OPENAI_MODEL
 from src.ai_generator.pipeline_schemas import (
     DrillContent,
-    DynamicDrillSchema,
     LearningRoadmap,
     RoleAnalysis,
     ValidationReport,
@@ -21,14 +20,12 @@ def validate_dynamic_drill(
     errors: list[str] = []
     warnings: list[str] = []
 
-    if not any(step.skill.casefold() in {s.name.casefold() for s in analysis.required_skills}
-               for step in roadmap.roadmap):
+    analyzed_skills = {skill.name.casefold() for skill in analysis.required_skills}
+    if not any(step.skill.casefold() in analyzed_skills for step in roadmap.roadmap):
         errors.append("No roadmap step refers to a skill extracted from the job posting.")
 
     final_step = roadmap.roadmap[-1] if roadmap.roadmap else None
-    if final_step and final_step.skill.casefold() not in {
-        skill.name.casefold() for skill in analysis.required_skills
-    }:
+    if final_step and final_step.skill.casefold() not in analyzed_skills:
         errors.append("The final roadmap step targets a skill not found in the analysis.")
 
     if "assert" not in drill.hidden_test_harness and "pytest" not in drill.hidden_test_harness:
@@ -36,9 +33,6 @@ def validate_dynamic_drill(
 
     if drill.broken_code.strip() == drill.fixed_solution.strip():
         errors.append("The broken code and fixed solution are identical.")
-
-    if drill.multiple_choice.options[drill.multiple_choice.correct_answer_index].strip() == "":
-        errors.append("The correct multiple-choice option is empty.")
 
     if not errors:
         warnings.append(
@@ -81,8 +75,9 @@ class ValidatorAgent:
             "You are a skeptical quality reviewer for educational Python code. Never claim tests ran unless tool evidence is provided.",
             prompt,
         )
+        errors = [*preflight.errors, *review.errors]
         return ValidationReport(
-            passed=preflight.passed and review.passed,
-            errors=[*preflight.errors, *review.errors],
+            passed=preflight.passed and review.passed and not review.errors,
+            errors=errors,
             warnings=[*preflight.warnings, *review.warnings],
         )
