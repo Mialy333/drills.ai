@@ -23,9 +23,11 @@ The Python package in `src/ai_generator/` contains an experimental specialist pi
 
 The orchestrator is not a web API and is not connected to the static browser generator yet. This avoids putting a server-side API key in the static site and keeps this first step isolated from the existing learner experience. The pipeline requires a valid `OPENAI_API_KEY` environment variable when instantiated with the default OpenAI client.
 
-### Quality gate still required
+### Validator checks and remaining quality gate
 
-Pydantic validation and model review do not prove that generated Python code works. Before publishing generated exercises, run the harness against both code samples in an isolated sandbox and require the tests to fail against `broken_code` and pass against `fixed_solution`. The current validator reports this limitation as a warning; it does not execute untrusted generated code.
+The deterministic preflight validates that both implementations and the test harness parse as Python, checks that the harness contains a real `assert` statement (not merely the word in a comment/string), checks that the broken and fixed implementations differ, and checks that the final roadmap skill came from the role analysis. Offline tests cover these rejection cases and ensure preflight failures skip the model review. These checks do **not** execute generated code or prove behavioural correctness.
+
+Before publishing generated exercises, run the harness against both code samples in a strongly isolated, resource-limited sandbox and require the tests to fail against `broken_code` and pass against `fixed_solution`. The current validator reports this limitation as a warning; it does not execute untrusted generated code. Do not treat an LLM review or syntax parsing as a substitute for that runtime gate.
 
 ## Where exercise content comes from
 
@@ -53,7 +55,7 @@ npm run build     # static output in dist/
 npm run preview   # preview the built site
 ```
 
-Python pipeline dependencies are listed in `requirements-devday.txt`. Install them in a virtual environment before running Python tests.
+Python pipeline dependencies are listed in `requirements-devday.txt`. Install them in a virtual environment before running Python tests. The offline validator suite is `python -m pytest -q tests/test_agent_pipeline.py`; it does not require an OpenAI API key or make paid API calls.
 
 ## Project structure
 
