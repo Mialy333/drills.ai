@@ -38,6 +38,11 @@ function write(key: string, value: unknown): void {
   }
 }
 
+function revealedKeys(): string[] {
+  const value = read<unknown>("drills.revealed", []);
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
 /** Accepts version-1 entries (Python only, score capped when the solution was opened). */
 function normalise(x: unknown): Attempt | null {
   const e = x as Record<string, unknown>;
@@ -899,7 +904,7 @@ function setupDrill(): void {
   const revealButton = document.getElementById("reveal") as HTMLButtonElement;
   const body = document.getElementById("solution-body")!;
   const note = document.getElementById("revealed-note")!;
-  let withSolution = read<string[]>("drills.revealed", []).includes(`${track}:${id}`);
+  let withSolution = revealedKeys().includes(`${track}:${id}`);
   const setSolution = (open: boolean) => {
     body.hidden = !open;
     article.classList.toggle("is-solution-open", open);
@@ -912,7 +917,7 @@ function setupDrill(): void {
     const open = body.hidden;
     if (open && !withSolution) {
       withSolution = true;
-      write("drills.revealed", [...new Set([...read<string[]>("drills.revealed", []), `${track}:${id}`])]);
+      write("drills.revealed", [...new Set([...revealedKeys(), `${track}:${id}`])]);
     }
     setSolution(open);
     paintScore();
@@ -1010,7 +1015,7 @@ function setupDrill(): void {
     draft = { answers: {}, scores: {}, hints: {}, elapsed: 0 };
     saveDraft();
     withSolution = false;
-    write("drills.revealed", read<string[]>("drills.revealed", []).filter((x) => x !== `${track}:${id}`));
+    write("drills.revealed", revealedKeys().filter((x) => x !== `${track}:${id}`));
     questions.forEach((q) => {
       const answer = q.querySelector<HTMLTextAreaElement>("[data-answer]");
       if (answer) answer.value = answer.dataset.starter ?? "";
