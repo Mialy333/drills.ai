@@ -42,7 +42,14 @@ const t = ui[lang];
       <p>{lang === "fr" ? "Repère les compétences demandées et prépare-toi avec un exercice Python adapté." : "Map the role's requirements and prepare with a tailored Python exercise."}</p>
       <span class="journey-action">{lang === "fr" ? "Préparer cette offre" : "Prepare for this role"}<span aria-hidden="true">↗</span></span>
     </a>
+    <a class="journey-card journey-card-sample" id="sample-drill-link" href={href(`/${lang}/python/dynamic-job/`)}>
+      <span class="journey-index">00 / QUICK START</span>
+      <h2>{lang === "fr" ? "Je veux essayer tout de suite" : "I want to try it now"}</h2>
+      <p>{lang === "fr" ? "Lance un mini-exercice Python prêt à l'emploi. Pas de compte, pas de clé API, pas d'offre à coller." : "Try a ready-to-go Python exercise. No account, API key, or job posting needed."}</p>
+      <span class="journey-action">{lang === "fr" ? "Essayer un exercice gratuit" : "Try a free sample drill"}<span aria-hidden="true">↗</span></span>
+    </a>
   </section>
+  <p id="sample-drill-error" class="note is-error" role="status" hidden>{lang === "fr" ? "Le stockage local est indisponible. Autorise le stockage pour lancer l'exercice d'exemple." : "Local storage is unavailable. Allow local storage to launch the sample drill."}</p>
 
   <p class="home-privacy">{lang === "fr" ? "Aucun compte requis · progression conservée sur cet appareil · Python s'exécute dans ton navigateur" : "No account required · progress stays on this device · Python runs in your browser"}</p>
 
@@ -54,6 +61,45 @@ const t = ui[lang];
     const base = document.body.dataset.base ?? "/";
     const lang = document.body.dataset.lang ?? "en";
     const copy = JSON.parse(document.body.dataset.strings ?? "{}") as { resumePractice?: string };
+
+    const sampleLink = document.getElementById("sample-drill-link") as HTMLAnchorElement | null;
+    const sampleError = document.getElementById("sample-drill-error");
+    sampleLink?.addEventListener("click", (event) => {
+      event.preventDefault();
+      const sample = {
+        drill_id: "sample-tags",
+        family: "Debugging",
+        title: lang === "fr" ? "Mini-exercice : normaliser des tags" : "Sample drill: normalize tags",
+        context: lang === "fr"
+          ? "Une API reçoit des tags saisis par des utilisateurs. Les espaces et les doublons créent des catégories incohérentes."
+          : "An API receives user-submitted tags. Whitespace and duplicates create inconsistent categories.",
+        mission: lang === "fr"
+          ? "Corrige normalize_tags pour supprimer les valeurs vides, retirer les espaces autour des tags, convertir en minuscules et dédupliquer les résultats."
+          : "Fix normalize_tags to discard blank values, trim whitespace, lowercase tags, and remove duplicates.",
+        broken_code: "def normalize_tags(tags):\\n    return [tag.strip().lower() for tag in tags if tag]",
+        fixed_solution: "def normalize_tags(tags):\\n    return sorted({tag.strip().lower() for tag in tags if tag and tag.strip()})",
+        hidden_test_harness: "def test_normalize_tags():\\n    assert normalize_tags([\\" AI \\", \\"ai\\", \\"\\", \\" Python \"]) == [\\"ai\\", \\"python\\"]\\n    assert normalize_tags([\\"  \\", \\"PYTHON\\"]) == [\\"python\\"]",
+        multiple_choice: {
+          question: lang === "fr" ? "Pourquoi faut-il tester tag.strip() et pas seulement tag ?" : "Why check tag.strip() instead of only tag?",
+          options: lang === "fr"
+            ? ["Une chaîne composée d'espaces est truthy en Python", "strip() trie automatiquement la liste", "strip() transforme la chaîne en nombre", "Les chaînes vides provoquent toujours une exception"]
+            : ["A whitespace-only string is truthy in Python", "strip() automatically sorts the list", "strip() converts the string to a number", "Empty strings always raise an exception"],
+          correct_answer_index: 0,
+          reasoning: lang === "fr"
+            ? "Une chaîne contenant des espaces n'est pas vide pour Python : il faut vérifier le résultat de strip()."
+            : "A string containing spaces is not empty to Python, so check the result of strip()."
+        },
+        model_answer_ideas: lang === "fr"
+          ? ["Filtrer les valeurs vides ou composées d'espaces", "Normaliser avec strip() et lower()", "Dédupliquer les tags"]
+          : ["Filter empty or whitespace-only values", "Normalize with strip() and lower()", "Deduplicate tags"]
+      };
+      try {
+        localStorage.setItem(`DRILLS_DYNAMIC_JOB_DATA_${lang.toUpperCase()}`, JSON.stringify(sample));
+        window.location.assign(sampleLink.href);
+      } catch {
+        if (sampleError) sampleError.hidden = false;
+      }
+    });
 
     try {
       const stored: unknown = JSON.parse(localStorage.getItem("drills.journal") ?? "null");
