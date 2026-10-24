@@ -324,6 +324,7 @@ Treat this as a fresh, isolated assessment. Use only technical requirements supp
         generateBtn?.addEventListener("click", async () => {
             if (generateBtn.disabled) return;
             const key = apiKeyInput?.value.trim() ?? "";
+            const jobDesc = jobDescriptionInput?.value.trim() ?? "";
             const backendUrl = (backendUrlInput?.value.trim() ?? "").replace(/\\/+$/, "");
 
             if (!backendUrl && !key) {
