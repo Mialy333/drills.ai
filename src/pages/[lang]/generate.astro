@@ -16,7 +16,7 @@ const lang = Astro.params.lang as Lang;
       <h1 id="generator-title">{lang === "fr" ? "Générateur de drills dynamiques" : "Dynamic drill generator"}</h1>
       <p>{lang === "fr" ? "Collez une annonce complète pour obtenir son analyse de compétences, un plan de préparation et un exercice Python ciblé." : "Paste a complete job posting to get its skill analysis, preparation roadmap, and a tailored Python exercise."}</p>
       <p>{lang === "fr" ? "Cette version cible les postes d’AI Agent Engineer. L’annonce doit mentionner l’IA ou les agents, ainsi que des compétences techniques." : "This version targets AI Agent Engineer roles. The posting must mention AI or agents, plus technical skills."}</p>
-      <p>{lang === "fr" ? "Le parcours et l’exercice sont générés dans la langue de l’annonce, même si l’interface est dans une autre langue." : "The roadmap and exercise follow the job posting’s language, even if the interface uses another language."}</p>
+      <p>{lang === "fr" ? "Le parcours et l’exercice suivent la langue de l’interface. Une annonce rédigée dans une autre langue sera analysée sans changer la langue des résultats." : "The roadmap and exercise follow the interface language. A posting written in another language will be analysed without changing the language of the results."}</p>
     </header>
     <style>
         .generator-page { max-width: 860px; margin: 0 auto; }
@@ -133,6 +133,7 @@ const lang = Astro.params.lang as Lang;
         });
 
         const DynamicDrillSchema = z.object({
+            output_language: z.enum(["fr", "en"]),
             role_title: z.string(),
             role_summary: z.string(),
             required_skills: z.array(RequiredSkillSchema).min(3).max(8),
@@ -151,7 +152,7 @@ const lang = Astro.params.lang as Lang;
 
         // System instructions to maintain maximum developer test rigor
         const SYSTEM_PROMPT = `You are an AI engineering interviewer. Analyze the job posting, prepare a concise role-based learning roadmap, and create one rigorous Python drill aligned with a high-priority requirement.
-Return every user-facing string in the output language explicitly specified in the user message, regardless of the job posting's language. For French output, use natural, grammatically correct French with correct accents; do not leave explanatory prose in English. Keep established technical names, identifiers, and code syntax unchanged. Translate evidence phrases faithfully into the output language instead of quoting text in another language. Follow the exact JSON schema.
+LANGUAGE IS A STRICT REQUIREMENT: return every user-facing natural-language string in the output language explicitly specified in the user message, regardless of the job posting's language. Never switch languages or mix French and English in the same result. For French output, use natural, grammatically correct French with correct accents; do not leave explanatory prose, skill evidence, roadmap steps, reasoning, or model-answer ideas in English. For English output, write all explanatory prose in English. Keep established technical names, programming identifiers, and code syntax unchanged. Translate evidence faithfully into the requested output language rather than copying source-language phrases. Follow the exact JSON schema.
 Treat this as a fresh, isolated assessment. Use only technical requirements supported by the job posting. Do not use or mention bundled drills, archives, saved exercises, portfolio projects, or presumed personal history. Do not reuse an old exercise or introduce a company, product, or technology that the posting does not support.
 1. Extract 3-8 concrete skills actually requested by the posting. Set priorities to Core, Important, or Supporting, and include a short quote or faithful evidence phrase from the posting for each.
 2. Create 3-6 ordered preparation steps. Each must name a skill, a concrete objective, and a realistic estimate in minutes (5-240). The last step must correspond to the generated drill.

@@ -38,6 +38,11 @@ function write(key: string, value: unknown): void {
   }
 }
 
+function revealedKeys(): string[] {
+  const value = read<unknown>("drills.revealed", []);
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
 /** Accepts version-1 entries (Python only, score capped when the solution was opened). */
 function normalise(x: unknown): Attempt | null {
   const e = x as Record<string, unknown>;
@@ -385,6 +390,7 @@ const fold = (s: string) =>
 type Draft = { answers: Record<string, string>; scores: Record<string, number>; hints: Record<string, number>; elapsed?: number };
 
 interface DynamicDrillData {
+  output_language?: "fr" | "en";
   drill_id: string;
   family: "Debugging" | "Refactoring" | "Code reading";
   title: string;
@@ -400,7 +406,8 @@ interface DynamicDrillData {
 function isDynamicDrillData(value: unknown): value is DynamicDrillData {
   if (!value || typeof value !== "object") return false;
   const d = value as Partial<DynamicDrillData>;
-  return typeof d.drill_id === "string" &&
+  return (d.output_language === undefined || d.output_language === "fr" || d.output_language === "en") &&
+    typeof d.drill_id === "string" &&
     (d.family === "Debugging" || d.family === "Refactoring" || d.family === "Code reading") &&
     typeof d.title === "string" &&
     typeof d.context === "string" && typeof d.mission === "string" &&
@@ -425,7 +432,7 @@ function mountDynamicJob(article: HTMLElement): boolean {
   try { raw = localStorage.getItem(dynamicDrillStorageKey); } catch {}
   let data: unknown;
   try { data = raw ? JSON.parse(raw) : null; } catch { data = null; }
-  if (!isDynamicDrillData(data)) {
+  if (!isDynamicDrillData(data) || (data.output_language && data.output_language !== (isFrench ? "fr" : "en"))) {
     const prompt = document.createElement("p");
     prompt.className = "note is-error";
     prompt.textContent = isFrench
@@ -444,6 +451,9 @@ function mountDynamicJob(article: HTMLElement): boolean {
     const node = article.querySelector<HTMLElement>(selector);
     if (node) node.textContent = value;
   };
+  // Give each generated/sample payload its own draft so an old exercise timer
+  // cannot leak into a newly opened drill that reuses the dynamic-job route.
+  article.dataset.contentId = data.drill_id;
   text(".drill-head h1", data.title);
   const category = article.querySelector<HTMLElement>(".drill-head .drill-cat");
   if (category) {
@@ -460,7 +470,14 @@ function mountDynamicJob(article: HTMLElement): boolean {
   if (source) source.textContent = isFrench ? "Généré par l'IA" : "AI generated";
   const criteria = article.querySelector(".criteria-list");
   if (criteria) criteria.replaceChildren();
-  text(".solution #solution-body .prose", data.fixed_solution);
+  const solutionContent = article.querySelector<HTMLElement>(".solution #solution-body .prose");
+  if (solutionContent) {
+    const pre = document.createElement("pre");
+    const code = document.createElement("code");
+    code.textContent = data.fixed_solution;
+    pre.append(code);
+    solutionContent.replaceChildren(pre);
+  }
   article.dataset.minutes = "15";
   if (gameData && !gameData.catalog.some((entry) => entry.track === "python" && entry.id === "dynamic-job")) {
     gameData.catalog.push({ id: "dynamic-job", cat: "debug", minutes: 15, track: "python" });
@@ -487,6 +504,13 @@ function mountDynamicJob(article: HTMLElement): boolean {
     promptNode.className = "prose q-prompt";
     promptNode.textContent = prompt;
     q.append(head, promptNode);
+    // setupDrill expects a hint list on every question, even when generated drills
+    // do not provide curated hints. Keeping the empty list prevents boot-time crashes.
+    const hints = document.createElement("ol");
+    hints.className = "q-hints";
+    hints.dataset.hints = "";
+    hints.hidden = true;
+    q.append(hints);
     return q;
   };
   const addCheck = (q: HTMLElement, label: string) => {
@@ -587,10 +611,18 @@ function setupDrill(): void {
   const track = article.dataset.track!;
   const target = Number(article.dataset.minutes) * 60;
   const s = strings<DrillStrings>(article);
-  const draftKey = `drills.draft.${track}:${id}`;
+  const draftKey = `drills.draft.${track}:${id}` + (article.dataset.dynamic === "true" ? `:${article.dataset.contentId ?? "dynamic"}` : "");
   const runner = new PythonRunner(base);
   const questions = [...article.querySelectorAll<HTMLElement>(".q")];
-  let draft: Draft = read<Draft>(draftKey, { answers: {}, scores: {}, hints: {} });
+  const storedDraft = read<Partial<Draft> | null>(draftKey, null);
+  // Older or partially written drafts must never prevent the rest of the page
+  // from binding its controls. Normalize each field before setup continues.
+  let draft: Draft = {
+    answers: storedDraft?.answers && typeof storedDraft.answers === "object" && !Array.isArray(storedDraft.answers) ? storedDraft.answers : {},
+    scores: storedDraft?.scores && typeof storedDraft.scores === "object" && !Array.isArray(storedDraft.scores) ? storedDraft.scores : {},
+    hints: storedDraft?.hints && typeof storedDraft.hints === "object" && !Array.isArray(storedDraft.hints) ? storedDraft.hints : {},
+    elapsed: typeof storedDraft?.elapsed === "number" && Number.isFinite(storedDraft.elapsed) && storedDraft.elapsed >= 0 ? storedDraft.elapsed : 0,
+  };
   const saveDraft = () => write(draftKey, draft);
 
   // ----- timer: starts by itself at the first answer -----
@@ -854,8 +886,9 @@ function setupDrill(): void {
     });
 
     const hintBtn = q.querySelector<HTMLButtonElement>("[data-hint]");
-    const hintList = q.querySelector<HTMLElement>("[data-hints]")!;
+    const hintList = q.querySelector<HTMLElement>("[data-hints]");
     const showHints = (n: number) => {
+      if (!hintList) return;
       const items = [...hintList.querySelectorAll("li")];
       items.forEach((li, i) => (li.hidden = i >= n));
       hintList.hidden = n === 0;
@@ -879,7 +912,7 @@ function setupDrill(): void {
   const revealButton = document.getElementById("reveal") as HTMLButtonElement;
   const body = document.getElementById("solution-body")!;
   const note = document.getElementById("revealed-note")!;
-  let withSolution = read<string[]>("drills.revealed", []).includes(`${track}:${id}`);
+  let withSolution = revealedKeys().includes(`${track}:${id}`);
   const setSolution = (open: boolean) => {
     body.hidden = !open;
     article.classList.toggle("is-solution-open", open);
@@ -892,7 +925,7 @@ function setupDrill(): void {
     const open = body.hidden;
     if (open && !withSolution) {
       withSolution = true;
-      write("drills.revealed", [...new Set([...read<string[]>("drills.revealed", []), `${track}:${id}`])]);
+      write("drills.revealed", [...new Set([...revealedKeys(), `${track}:${id}`])]);
     }
     setSolution(open);
     paintScore();
@@ -990,7 +1023,7 @@ function setupDrill(): void {
     draft = { answers: {}, scores: {}, hints: {}, elapsed: 0 };
     saveDraft();
     withSolution = false;
-    write("drills.revealed", read<string[]>("drills.revealed", []).filter((x) => x !== `${track}:${id}`));
+    write("drills.revealed", revealedKeys().filter((x) => x !== `${track}:${id}`));
     questions.forEach((q) => {
       const answer = q.querySelector<HTMLTextAreaElement>("[data-answer]");
       if (answer) answer.value = answer.dataset.starter ?? "";
@@ -999,9 +1032,11 @@ function setupDrill(): void {
       fb.className = "q-feedback";
       fb.replaceChildren();
       setScore(q, undefined);
-      const hintList = q.querySelector<HTMLElement>("[data-hints]")!;
-      hintList.hidden = true;
-      hintList.querySelectorAll("li").forEach((li) => (li.hidden = true));
+      const hintList = q.querySelector<HTMLElement>("[data-hints]");
+      if (hintList) {
+        hintList.hidden = true;
+        hintList.querySelectorAll("li").forEach((li) => (li.hidden = true));
+      }
       const hintBtn = q.querySelector<HTMLButtonElement>("[data-hint]");
       if (hintBtn) {
         hintBtn.disabled = false;

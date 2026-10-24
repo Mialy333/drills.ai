@@ -19,7 +19,7 @@ from src.ai_generator.pipeline_schemas import (
     RoleAnalysis,
     RoadmapStep,
 )
-from src.ai_generator.schemas import DrillGeneratorSchema
+from src.ai_generator.schemas import DrillGeneratorSchema, MultipleChoiceQuestion as LegacyMultipleChoiceQuestion
 
 
 @pytest.fixture
@@ -38,12 +38,12 @@ def legacy_drill() -> DrillGeneratorSchema:
             "    return payload['name']"
         ),
         hidden_test_harness="assert read_name({'name': 'Ada'}) == 'Ada'",
-        multiple_choice={
-            "question": "Why validate input?",
-            "options": ["Safety", "Decoration", "Latency", "Formatting"],
-            "correct_answer_index": 0,
-            "reasoning": "Validation rejects malformed values at the boundary.",
-        },
+        multiple_choice=LegacyMultipleChoiceQuestion(
+            question="Why validate input?",
+            options=["Safety", "Decoration", "Latency", "Formatting"],
+            correct_answer_index=0,
+            reasoning="Validation rejects malformed values at the boundary.",
+        ),
         model_answer_ideas=["validation", "boundary", "errors"],
     )
 
@@ -100,6 +100,10 @@ def pipeline_drill() -> DrillContent:
 def _completion(parsed=None, *, choices=True, refusal=None):
     message = SimpleNamespace(parsed=parsed, refusal=refusal)
     return SimpleNamespace(choices=[SimpleNamespace(message=message)] if choices else [])
+
+
+def test_legacy_generator_fixture_uses_typed_multiple_choice(legacy_drill):
+    assert isinstance(legacy_drill.multiple_choice, LegacyMultipleChoiceQuestion)
 
 
 def test_legacy_generator_returns_first_parsed_choice(legacy_drill):
