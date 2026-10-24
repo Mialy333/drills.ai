@@ -27,6 +27,8 @@ The orchestrator is not a web API and is not connected to the static browser gen
 
 The deterministic preflight validates that both implementations and the test harness parse as Python, checks that the harness contains a real `assert` statement (not merely the word in a comment/string), checks that the broken and fixed implementations differ, and checks that the final roadmap skill came from the role analysis. Offline tests cover these rejection cases and ensure preflight failures skip the model review. These checks do **not** execute generated code or prove behavioural correctness.
 
+The offline behavioral-contract tests in `tests/test_behavioral_contract.py` use fixed, trusted fixtures to prove that a discriminating harness fails on a known broken implementation and passes on its fixed version. They also demonstrate that a happy-path-only harness can pass both versions. These tests are examples of the expected contract, not a validator for arbitrary generated code; the test helper must never be fed model-generated source. A subprocess timeout is not a security sandbox.
+
 Before publishing generated exercises, run the harness against both code samples in a strongly isolated, resource-limited sandbox and require the tests to fail against `broken_code` and pass against `fixed_solution`. The current validator reports this limitation as a warning; it does not execute untrusted code. Do not treat an LLM review or syntax parsing as a substitute for that runtime gate.
 
 ### Browser-side exercise runner
