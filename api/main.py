@@ -76,12 +76,14 @@ async def generate_drill(request: DrillRequest) -> DynamicDrillSchema:
     try:
         # The orchestrator and OpenAI SDK are synchronous; run them off the
         # event loop so other requests (including /health) remain responsive.
-        return await asyncio.to_thread(
+        language_label = "French" if request.output_language == "fr" else "English"
+        result = await asyncio.to_thread(
             DrillOrchestrator().generate,
             job_description=request.job_description,
-            output_language=request.output_language,
+            output_language=language_label,
             learner_snapshot=request.learner_snapshot,
         )
+        return result.model_copy(update={"output_language": request.output_language})
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DrillPipelineError as exc:
