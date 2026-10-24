@@ -31,19 +31,19 @@ const t = ui[lang];
 
   <section class="journey-grid" aria-label={lang === "fr" ? "Commencer à pratiquer" : "Start practising"}>
     <a class="journey-card journey-card-primary" id="sample-drill-link" href={href(`/${lang}/python/dynamic-job/`)}>
-      <span class="journey-index">01 / PREMIER EXERCICE</span>
+      <span class="journey-index">{lang === "fr" ? "01 / PREMIER EXERCICE" : "01 / FIRST EXERCISE"}</span>
       <h2>{lang === "fr" ? "Commencer un exercice" : "Start an exercise"}</h2>
       <p>{lang === "fr" ? "Essaie un mini-exercice Python guidé. Pas de compte, pas de clé API, pas d'offre à coller." : "Try a guided Python mini-exercise. No account, API key, or job posting needed."}</p>
       <span class="journey-action">{lang === "fr" ? "Commencer maintenant" : "Start now"}<span aria-hidden="true">↗</span></span>
     </a>
     <a class="journey-card journey-card-secondary" href={href(`/${lang}/assess/`)}>
-      <span class="journey-index">02 / DIAGNOSTIC</span>
+      <span class="journey-index">{lang === "fr" ? "02 / DIAGNOSTIC" : "02 / SKILL CHECK"}</span>
       <h2>{lang === "fr" ? "Situer mon niveau" : "Check my level"}</h2>
       <p>{lang === "fr" ? "Réponds à 8 questions pour obtenir un premier repère sur tes compétences d'AI Agent Engineer." : "Answer 8 questions for an initial snapshot of your AI Agent Engineer skills."}</p>
       <span class="journey-action">{lang === "fr" ? "Faire le diagnostic" : "Start the diagnostic"}<span aria-hidden="true">↗</span></span>
     </a>
     <a class="journey-card journey-card-secondary" href={href(`/${lang}/generate/`)}>
-      <span class="journey-index">03 / OFFRE D'EMPLOI</span>
+      <span class="journey-index">{lang === "fr" ? "03 / OFFRE D'EMPLOI" : "03 / JOB POSTING"}</span>
       <h2>{lang === "fr" ? "Préparer une offre" : "Prepare for a job posting"}</h2>
       <p>{lang === "fr" ? "Repère les compétences demandées et prépare-toi avec un exercice Python adapté." : "Map the role's requirements and prepare with a tailored Python exercise."}</p>
       <span class="journey-action">{lang === "fr" ? "Analyser mon offre" : "Analyse my job posting"}<span aria-hidden="true">↗</span></span>
