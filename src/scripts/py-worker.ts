@@ -1,5 +1,8 @@
 // Runs answers in real Python (Pyodide) off the main thread.
+// Import the npm package through Vite; public/ assets must be fetched, not imported as source.
 // The page can terminate this worker if an answer loops forever.
+
+import { loadPyodide } from "pyodide";
 
 type RunRequest = { id: number; base: string; code: string; tests: string };
 
@@ -63,9 +66,7 @@ let ready: Promise<any> | null = null;
 function load(base: string) {
   if (!ready) {
     ready = (async () => {
-      const url = `${base}pyodide/pyodide.mjs`;
-      const mod = await import(/* @vite-ignore */ url);
-      const py = await mod.loadPyodide({ indexURL: `${base}pyodide/` });
+      const py = await loadPyodide({ indexURL: `${base}pyodide/` });
       py.runPython(HARNESS);
       return py;
     })();
