@@ -446,6 +446,9 @@ function mountDynamicJob(article: HTMLElement): boolean {
     const node = article.querySelector<HTMLElement>(selector);
     if (node) node.textContent = value;
   };
+  // Give each generated/sample payload its own draft so an old exercise timer
+  // cannot leak into a newly opened drill that reuses the dynamic-job route.
+  article.dataset.contentId = data.drill_id;
   text(".drill-head h1", data.title);
   const category = article.querySelector<HTMLElement>(".drill-head .drill-cat");
   if (category) {
@@ -489,6 +492,13 @@ function mountDynamicJob(article: HTMLElement): boolean {
     promptNode.className = "prose q-prompt";
     promptNode.textContent = prompt;
     q.append(head, promptNode);
+    // setupDrill expects a hint list on every question, even when generated drills
+    // do not provide curated hints. Keeping the empty list prevents boot-time crashes.
+    const hints = document.createElement("ol");
+    hints.className = "q-hints";
+    hints.dataset.hints = "";
+    hints.hidden = true;
+    q.append(hints);
     return q;
   };
   const addCheck = (q: HTMLElement, label: string) => {
@@ -589,7 +599,7 @@ function setupDrill(): void {
   const track = article.dataset.track!;
   const target = Number(article.dataset.minutes) * 60;
   const s = strings<DrillStrings>(article);
-  const draftKey = `drills.draft.${track}:${id}`;
+  const draftKey = `drills.draft.${track}:${id}` + (article.dataset.dynamic === "true" ? `:${article.dataset.contentId ?? "dynamic"}` : "");
   const runner = new PythonRunner(base);
   const questions = [...article.querySelectorAll<HTMLElement>(".q")];
   let draft: Draft = read<Draft>(draftKey, { answers: {}, scores: {}, hints: {} });
