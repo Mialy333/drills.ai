@@ -74,7 +74,7 @@ async def health() -> dict[str, str | bool]:
 
 @app.post("/api/drills", response_model=DynamicDrillSchema)
 @limiter.limit("5/minute")
-async def generate_drill(http_request: Request, payload: DrillRequest) -> DynamicDrillSchema:
+async def generate_drill(request: Request, payload: DrillRequest) -> DynamicDrillSchema:
     """Run the existing Analyst → Coach → Creator → Validator pipeline."""
     if not os.getenv("OPENAI_API_KEY"):
         raise HTTPException(
