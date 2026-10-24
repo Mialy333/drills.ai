@@ -6,7 +6,7 @@ Python code is correct; runtime checks must remain a separate quality gate.
 """
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class StrictSchema(BaseModel):
@@ -64,10 +64,3 @@ class ValidationReport(StrictSchema):
     passed: bool
     errors: list[str]
     warnings: list[str]
-
-
-@model_validator(mode="after")
-def _placeholder():
-    # Kept out of individual models intentionally; cross-field checks live in
-    # validate_dynamic_drill() so they can be tested without an API call.
-    return _placeholder
