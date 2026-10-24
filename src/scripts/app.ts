@@ -465,7 +465,14 @@ function mountDynamicJob(article: HTMLElement): boolean {
   if (source) source.textContent = isFrench ? "Généré par l'IA" : "AI generated";
   const criteria = article.querySelector(".criteria-list");
   if (criteria) criteria.replaceChildren();
-  text(".solution #solution-body .prose", data.fixed_solution);
+  const solutionContent = article.querySelector<HTMLElement>(".solution #solution-body .prose");
+  if (solutionContent) {
+    const pre = document.createElement("pre");
+    const code = document.createElement("code");
+    code.textContent = data.fixed_solution;
+    pre.append(code);
+    solutionContent.replaceChildren(pre);
+  }
   article.dataset.minutes = "15";
   if (gameData && !gameData.catalog.some((entry) => entry.track === "python" && entry.id === "dynamic-job")) {
     gameData.catalog.push({ id: "dynamic-job", cat: "debug", minutes: 15, track: "python" });
