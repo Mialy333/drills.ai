@@ -873,8 +873,9 @@ function setupDrill(): void {
     });
 
     const hintBtn = q.querySelector<HTMLButtonElement>("[data-hint]");
-    const hintList = q.querySelector<HTMLElement>("[data-hints]")!;
+    const hintList = q.querySelector<HTMLElement>("[data-hints]");
     const showHints = (n: number) => {
+      if (!hintList) return;
       const items = [...hintList.querySelectorAll("li")];
       items.forEach((li, i) => (li.hidden = i >= n));
       hintList.hidden = n === 0;
@@ -1018,9 +1019,11 @@ function setupDrill(): void {
       fb.className = "q-feedback";
       fb.replaceChildren();
       setScore(q, undefined);
-      const hintList = q.querySelector<HTMLElement>("[data-hints]")!;
-      hintList.hidden = true;
-      hintList.querySelectorAll("li").forEach((li) => (li.hidden = true));
+      const hintList = q.querySelector<HTMLElement>("[data-hints]");
+      if (hintList) {
+        hintList.hidden = true;
+        hintList.querySelectorAll("li").forEach((li) => (li.hidden = true));
+      }
       const hintBtn = q.querySelector<HTMLButtonElement>("[data-hint]");
       if (hintBtn) {
         hintBtn.disabled = false;
