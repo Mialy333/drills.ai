@@ -15,6 +15,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
+from src.ai_generator.agents.mentor import MentorAgent
 from src.ai_generator.orchestrator import DrillOrchestrator, DrillPipelineError
 from src.ai_generator.pipeline_schemas import DynamicDrillSchema
 
@@ -63,6 +64,62 @@ class DrillRequest(BaseModel):
     learner_snapshot: str | None = Field(default=None, max_length=4_000)
 
 
+class CoachTurn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=2_000)
+
+
+class CoachLearnerContext(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    goal: str | None = Field(default=None, max_length=120)
+    python_experience: str | None = Field(default=None, max_length=80)
+    agent_experience: str | None = Field(default=None, max_length=80)
+    weekly_minutes: int | None = Field(default=None, ge=30, le=2_400)
+    demonstrated_snapshot: str | None = Field(default=None, max_length=1_000)
+
+
+class CoachRoadmapStep(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(max_length=160)
+    skill: str = Field(max_length=120)
+    objective: str = Field(max_length=600)
+
+
+class CoachRoadmapContext(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role_title: str = Field(max_length=160)
+    role_summary: str = Field(max_length=1_200)
+    steps: list[CoachRoadmapStep] = Field(max_length=6)
+
+
+class CoachExerciseContext(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(max_length=160)
+    context: str = Field(max_length=1_600)
+    mission: str = Field(max_length=1_600)
+    current_answer: str | None = Field(default=None, max_length=12_000)
+    latest_feedback: str | None = Field(default=None, max_length=2_000)
+
+
+class CompanionRequest(BaseModel):
+    """Minimal context for a stateless, contextual learning-companion turn."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    output_language: Literal["fr", "en"]
+    message: str = Field(min_length=1, max_length=2_000)
+    history: list[CoachTurn] = Field(default_factory=list, max_length=8)
+    learner: CoachLearnerContext | None = None
+    roadmap: CoachRoadmapContext | None = None
+    exercise: CoachExerciseContext | None = None
+
+
 @app.get("/health")
 async def health() -> dict[str, str | bool]:
     """Small health check suitable for deployment-provider monitoring."""
@@ -106,4 +163,25 @@ async def generate_drill(request: Request, payload: DrillRequest) -> DynamicDril
         raise HTTPException(
             status_code=502,
             detail="Drill generation failed. Check the API service logs and try again.",
+        ) from exc
+
+
+@app.post("/api/coach")
+@limiter.limit("10/minute")
+async def coach(request: Request, payload: CompanionRequest) -> dict[str, str]:
+    """Return one contextual mentoring turn; no conversation is stored server-side."""
+    if not os.getenv("OPENAI_API_KEY"):
+        raise HTTPException(
+            status_code=503,
+            detail="The learning companion is not configured on this API service.",
+        )
+
+    try:
+        reply = await asyncio.to_thread(MentorAgent().respond, payload)
+        return {"reply": reply}
+    except Exception as exc:
+        logger.exception("Learning companion request failed")
+        raise HTTPException(
+            status_code=502,
+            detail="The learning companion could not respond. Please try again.",
         ) from exc

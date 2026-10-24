@@ -89,3 +89,61 @@ def test_generate_uses_specialist_pipeline_and_returns_browser_payload(monkeypat
     assert response.status_code == 200
     assert response.json()["output_language"] == "fr"
     assert response.json()["drill_id"] == "api-drill-1"
+
+
+def test_companion_requires_server_side_api_key(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    response = TestClient(api_main.app).post(
+        "/api/coach",
+        json={"output_language": "en", "message": "Can you explain this concept?"},
+    )
+
+    assert response.status_code == 503
+
+
+def test_companion_rejects_reference_solution_fields():
+    response = TestClient(api_main.app).post(
+        "/api/coach",
+        json={
+            "output_language": "en",
+            "message": "Help me debug this",
+            "exercise": {
+                "title": "Validate input",
+                "context": "An API receives a payload.",
+                "mission": "Validate the request.",
+                "fixed_solution": "secret reference solution",
+            },
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_companion_returns_contextual_reply_without_persisting_conversation(monkeypatch):
+    class FakeMentor:
+        def respond(self, payload):
+            assert payload.output_language == "fr"
+            assert payload.exercise.title == "Valider une entrée"
+            assert payload.exercise.current_answer == "def validate(value): pass"
+            assert payload.learner.demonstrated_snapshot == "Python: 2/3"
+            return "Commence par vérifier le type de la valeur reçue."
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(api_main, "MentorAgent", FakeMentor)
+    response = TestClient(api_main.app).post(
+        "/api/coach",
+        json={
+            "output_language": "fr",
+            "message": "Par quoi commencer ?",
+            "learner": {"demonstrated_snapshot": "Python: 2/3"},
+            "exercise": {
+                "title": "Valider une entrée",
+                "context": "Une API reçoit une valeur.",
+                "mission": "Valide la valeur avant de la traiter.",
+                "current_answer": "def validate(value): pass",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"reply": "Commence par vérifier le type de la valeur reçue."}
