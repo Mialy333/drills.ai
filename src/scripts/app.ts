@@ -385,6 +385,7 @@ const fold = (s: string) =>
 type Draft = { answers: Record<string, string>; scores: Record<string, number>; hints: Record<string, number>; elapsed?: number };
 
 interface DynamicDrillData {
+  output_language?: "fr" | "en";
   drill_id: string;
   family: "Debugging" | "Refactoring" | "Code reading";
   title: string;
@@ -400,7 +401,8 @@ interface DynamicDrillData {
 function isDynamicDrillData(value: unknown): value is DynamicDrillData {
   if (!value || typeof value !== "object") return false;
   const d = value as Partial<DynamicDrillData>;
-  return typeof d.drill_id === "string" &&
+  return (d.output_language === undefined || d.output_language === "fr" || d.output_language === "en") &&
+    typeof d.drill_id === "string" &&
     (d.family === "Debugging" || d.family === "Refactoring" || d.family === "Code reading") &&
     typeof d.title === "string" &&
     typeof d.context === "string" && typeof d.mission === "string" &&
@@ -425,7 +427,7 @@ function mountDynamicJob(article: HTMLElement): boolean {
   try { raw = localStorage.getItem(dynamicDrillStorageKey); } catch {}
   let data: unknown;
   try { data = raw ? JSON.parse(raw) : null; } catch { data = null; }
-  if (!isDynamicDrillData(data)) {
+  if (!isDynamicDrillData(data) || (data.output_language && data.output_language !== (isFrench ? "fr" : "en"))) {
     const prompt = document.createElement("p");
     prompt.className = "note is-error";
     prompt.textContent = isFrench
