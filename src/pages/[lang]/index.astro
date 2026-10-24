@@ -68,7 +68,8 @@ const t = ui[lang];
       event.preventDefault();
       const sample = {
         output_language: lang,
-        drill_id: "sample-tags",
+        // A fresh id isolates timer/progress state for each sample launch.
+        drill_id: `sample-tags-${Date.now()}`,
         family: "Debugging",
         title: lang === "fr" ? "Mini-exercice : normaliser des tags" : "Sample drill: normalize tags",
         context: lang === "fr"
