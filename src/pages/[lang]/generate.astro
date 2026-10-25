@@ -36,11 +36,18 @@ const lang = Astro.params.lang as Lang;
             margin-bottom: 15px;
         }
         .generator-card textarea { font-family: var(--mono); height: 180px; }
-        .generator-card #candidateExperience, .generator-card #candidateSchools { height: auto; }
+        .generator-card #candidateSchools { height: auto; }
         .generator-card input, .generator-card select { width: 100%; min-height: 44px; margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--code-bg); color: var(--ink); font: inherit; }
         .candidate-fields { display: grid; gap: 8px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
         .candidate-fields h2 { margin: 0; font-size: 1.2rem; }
         .candidate-fields > p { margin: 0 0 4px; color: var(--muted); font-size: .92rem; }
+        .candidate-experiences { display: grid; gap: 14px; }
+        .candidate-experience { min-width: 0; margin: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-s); }
+        .candidate-experience legend { padding: 0 6px; color: var(--ink); font-weight: 700; }
+        .candidate-experience label { margin-top: 8px; }
+        .candidate-experience textarea { height: 100px; }
+        .candidate-experience .remove-experience { width: auto; margin-top: 8px; background: var(--raise); color: var(--ink); border-color: var(--line); }
+        .add-experience { width: auto !important; justify-self: start; background: var(--raise) !important; color: var(--ink) !important; border-color: var(--line) !important; }
         .profile-actions { display: flex; flex-wrap: wrap; gap: 10px; }
         .generator-card .profile-actions button { width: auto; flex: 1 1 180px; background: var(--raise); color: var(--ink); border-color: var(--line); }
         .profile-status { min-height: 1.4em; margin: 0; color: var(--muted); font-size: .9rem; }
@@ -98,15 +105,9 @@ const lang = Astro.params.lang as Lang;
 
         <div class="candidate-fields" aria-labelledby="candidate-profile-title">
           <h2 id="candidate-profile-title">{lang === "fr" ? "2. Ajoute quelques éléments de ton parcours" : "2. Add a few details about your background"}</h2>
-          <p>{lang === "fr" ? "Une expérience suffit pour commencer. N’importe pas ton CV brut : indique seulement les faits que tu veux comparer." : "One experience is enough to start. Don’t paste a raw CV: enter only the facts you want to compare."}</p>
-          <label for="candidateRole">{lang === "fr" ? "Intitulé de ton expérience" : "Experience title"}</label>
-          <input id="candidateRole" maxlength="120" placeholder={lang === "fr" ? "Ex. Analyste, développeuse web, cheffe de projet" : "e.g. Analyst, web developer, project manager"} />
-          <label for="candidateCompany">{lang === "fr" ? "Nom de l’entreprise (facultatif)" : "Company name (optional)"}</label>
-          <input id="candidateCompany" maxlength="120" />
-          <label for="candidatePeriod">{lang === "fr" ? "Période (facultatif)" : "Period (optional)"}</label>
-          <input id="candidatePeriod" maxlength="80" placeholder={lang === "fr" ? "Ex. 2022–2025" : "e.g. 2022–2025"} />
-          <label for="candidateExperience">{lang === "fr" ? "Ce que tu as réellement fait" : "What you actually did"}</label>
-          <textarea id="candidateExperience" maxlength="2000" minlength="20" rows="4" placeholder={lang === "fr" ? "Décris tes tâches, projets, outils ou responsabilités pertinents. 20 caractères minimum." : "Describe relevant tasks, projects, tools, or responsibilities. At least 20 characters."}></textarea>
+          <p>{lang === "fr" ? "Ajoute jusqu’à trois expériences ou projets pertinents. N’importe pas ton CV brut : indique seulement les faits que tu veux comparer." : "Add up to three relevant experiences or projects. Don’t paste a raw CV: enter only the facts you want to compare."}</p>
+          <div id="candidateExperiences" class="candidate-experiences"></div>
+          <button id="addCandidateExperience" class="add-experience" type="button">{lang === "fr" ? "+ Ajouter une expérience" : "+ Add an experience"}</button>
           <label for="candidateSchools">{lang === "fr" ? "École(s) ou formation(s) (facultatif, une par ligne)" : "School(s) or training provider(s) (optional, one per line)"}</label>
           <textarea id="candidateSchools" maxlength="600" rows="2"></textarea>
           <p class="profile-status" id="candidateProfileStatus" role="status" aria-live="polite"></p>
@@ -167,10 +168,8 @@ const lang = Astro.params.lang as Lang;
         const roadmapStepsTitle = document.querySelector<HTMLElement>("#roadmapStepsTitle");
         const roadmapSteps = document.querySelector<HTMLOListElement>("#roadmapSteps");
         const roadmapNote = document.querySelector<HTMLElement>("#roadmapNote");
-        const candidateRole = document.querySelector<HTMLInputElement>("#candidateRole");
-        const candidateCompany = document.querySelector<HTMLInputElement>("#candidateCompany");
-        const candidatePeriod = document.querySelector<HTMLInputElement>("#candidatePeriod");
-        const candidateExperience = document.querySelector<HTMLTextAreaElement>("#candidateExperience");
+        const candidateExperiences = document.querySelector<HTMLElement>("#candidateExperiences");
+        const addCandidateExperience = document.querySelector<HTMLButtonElement>("#addCandidateExperience");
         const candidateSchools = document.querySelector<HTMLTextAreaElement>("#candidateSchools");
         const candidateProfileStatus = document.querySelector<HTMLElement>("#candidateProfileStatus");
         const exportCandidateProfile = document.querySelector<HTMLButtonElement>("#exportCandidateProfile");
@@ -208,14 +207,74 @@ const lang = Astro.params.lang as Lang;
             lowMatch: isFrench ? "Moins de 60 % des critères pondérés apparaissent dans les expériences décrites. Examine les éléments non retrouvés : cela ne signifie pas que tu ne possèdes pas ces compétences." : "Fewer than 60% of weighted requirements appear in the experience you described. Review the items not found; this does not mean you lack those skills.",
         };
 
+        function updateExperienceControls(): void {
+            if (!candidateExperiences || !addCandidateExperience) return;
+            addCandidateExperience.hidden = candidateExperiences.childElementCount >= 3;
+            candidateExperiences.querySelectorAll<HTMLButtonElement>("[data-remove-experience]").forEach((button) => {
+                button.hidden = candidateExperiences.childElementCount === 1;
+            });
+        }
+
+        function appendExperienceFields(experience?: CandidateProfileInput["experiences"][number]): void {
+            if (!candidateExperiences || candidateExperiences.childElementCount >= 3) return;
+            const index = candidateExperiences.childElementCount + 1;
+            const fieldset = document.createElement("fieldset");
+            fieldset.className = "candidate-experience";
+            fieldset.dataset.candidateExperience = "";
+            const legend = document.createElement("legend");
+            legend.textContent = `${isFrench ? "Expérience" : "Experience"} ${index}`;
+            fieldset.append(legend);
+
+            const addField = (key: "role" | "company" | "period" | "summary", labelText: string, tag: "input" | "textarea", value: string, placeholder = ""): void => {
+                const label = document.createElement("label");
+                label.textContent = labelText;
+                const control = tag === "textarea" ? document.createElement("textarea") : document.createElement("input");
+                control.dataset.experienceField = key;
+                control.value = value;
+                if (tag === "input") control.type = "text";
+                if (key === "role" || key === "company") control.maxLength = 120;
+                if (key === "period") control.maxLength = 80;
+                if (key === "summary") {
+                    control.maxLength = 2_000;
+                    control.minLength = 20;
+                    control.rows = 4;
+                }
+                if (placeholder) control.placeholder = placeholder;
+                label.append(control);
+                fieldset.append(label);
+            };
+
+            addField("role", isFrench ? "Intitulé du poste ou du projet" : "Role or project title", "input", experience?.role ?? "", isFrench ? "Ex. Analyste, développeuse web, cheffe de projet" : "e.g. Analyst, web developer, project manager");
+            addField("company", isFrench ? "Nom de l’entreprise (facultatif)" : "Company name (optional)", "input", experience?.company ?? "");
+            addField("period", isFrench ? "Période (facultatif)" : "Period (optional)", "input", experience?.period ?? "", isFrench ? "Ex. 2022–2025" : "e.g. 2022–2025");
+            addField("summary", isFrench ? "Ce que tu as réellement fait" : "What you actually did", "textarea", experience?.summary ?? "", isFrench ? "Décris les tâches, projets, outils ou responsabilités pertinents. 20 caractères minimum." : "Describe relevant tasks, projects, tools, or responsibilities. At least 20 characters.");
+
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "remove-experience";
+            remove.dataset.removeExperience = "";
+            remove.textContent = isFrench ? "Supprimer cette expérience" : "Remove this experience";
+            remove.addEventListener("click", () => {
+                fieldset.remove();
+                if (!candidateExperiences.childElementCount) appendExperienceFields();
+                updateExperienceControls();
+            });
+            fieldset.append(remove);
+            candidateExperiences.append(fieldset);
+            updateExperienceControls();
+        }
+
         function candidateProfileInput(): CandidateProfileInput | null {
+            const experiences = Array.from(candidateExperiences?.querySelectorAll<HTMLElement>("[data-candidate-experience]") ?? [])
+                .map((card) => ({
+                    role: card.querySelector<HTMLInputElement>('[data-experience-field="role"]')?.value ?? "",
+                    company: card.querySelector<HTMLInputElement>('[data-experience-field="company"]')?.value ?? "",
+                    period: card.querySelector<HTMLInputElement>('[data-experience-field="period"]')?.value ?? "",
+                    summary: card.querySelector<HTMLTextAreaElement>('[data-experience-field="summary"]')?.value ?? "",
+                }))
+                .filter((item) => Object.values(item).some((value) => value.trim().length > 0));
             const result = CandidateProfileInputSchema.safeParse({
-                experiences: [{
-                    role: candidateRole?.value ?? "",
-                    company: candidateCompany?.value ?? "",
-                    period: candidatePeriod?.value ?? "",
-                    summary: candidateExperience?.value ?? "",
-                }],
+                experiences,
                 schools: (candidateSchools?.value ?? "").split("\n").map((school) => school.trim()).filter(Boolean).slice(0, 5),
             });
             return result.success ? result.data : null;
@@ -224,10 +283,9 @@ const lang = Astro.params.lang as Lang;
         function fillCandidateProfile(): void {
             const profile = readCandidateProfile();
             if (!profile) return;
-            if (candidateRole) candidateRole.value = profile.experiences[0]?.role ?? "";
-            if (candidateCompany) candidateCompany.value = profile.experiences[0]?.company ?? "";
-            if (candidatePeriod) candidatePeriod.value = profile.experiences[0]?.period ?? "";
-            if (candidateExperience) candidateExperience.value = profile.experiences[0]?.summary ?? "";
+            candidateExperiences?.replaceChildren();
+            profile.experiences.forEach(appendExperienceFields);
+            if (!profile.experiences.length) appendExperienceFields();
             if (candidateSchools) candidateSchools.value = profile.schools.join("\n");
             if (candidateProfileStatus) candidateProfileStatus.textContent = `${copy.profileSaved} (${new Intl.DateTimeFormat(isFrench ? "fr-FR" : "en-GB", { dateStyle: "medium" }).format(new Date(profile.expiresAt))})`;
             if (exportCandidateProfile) exportCandidateProfile.hidden = false;
@@ -338,6 +396,8 @@ const lang = Astro.params.lang as Lang;
         });
 
         fillCandidateProfile();
+        if (!candidateExperiences?.childElementCount) appendExperienceFields();
+        addCandidateExperience?.addEventListener("click", () => appendExperienceFields());
         exportCandidateProfile?.addEventListener("click", () => {
             const profile = readCandidateProfile();
             if (!profile) return;
@@ -352,10 +412,8 @@ const lang = Astro.params.lang as Lang;
         });
         candidateProfileDeleteBtn?.addEventListener("click", () => {
             removeCandidateProfile();
-            if (candidateRole) candidateRole.value = "";
-            if (candidateCompany) candidateCompany.value = "";
-            if (candidatePeriod) candidatePeriod.value = "";
-            if (candidateExperience) candidateExperience.value = "";
+            candidateExperiences?.replaceChildren();
+            appendExperienceFields();
             if (candidateSchools) candidateSchools.value = "";
             if (exportCandidateProfile) exportCandidateProfile.hidden = true;
             if (candidateProfileDeleteBtn) candidateProfileDeleteBtn.hidden = true;
@@ -400,7 +458,7 @@ const lang = Astro.params.lang as Lang;
             const profileInput = candidateProfileInput();
             if (!profileInput) {
                 setStatus(copy.missingExperience, "error");
-                candidateExperience?.focus();
+                candidateExperiences?.querySelector<HTMLTextAreaElement>("[data-experience-field='summary']")?.focus();
                 return;
             }
             const candidateProfile = createCandidateProfile(profileInput);

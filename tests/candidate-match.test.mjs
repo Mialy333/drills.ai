@@ -5,7 +5,10 @@ import { matchCandidateToDrill } from "../src/lib/candidate-match.ts";
 
 test("match score weights core skills and reports missing evidence without claiming absence", () => {
   const profile = createCandidateProfile({
-    experiences: [{ role: "Developer", company: "RAG Specialist", period: "Python async, 2023–2025", summary: "Built async Python APIs with Git and documented deployment workflows." }],
+    experiences: [
+      { role: "Developer", company: "RAG Specialist", period: "Python async, 2023–2025", summary: "Built async Python APIs with Git and documented deployment workflows." },
+      { role: "Project lead", company: "Example Co", period: "2020–2023", summary: "Designed a retrieval prototype using vector search." },
+    ],
     schools: ["Example School"],
   });
   assert.ok(profile);
@@ -13,10 +16,12 @@ test("match score weights core skills and reports missing evidence without claim
     { name: "Python async", priority: "Core", evidence: "Posting says Python and asynchronous programming." },
     { name: "RAG", priority: "Important", evidence: "Posting asks for retrieval-augmented generation." },
     { name: "Git", priority: "Supporting", evidence: "Posting mentions Git." },
+    { name: "Vector search", priority: "Supporting", evidence: "Posting mentions vector search." },
   ] });
-  assert.equal(result.score, 67);
-  assert.deepEqual(result.skills.map(({ status }) => status), ["matched", "not-found", "matched"]);
+  assert.equal(result.score, 71);
+  assert.deepEqual(result.skills.map(({ status }) => status), ["matched", "not-found", "matched", "matched"]);
   assert.equal(result.skills[1].evidenceSource, null);
+  assert.equal(result.skills[3].evidenceSource, "Project lead");
 });
 
 test("partial token overlap contributes half weight and school names do not create skill evidence", () => {
