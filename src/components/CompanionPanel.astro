@@ -1,5 +1,5 @@
 ---
-import { href, type Lang } from "../lib/drills";
+import type { Lang } from "../lib/drills";
 
 interface Props {
   lang: Lang;
@@ -12,30 +12,39 @@ const french = lang === "fr";
 
 <section
   class="companion-panel"
+  id={`companion-${scope}`}
   data-companion
   data-scope={scope}
   aria-labelledby={`companion-title-${scope}`}
 >
   <header class="companion-header">
-    <p class="section-eyebrow">{french ? "AIDE CONTEXTUELLE" : "CONTEXTUAL SUPPORT"}</p>
-    <h2 id={`companion-title-${scope}`}>{french ? "Ton compagnon d’apprentissage" : "Your learning companion"}</h2>
-    <p>{french ? "Demande une explication, un indice progressif ou de l'aide pour comprendre un retour." : "Ask for an explanation, a progressive hint, or help understanding feedback."}</p>
+    <span class="companion-mark" aria-hidden="true">✦</span>
+    <div>
+      <p class="section-eyebrow">{french ? "COMPAGNON IA" : "AI COMPANION"}</p>
+      <h2 id={`companion-title-${scope}`}>{french ? "Un indice au bon moment" : "Help when you need it"}</h2>
+      <p>{french ? "Demande une explication ou un indice progressif, sans recevoir la solution d’emblée." : "Ask for an explanation or a progressive hint without getting the solution up front."}</p>
+    </div>
   </header>
 
+  <div class="companion-prompts" aria-label={french ? "Questions proposées" : "Suggested prompts"}>
+    <button class="companion-prompt" type="button" data-companion-suggestion={french ? "Peux-tu m’expliquer le concept en termes simples ?" : "Can you explain the concept in simple terms?"}>{french ? "Explique-moi le concept" : "Explain this concept"}</button>
+    <button class="companion-prompt" type="button" data-companion-suggestion={french ? "Donne-moi un indice sans révéler la solution." : "Give me a hint without revealing the solution."}>{french ? "Donne-moi un indice" : "Give me a hint"}</button>
+    <button class="companion-prompt" type="button" data-companion-suggestion={french ? "Pose-moi une question pour m’aider à avancer." : "Ask me a question that will help me move forward."}>{french ? "Aide-moi à raisonner" : "Help me reason it out"}</button>
+  </div>
+
   <div class="companion-transcript" data-companion-transcript role="log" aria-live="polite" aria-relevant="additions text">
-    <p class="companion-message companion-message-guide">{french ? "Je peux t'aider à raisonner étape par étape. Je n'enverrai pas la solution de référence ni les tests cachés." : "I can help you reason step by step. The reference solution and hidden tests are never sent."}</p>
+    <p class="companion-message companion-message-guide">{french ? "Je peux t’aider à avancer étape par étape. Je ne reçois ni la solution de référence ni les tests cachés." : "I can guide you one step at a time. I do not receive the reference solution or hidden tests."}</p>
   </div>
 
   <form class="companion-form" data-companion-form>
-    <label class="visually-hidden" for={`companion-input-${scope}`}>{french ? "Ta question" : "Your question"}</label>
-    <textarea id={`companion-input-${scope}`} data-companion-input rows="2" maxlength="2000" required placeholder={french ? "Pose une question sur ton parcours ou cet exercice…" : "Ask about your roadmap or this exercise…"}></textarea>
-    <button class="btn btn-primary" type="submit" data-companion-submit>{french ? "Envoyer" : "Send"}</button>
+    <label class="visually-hidden" for={`companion-input-${scope}`}>{french ? "Ton message" : "Your message"}</label>
+    <textarea id={`companion-input-${scope}`} data-companion-input rows="2" maxlength="2000" required placeholder={french ? "Écris ta question…" : "Write your question…"}></textarea>
+    <button class="btn btn-primary companion-send" type="submit" data-companion-submit aria-label={french ? "Envoyer le message" : "Send message"}>
+      <span aria-hidden="true">↑</span>
+    </button>
   </form>
 
   <p class="companion-status" data-companion-status role="status" aria-live="polite"></p>
-  <p class="companion-setup" data-companion-setup hidden>
-    {french ? "Le compagnon nécessite une URL d'API sécurisée." : "The companion needs a secure API URL."}
-    <a href={href(`/${lang}/generate/`)}>{french ? "Configurer le service" : "Configure the service"}</a>
-  </p>
-  <p class="companion-privacy">{french ? "La conversation reste en mémoire le temps de cette page. Le message et le contexte affiché sont envoyés au service API configuré." : "Conversation stays in memory for this page. Your message and the visible context are sent to the configured API service."}</p>
+  <button class="companion-retry" type="button" data-companion-retry hidden>{french ? "Réessayer" : "Try again"}</button>
+  <p class="companion-privacy">{french ? "La conversation reste sur cette page. Ton message et le contexte visible sont envoyés pour générer une réponse." : "This conversation stays on this page. Your message and visible learning context are sent to generate a reply."}</p>
 </section>

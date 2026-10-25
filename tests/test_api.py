@@ -11,6 +11,21 @@ def test_health_reports_service_and_generator_configuration(monkeypatch):
     assert response.json() == {"status": "ok", "generator_configured": True}
 
 
+def test_api_allows_the_local_astro_origin_for_json_requests():
+    response = TestClient(api_main.app).options(
+        "/api/coach",
+        headers={
+            "Origin": "http://localhost:4321",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:4321"
+    assert "POST" in response.headers["access-control-allow-methods"]
+
+
 def test_generate_rejects_short_job_posting():
     response = TestClient(api_main.app).post(
         "/api/drills",
@@ -123,6 +138,7 @@ def test_companion_returns_contextual_reply_without_persisting_conversation(monk
     class FakeMentor:
         def respond(self, payload):
             assert payload.output_language == "fr"
+            assert payload.history[-1].content == "Vérifie aussi les cas limites."
             assert payload.exercise.title == "Valider une entrée"
             assert payload.exercise.current_answer == "def validate(value): pass"
             assert payload.learner.demonstrated_snapshot == "Python: 2/3"
@@ -135,6 +151,7 @@ def test_companion_returns_contextual_reply_without_persisting_conversation(monk
         json={
             "output_language": "fr",
             "message": "Par quoi commencer ?",
+            "history": [{"role": "assistant", "content": "Vérifie aussi les cas limites."}],
             "learner": {"demonstrated_snapshot": "Python: 2/3"},
             "exercise": {
                 "title": "Valider une entrée",

@@ -22,13 +22,13 @@ The Python package in `src/ai_generator/` contains an experimental specialist pi
 4. `ValidatorAgent` runs deterministic preflight checks and requests a separate model review.
 5. `DrillOrchestrator` coordinates the stages and combines their outputs into the existing browser payload shape.
 
-The specialist pipeline is exposed through `api/main.py`. The static generator can call this backend by setting a backend URL on the generator page; the OpenAI key then stays in the backend environment. If no backend URL is configured, the existing browser-side OpenAI-key flow remains available as a fallback. The API requires a valid server-side `OPENAI_API_KEY`. The legacy `DrillGeneratorAgent` remains for compatibility; new work should prefer the specialist pipeline.
+The specialist pipeline is exposed through `api/main.py`. During local development the static frontend calls `http://127.0.0.1:8000` directly; production builds use the public API origin supplied through `PUBLIC_DRILLS_API_URL`. Learners do not configure backend URLs or API keys. The OpenAI key stays in the API service environment. The API requires a valid server-side `OPENAI_API_KEY`. The legacy `DrillGeneratorAgent` remains for compatibility; new work should prefer the specialist pipeline.
 
 The API currently runs the four specialist stages sequentially in one request. It is an MVP, not a durable job queue: long requests can fail if the hosting instance restarts, and the service should be rate-limited before public use. It does not execute generated Python code on the server.
 
 ### Contextual learning companion
 
-The optional `/api/coach` endpoint powers the learning companion on the home and exercise pages. It receives the learner's optional self-reported profile, diagnostic summary, roadmap, visible exercise instructions, current answer, and recent feedback. It does not receive the reference solution or hidden tests. The endpoint is stateless; the short conversation history stays in the current browser page only. The same server-side `OPENAI_API_KEY` is used as the drill generator. Configure the backend URL on the generator page to enable both backend features.
+The optional `/api/coach` endpoint powers the learning companion on the home and exercise pages. It receives the learner's optional self-reported profile, diagnostic summary, roadmap, visible exercise instructions, current answer, and recent feedback. It does not receive the reference solution or hidden tests. The endpoint is stateless; the short conversation history stays in the current browser page only. The same server-side `OPENAI_API_KEY` is used as the drill generator.
 
 The public production build contains only the guided routes and the `dynamic-job` exercise shell; legacy catalog routes and the drill map are included in local development builds. This is a static-build visibility boundary, not access control. Progress and profile data stay in each browser's local storage.
 
@@ -59,7 +59,7 @@ A small, reviewed starter set of generic AI-agent Python exercises would also le
 
 ## Privacy and API key
 
-There is no user account system. When a backend URL is configured, the pasted job posting and optional quiz snapshot are sent to the DRILLS.ai API, which forwards the request to OpenAI using a server-side secret. Do not log or persist job postings unnecessarily. Without a backend URL, the fallback sends the posting and the learner's API key directly from the browser to OpenAI; that key is stored in local storage if saved. Generated content and progress remain in browser storage. Avoid using a personal API key on shared devices and revoke exposed keys promptly.
+There is no user account system. The pasted job posting and optional quiz snapshot are sent to the configured DRILLS.ai API, which forwards the request to OpenAI using a server-side secret. Companion messages include the current page's recent conversation and only the visible exercise context. Do not log or persist this content unnecessarily. Generated content and learner progress remain in browser storage. No OpenAI key is requested from or stored in the learner's browser.
 
 ## Run locally
 
@@ -81,18 +81,16 @@ These tests use mocked clients and do not require an `OPENAI_API_KEY` or make pa
 ### Run the API locally
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements-api.txt -r requirements-devday.txt
-export OPENAI_API_KEY="your-key"
-uvicorn api.main:app --reload --port 8000
+uv venv
+uv pip install --python .venv/bin/python -r requirements-api.txt -r requirements-devday.txt
+OPENAI_API_KEY="your-key" uv run --no-sync uvicorn api.main:app --reload --port 8000
 ```
 
-Open `http://127.0.0.1:8000/docs` to inspect the API and `http://127.0.0.1:8000/health` to check its configuration. In the generator page, enter `http://127.0.0.1:8000` in the FastAPI backend URL field. Keep the key in your local environment; do not commit it to Git.
+Run the Astro frontend in another terminal with `npm run dev`. In development, it calls the API at `http://127.0.0.1:8000`; the API's CORS policy permits the local Astro origin. The generator and companion work without exposing an infrastructure setting in the UI. Keep the key in the API process environment or an ignored local `.env`; do not commit it.
 
 ### Deploy the API to Render
 
-The `render.yaml` blueprint defines a separate Python web service. In Render, create a new Blueprint from this repository and set `OPENAI_API_KEY` as a secret environment variable when prompted. After the service is live, copy its HTTPS URL into the generator page's FastAPI backend URL field. The Astro site can remain on GitHub Pages. The API URL is saved in the browser's local storage; it is not a secret.
+The `render.yaml` blueprint defines a separate Python web service. In Render, create a new Blueprint from this repository and set `OPENAI_API_KEY` as a secret environment variable when prompted. For GitHub Pages, set the repository variable `DRILLS_API_URL` to the API service's HTTPS origin. The deploy workflow passes it to Astro as `PUBLIC_DRILLS_API_URL` at build time. This origin is public configuration, not a secret; the OpenAI key must only exist in the API service environment. If the variable is absent, the static site shows a learner-friendly unavailable message and does not attempt a cross-origin request.
 
 ## Project structure
 
