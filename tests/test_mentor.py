@@ -22,6 +22,13 @@ def test_mentor_sends_only_allowlisted_context_and_returns_text():
                 "current_answer": "def validate(payload): pass",
                 "latest_feedback": "One test failed.",
             },
+            "lesson": {
+                "title": "Build an MCP server",
+                "objective": "Implement a validated tool.",
+                "sequence": "Practice",
+                "instructions": "Return the calculated value.",
+                "code": "def calculate_total(price, quantity): pass",
+            },
             "history": [{"role": "user", "content": "What is a boundary?"}],
         }
     )
@@ -37,6 +44,9 @@ def test_mentor_sends_only_allowlisted_context_and_returns_text():
     assert "current_answer" in context
     assert "fixed_solution" not in context
     assert "hidden_test_harness" not in context
+    assert '"lesson"' in context
+    assert "calculate_total" in context
+    assert "reference solution" in kwargs["messages"][0]["content"]
     assert kwargs["messages"][-1] == {"role": "user", "content": "Where should I start?"}
 
 

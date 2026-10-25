@@ -1,0 +1,488 @@
+---
+import App from "../../../layouts/App.astro";
+import CompanionPanel from "../../../components/CompanionPanel.astro";
+import QuizQuestion from "../../../components/QuizQuestion.astro";
+import QuizProgress from "../../../components/QuizProgress.astro";
+import QuizSummary from "../../../components/QuizSummary.astro";
+import { href, LANGS, type Lang } from "../../../lib/drills";
+import { MCP_PYTHON_LESSON, lessonText } from "../../../lib/lessons";
+import { ui } from "../../../lib/i18n";
+import SERVER_SOURCE from "../../../learning/mcp_calculator.py?raw";
+
+export function getStaticPaths() {
+  return LANGS.map((lang) => ({ params: { lang, lessonId: MCP_PYTHON_LESSON.id } }));
+}
+const lang = Astro.params.lang as Lang;
+const lesson = MCP_PYTHON_LESSON;
+const t = ui[lang];
+const french = lang === "fr";
+const questions = lesson.questions.map((question) => ({
+  id: question.id,
+  prompt: lessonText(question.prompt, lang),
+  options: question.options.map((option) => lessonText(option, lang)),
+  answer: question.answer,
+  hint: lessonText(question.hint, lang),
+  feedback: lessonText(question.feedback, lang),
+  incorrectFeedback: lessonText(question.incorrectFeedback, lang),
+  concept: lessonText(question.concept, lang),
+}));
+const checkNames = [...lesson.checksCode.matchAll(/def (test_[a-zA-Z0-9_]+)\(/g)].map((match) => match[1]);
+const sequenceTitles = lesson.sequences.map((sequence) => lessonText(sequence.title, lang));
+const sequenceObjectives = lesson.sequences.map((sequence) => lessonText(sequence.objective, lang));
+const sequenceBriefs = lesson.sequences.map((sequence) => `${lessonText(sequence.objective, lang)} ${lessonText(sequence.explanation, lang)}`.slice(0, 2_000));
+const quizCopy = french ? {
+  question: "Question", of: "sur", hintButton: "Besoin d’un indice ?", correct: "Bien joué !", incorrect: "Une notion à revoir",
+  askCompanion: "Explique-moi pourquoi cette réponse n’est pas correcte", check: "Vérifier ma réponse", summary: "Voir mon bilan",
+  retry: "Refaire le quiz", review: "Revoir une notion", returnSummary: "Retour au bilan", summaryTitle: "Chaque réponse est une étape", summarySubtitle: "Voici ce que tes réponses montrent dans ce quiz.",
+  noMisses: "Toutes les réponses sont correctes.", scoreLabel: "Score du quiz", scoreCaption: "Réponses correctes", conceptsUnderstood: "Notions comprises", conceptsReview: "Notions à revoir",
+  quizComplete: "Quiz terminé.", selectAnswer: "Choisis une réponse pour continuer.", previousQuestion: "Question précédente", nextQuestion: "Question suivante",
+  hintUsed: "déjà affiché",
+} : {
+  question: "Question", of: "of", hintButton: "Need a hint?", correct: "Nice work!", incorrect: "A concept to revisit",
+  askCompanion: "Explain why my answer is incorrect", check: "Check my answer", summary: "View my summary", retry: "Try the quiz again",
+  review: "Review a concept", returnSummary: "Back to summary", summaryTitle: "Every answer is a step forward", summarySubtitle: "Here is what your answers show in this quiz.",
+  noMisses: "All answers are correct.", scoreLabel: "Quiz score", scoreCaption: "Correct answers", conceptsUnderstood: "Concepts understood", conceptsReview: "Concepts to revisit",
+  quizComplete: "Quiz complete.", selectAnswer: "Choose an answer to continue.", previousQuestion: "Previous question", nextQuestion: "Next question",
+  hintUsed: "already shown",
+};
+const exerciseCopy = french
+  ? { starter: "Code de départ", checks: "Vérifications automatiques", run: "Lancer les vérifications", running: "Exécution en cours…", ready: "Le moteur Python se lance au premier test.", passed: "Toutes les vérifications passent.", failed: "Certaines vérifications restent à corriger.", changed: "Code modifié : relance les vérifications.", answerAll: "Réponds aux quatre questions avant de vérifier.", error: "Le moteur Python n’a pas pu terminer l’exécution.", results: "Résultats", noCode: "Le code est vide.", solution: "Afficher la solution de référence", solutionNote: "La consulter est utile pour apprendre ; elle ne compte pas comme réussite autonome.", reflection: "Réflexion sécurité", submitReflection: "Enregistrer ma réflexion", reflectionSaved: "Réflexion enregistrée.", complete: "Leçon terminée : les huit vérifications de ta fonction passent. L’intégration MCP se vérifie séparément en local.", incomplete: "Tu peux reprendre où tu en étais ou choisir une prochaine étape.", score: "Résultat du quiz", evidence: "Éléments suivis séparément", practiceOnly: "Ces vérifications couvrent uniquement la fonction Python. Elles ne lancent ni le SDK MCP ni un serveur réseau.", sdk: "Intégration MCP testée séparément en local avec le SDK officiel.", nextLesson: "Connecter un client MCP à ton serveur", soon: "Bientôt disponible", back: "Précédent", next: "Continuer", finish: "Voir mon bilan", lessonProgress: "Progression de la leçon", saved: "Ta progression est enregistrée sur cet appareil.", reset: "Recommencer la leçon", edit: "Ton code", privacy: "Le code n’est transmis au compagnon que si tu coches la case prévue à cet effet." }
+  : { starter: "Starter code", checks: "Automated checks", run: "Run checks", running: "Running…", ready: "Python starts when you run the checks.", passed: "All checks pass.", failed: "Some checks still need attention.", changed: "Code changed. Run the checks again.", answerAll: "Answer all four questions before checking them.", error: "The Python runtime could not finish execution.", results: "Results", noCode: "The code is empty.", solution: "Reveal the reference solution", solutionNote: "Reviewing it can help you learn; it does not count as an independent pass.", reflection: "Security reflection", submitReflection: "Save my reflection", reflectionSaved: "Reflection saved.", complete: "Lesson complete: your function passes all eight checks. Verify MCP integration separately in a local environment.", incomplete: "Pick up where you left off or choose a next step.", score: "Quiz result", evidence: "Evidence tracked separately", practiceOnly: "These checks cover only the Python function. They do not run the MCP SDK or a network server.", sdk: "MCP integration is tested separately with the official SDK locally.", nextLesson: "Connect an MCP client to your server", soon: "Coming soon", back: "Previous", next: "Continue", finish: "Review lesson", lessonProgress: "Lesson progress", saved: "Your progress is saved on this device.", reset: "Restart the lesson", edit: "Your code", privacy: "Code is shared with the companion only if you opt in using the checkbox." };
+const pageData = {
+  lessonId: lesson.id,
+  title: lessonText(lesson.title, lang),
+  objective: lessonText(lesson.sequences[2].objective, lang),
+  questions,
+  quizCopy,
+  quizModule: lessonText(lesson.module, lang),
+  quizTopic: french ? "Compréhension MCP" : "MCP concepts",
+  checksCode: lesson.checksCode,
+  checkNames,
+  serverCode: SERVER_SOURCE,
+  base: href("/"),
+  lang,
+  sequenceTitles,
+  sequenceObjectives,
+  sequenceBriefs,
+  copy: exerciseCopy,
+  reflectionPrompt: lessonText(lesson.reflectionPrompt, lang),
+};
+---
+
+<App lang={lang} title={lessonText(lesson.title, lang)} path={`/learn/${lesson.id}/`} section="learn" showCatalogSidebar={false}>
+  <article class="course-lesson" id="course-lesson" data-lesson-context data-lesson-title={lessonText(lesson.title, lang)} data-lesson-objective={lessonText(lesson.sequences[2].objective, lang)}>
+    <a class="course-back-link" href={href(`/${lang}/learn/`)}>← {french ? "Tous les cours" : "All lessons"}</a>
+    <header class="course-lesson-header">
+      <p class="course-module">{lessonText(lesson.module, lang)}</p>
+      <h1>{lessonText(lesson.title, lang)}</h1>
+      <p class="lead">{lessonText(lesson.subtitle, lang)}</p>
+      <div class="course-meta"><span>{french ? "Environ" : "About"} {lesson.durationMinutes} {t.minutes}</span><span>{lesson.sequences.length} {french ? "séquences" : "steps"}</span><span>Python</span></div>
+    </header>
+
+    <div class="course-layout">
+      <div class="course-main">
+        <nav class="course-step-nav" aria-label={french ? "Séquences de la leçon" : "Lesson steps"}>
+          <ol>{lesson.sequences.map((sequence, index) => <li><button type="button" data-go-sequence={index} aria-current={index === 0 ? "step" : undefined}><span>{index + 1}</span>{lessonText(sequence.title, lang)}</button></li>)}</ol>
+        </nav>
+        <div class="course-progress-line"><span id="course-progress-fill"></span></div>
+        <p class="course-step-count" id="course-step-count" aria-live="polite"></p>
+
+        {lesson.sequences.map((sequence, index) => (
+          <section class="course-sequence" data-sequence={index} data-sequence-content aria-labelledby={`sequence-title-${index}`} hidden={index !== 0}>
+            <p class="section-eyebrow">{french ? `ÉTAPE ${index + 1} SUR ${lesson.sequences.length}` : `STEP ${index + 1} OF ${lesson.sequences.length}`}</p>
+            <h2 id={`sequence-title-${index}`} data-current-sequence>{lessonText(sequence.title, lang)}</h2>
+            <p class="course-objective">{lessonText(sequence.objective, lang)}</p>
+            <div class="course-prose">{lessonText(sequence.explanation, lang)}</div>
+            {index === 0 && <p class="course-prerequisite"><strong>{french ? "Prérequis" : "Prerequisite"}:</strong> {lessonText(lesson.prerequisites, lang)}</p>}
+            {index === 0 && <div class="course-diagram" role="img" aria-label={french ? "Hôte vers client MCP vers serveur MCP vers outil Python" : "Host to MCP client to MCP server to Python tool"}><span>{french ? "Application IA / Hôte" : "AI host"}</span><b aria-hidden="true">→</b><span>Client MCP</span><b aria-hidden="true">→</b><span>Serveur MCP</span><b aria-hidden="true">→</b><span>Outil Python</span></div>}
+            {index === 1 && <>
+              <div class="course-code-card"><div class="course-code-heading"><strong>{french ? "src/learning/mcp_calculator.py" : "src/learning/mcp_calculator.py"}</strong><button type="button" class="text-button" data-copy-server>{french ? "Copier le code" : "Copy code"}</button></div><pre><code id="server-example">{SERVER_SOURCE}</code></pre></div>
+              <pre class="course-code-snippet"><code>{`import anyio\nfrom mcp import Client\nfrom src.learning.mcp_calculator import mcp\n\nasync def main() -> None:\n    async with Client(mcp) as client:\n        tools = await client.list_tools()\n        result = await client.call_tool(\n            "calculate_total",\n            {"price": 12.5, "quantity": 3},\n        )\n        print(tools, result)\n\nanyio.run(main)`}</code></pre>
+              <h3>{french ? "Documentation officielle" : "Official documentation"}</h3>
+              <ul class="course-resources">{lesson.resources.map((resource) => <li><a href={resource.href} target="_blank" rel="noreferrer">{lessonText(resource.title, lang)}</a></li>)}</ul>
+            </>}
+            {index === 2 && <section class="lesson-exercise" aria-labelledby="lesson-exercise-title">
+              <h3 id="lesson-exercise-title">{french ? "Ajoute ton premier outil MCP" : "Add your first MCP tool"}</h3>
+              <p>{lessonText(lesson.sequences[index].explanation, lang)}</p>
+              <label for="lesson-code">{exerciseCopy.edit}</label>
+              <textarea id="lesson-code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" rows="12">{lesson.starterCode}</textarea>
+              <p class="runtime-limit">{exerciseCopy.practiceOnly}</p>
+              <button type="button" class="btn btn-primary" id="run-lesson-tests">{exerciseCopy.run}</button>
+              <p id="lesson-runtime-status" data-lesson-feedback role="status" aria-live="polite">{exerciseCopy.ready}</p>
+              <ol id="lesson-test-results" class="lesson-test-results" aria-label={exerciseCopy.results}></ol>
+            </section>}
+            {index === 3 && <div class="course-safety-note"><strong>{french ? "Aide progressive" : "Progressive help"}</strong><p>{french ? "Tu peux demander une explication, puis une piste, puis un indice plus précis. Le compagnon ne reçoit ni la solution de référence ni les vérifications du cours. Le partage du code est facultatif." : "Ask for an explanation, then a hint, then a more specific nudge. The companion receives neither the reference solution nor the course checks. Sharing code is optional."}</p></div>}
+            {index === 4 && <section class="lesson-assessment" aria-labelledby="lesson-quiz-title" data-quiz>
+              <header class="quiz-heading"><div><p class="section-eyebrow">{lessonText(lesson.module, lang)}</p><h3 id="lesson-quiz-title">{french ? "Vérifier ta compréhension" : "Check your understanding"}</h3></div><span class="quiz-heading-topic">{french ? "MCP · Python" : "MCP · Python"}</span></header>
+              <QuizProgress total={questions.length} label={french ? "Progression du quiz" : "Quiz progress"} />
+              <div class="quiz-question-stage" data-quiz-stage>
+                {questions.map((question, questionIndex) => <QuizQuestion index={questionIndex} total={questions.length} module="MCP" topic={french ? "Compréhension" : "Concepts"} prompt={question.prompt} options={question.options} hint={question.hint} labels={{ ...quizCopy, previous: exerciseCopy.back, next: exerciseCopy.next }} />)}
+              </div>
+              <QuizSummary label={french ? "BILAN DU QUIZ" : "QUIZ SUMMARY"} title={quizCopy.summaryTitle} subtitle={quizCopy.summarySubtitle} max={questions.length} retry={quizCopy.retry} review={quizCopy.review} understood={quizCopy.conceptsUnderstood} toReview={quizCopy.conceptsReview} scoreCaption={quizCopy.scoreCaption} lang={lang} />
+              <p id="lesson-quiz-score" role="status" aria-live="polite" class="visually-hidden"></p>
+              <div class="quiz-reflection" data-quiz-reflection hidden>
+              <label class="field lesson-reflection"><span>{exerciseCopy.reflection}</span><span>{exerciseCopy.reflectionPrompt}</span><textarea id="lesson-reflection" rows="4" maxlength="3000"></textarea></label>
+              <button type="button" class="btn btn-secondary" id="save-lesson-reflection">{exerciseCopy.submitReflection}</button>
+              <p id="lesson-reflection-status" role="status" aria-live="polite"></p>
+              </div>
+            </section>}
+            {index === 5 && <section class="lesson-review" aria-labelledby="lesson-review-title">
+              <h3 id="lesson-review-title">{french ? "Ce que tu as fait" : "What you did"}</h3>
+              <p>{exerciseCopy.evidence}</p>
+              <ul class="course-success-criteria">{lesson.successCriteria.map((criterion) => <li>{lessonText(criterion, lang)}</li>)}</ul>
+              <ul class="lesson-evidence">
+                <li data-evidence="visited">{french ? "Leçon consultée" : "Lesson viewed"}</li>
+                <li data-evidence="attempt">{french ? "Exercice tenté" : "Exercise attempted"}</li>
+                <li data-evidence="passed">{french ? "Tests réussis avant la solution" : "Checks passed before the solution"}</li>
+                <li data-evidence="quiz">{french ? "Compréhension évaluée" : "Understanding assessed"}</li>
+                <li data-evidence="reflection">{french ? "Réflexion sécurité enregistrée" : "Security reflection saved"}</li>
+                <li data-evidence="solution">{french ? "Solution consultée (suivie à part)" : "Solution viewed (tracked separately)"}</li>
+              </ul>
+              <p class="lesson-completion" id="lesson-completion" role="status" aria-live="polite">{exerciseCopy.incomplete}</p>
+              <div class="course-code-card lesson-solution"><button type="button" class="btn btn-secondary" id="reveal-lesson-solution">{exerciseCopy.solution}</button><p>{exerciseCopy.solutionNote}</p><pre id="lesson-solution-code" hidden><code></code></pre></div>
+              <div class="lesson-next-card"><div><h3>{exerciseCopy.nextLesson}</h3><p>{exerciseCopy.soon}</p></div><button type="button" disabled aria-disabled="true">{exerciseCopy.soon}</button></div>
+              <a class="text-link" href={href(`/${lang}/progress/`)}>{french ? "Voir ma progression" : "View progress"} →</a>
+              <a class="text-link" href={href(`/${lang}/journal/`)}>{french ? "Ouvrir mon journal" : "Open my journal"} →</a>
+            </section>}
+            <div class="course-sequence-nav"><button type="button" class="btn btn-secondary" data-previous disabled>{exerciseCopy.back}</button><button type="button" class="btn btn-primary" data-next>{index === lesson.sequences.length - 1 ? exerciseCopy.finish : exerciseCopy.next}</button></div>
+          </section>
+        ))}
+      </div>
+      <CompanionPanel lang={lang} scope="lesson" />
+    </div>
+    <p class="note course-storage-note">{exerciseCopy.saved}</p>
+    <script type="application/json" id="course-data" set:html={JSON.stringify(pageData).replace(/</g, "\\u003c")} />
+  </article>
+
+  <script>
+    import { completeQuiz, createLessonState, isLessonComplete, readLessonState, restartQuiz, saveLessonState, scoreLessonQuiz, submitQuizAnswer, withLessonEvent } from "../../../lib/lesson-progress";
+
+    type QuizQuestionData = { id: string; prompt: string; options: string[]; answer: number; hint: string; feedback: string; incorrectFeedback: string; concept: string };
+    type CoursePayload = { lessonId: string; title: string; objective: string; questions: QuizQuestionData[]; quizCopy: Record<string, string>; quizModule: string; quizTopic: string; checksCode: string; checkNames: string[]; serverCode: string; base: string; lang: "fr" | "en"; sequenceTitles: string[]; sequenceObjectives: string[]; sequenceBriefs: string[]; copy: Record<string, string>; reflectionPrompt: string };
+    type TestResult = { name: string; ok: boolean; msg?: string };
+    type WorkerResponse = { id: number; result: { error: string | null; tests: TestResult[] } };
+    const data = JSON.parse(document.getElementById("course-data")?.textContent ?? "{}") as CoursePayload;
+    const copy = data.copy;
+    const root = document.getElementById("course-lesson")!;
+    const sections = [...root.querySelectorAll<HTMLElement>("[data-sequence]")];
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>("[data-go-sequence]")];
+    const progressFill = root.querySelector<HTMLElement>("#course-progress-fill")!;
+    const stepCount = root.querySelector<HTMLElement>("#course-step-count")!;
+    const codeInput = root.querySelector<HTMLTextAreaElement>("#lesson-code")!;
+    const reflectionInput = root.querySelector<HTMLTextAreaElement>("#lesson-reflection")!;
+    const testButton = root.querySelector<HTMLButtonElement>("#run-lesson-tests")!;
+    const runtimeStatus = root.querySelector<HTMLElement>("#lesson-runtime-status")!;
+    const testResults = root.querySelector<HTMLOListElement>("#lesson-test-results")!;
+    const lessonMascot = root.querySelector<SVGSVGElement>("[data-mascot]");
+    let storage: Storage | null = null;
+    try { storage = window.localStorage; } catch { /* The lesson remains usable without persistence. */ }
+    let state = storage ? readLessonState(storage, data.lessonId, data.questions.length) ?? createLessonState(data.lessonId, new Date().toISOString(), data.questions.length) : createLessonState(data.lessonId, new Date().toISOString(), data.questions.length);
+    let activeIndex = state.lastSequence;
+    const savedDraft = state.draft;
+    if (savedDraft) codeInput.value = savedDraft;
+    reflectionInput.value = state.reflection;
+    state.testResults.forEach((passed, index) => {
+      const item = document.createElement("li");
+      item.textContent = `${passed ? "✓" : "○"} ${data.checkNames[index] ?? (data.lang === "fr" ? `Vérification ${index + 1}` : `Check ${index + 1}`)}`;
+      item.classList.toggle("is-passed", passed);
+      testResults.append(item);
+    });
+    if (state.attempts) runtimeStatus.textContent = state.testsPassed ? copy.passed : copy.failed;
+    state.answers.forEach((answer, index) => {
+      const radio = root.querySelector<HTMLInputElement>(`input[name="quiz-answer-${index}"][value="${answer}"]`);
+      if (radio) radio.checked = true;
+    });
+
+    function persist(): void {
+      state = { ...state, updatedAt: new Date().toISOString(), lastSequence: activeIndex, draft: codeInput.value.slice(0, 12_000), reflection: reflectionInput.value.slice(0, 3_000) };
+      if (isLessonComplete(state, data.questions) && !state.events.some((event) => event.type === "completed")) state = withLessonEvent(state, "completed");
+      if (storage) saveLessonState(storage, state);
+      renderEvidence();
+    }
+
+    function renderEvidence(): void {
+      const answersCorrect = state.answers.every((answer, index) => answer === data.questions[index].answer);
+      const complete = isLessonComplete(state, data.questions);
+      root.querySelector<HTMLElement>('[data-evidence="visited"]')?.classList.add("is-done");
+      root.querySelector<HTMLElement>('[data-evidence="attempt"]')?.classList.toggle("is-done", state.attempts > 0);
+      root.querySelector<HTMLElement>('[data-evidence="passed"]')?.classList.toggle("is-done", state.passedBeforeSolution);
+      root.querySelector<HTMLElement>('[data-evidence="quiz"]')?.classList.toggle("is-done", state.quizSubmitted && state.answers.every((answer) => answer >= 0) && answersCorrect);
+      root.querySelector<HTMLElement>('[data-evidence="reflection"]')?.classList.toggle("is-done", state.reflectionSubmitted);
+      root.querySelector<HTMLElement>('[data-evidence="solution"]')?.classList.toggle("is-done", state.solutionViewed);
+      const completion = root.querySelector<HTMLElement>("#lesson-completion");
+      if (completion) completion.textContent = complete ? copy.complete : copy.incomplete;
+      root.dataset.lessonComplete = String(complete);
+    }
+
+    const quizRoot = root.querySelector<HTMLElement>("[data-quiz]")!;
+    const quizPanels = [...quizRoot.querySelectorAll<HTMLElement>("[data-quiz-question]")];
+    const quizSummary = quizRoot.querySelector<HTMLElement>("[data-quiz-summary]")!;
+    const quizReflection = quizRoot.querySelector<HTMLElement>("[data-quiz-reflection]")!;
+    const quizStatus = quizRoot.querySelector<HTMLElement>("#lesson-quiz-score")!;
+    const quizText = (key: string): string => data.quizCopy[key] ?? key;
+    let reviewingCompletedQuiz = false;
+
+    function renderQuizSummary(): void {
+      const understood = quizSummary.querySelector<HTMLElement>("[data-quiz-understood]")!;
+      const review = quizSummary.querySelector<HTMLElement>("[data-quiz-review-list]")!;
+      understood.replaceChildren();
+      review.replaceChildren();
+      data.questions.forEach((question, index) => {
+        const item = document.createElement("li");
+        item.textContent = question.concept;
+        (state.answers[index] === question.answer ? understood : review).append(item);
+      });
+      if (!review.childElementCount) {
+        const item = document.createElement("li");
+        item.textContent = quizText("noMisses");
+        review.append(item);
+      }
+      const score = scoreLessonQuiz(state, data.questions.map((question) => question.answer)) ?? 0;
+      quizSummary.querySelector<HTMLElement>("[data-quiz-summary-score]")!.textContent = `${score} / ${data.questions.length}`;
+      const ring = quizSummary.querySelector<SVGSVGElement>("[data-progress-ring]");
+      if (ring) {
+        const circumference = 2 * Math.PI * 17;
+        const value = ring.querySelector<SVGCircleElement>(".progress-ring-value");
+        value?.setAttribute("stroke-dashoffset", String(circumference * (1 - score / data.questions.length)));
+        ring.querySelector<SVGTextElement>(".progress-ring-label")!.textContent = `${score}/${data.questions.length}`;
+        ring.setAttribute("aria-label", `${quizText("scoreLabel")}: ${score} / ${data.questions.length}`);
+        ring.dataset.value = String(score);
+      }
+      quizSummary.dataset.result = score === data.questions.length ? "all-correct" : "review-needed";
+      quizSummary.querySelector<HTMLButtonElement>("[data-quiz-review]")!.disabled = score === data.questions.length;
+    }
+
+    function renderQuizQuestion(): void {
+      const complete = state.quizSubmitted && !reviewingCompletedQuiz;
+      quizPanels.forEach((panel, index) => {
+        const active = !complete && index === state.quizIndex;
+        panel.hidden = !active;
+        if (!active) return;
+        const checked = state.quizChecked[index];
+        panel.querySelectorAll<HTMLInputElement>('input[type="radio"]').forEach((input) => {
+          input.checked = Number(input.value) === state.answers[index];
+          input.disabled = checked;
+          const card = input.closest<HTMLElement>("[data-quiz-answer-card]")!;
+          card.classList.toggle("is-selected", input.checked);
+          card.classList.toggle("is-correct", checked && Number(input.value) === data.questions[index].answer);
+          card.classList.toggle("is-incorrect", checked && input.checked && Number(input.value) !== data.questions[index].answer);
+          const stateMark = card.querySelector<HTMLElement>("[data-quiz-answer-state]")!;
+          stateMark.textContent = checked && Number(input.value) === data.questions[index].answer ? "✓" : checked && input.checked ? "×" : "";
+        });
+        const feedback = panel.querySelector<HTMLElement>("[data-quiz-feedback]")!;
+        feedback.hidden = !checked;
+        feedback.classList.toggle("is-correct", checked && state.answers[index] === data.questions[index].answer);
+        feedback.classList.toggle("is-incorrect", checked && state.answers[index] !== data.questions[index].answer);
+        if (checked) {
+          const correct = state.answers[index] === data.questions[index].answer;
+          feedback.querySelector<HTMLElement>("[data-quiz-feedback-title]")!.textContent = quizText(correct ? "correct" : "incorrect");
+          feedback.querySelector<HTMLElement>("[data-quiz-feedback-copy]")!.textContent = correct ? data.questions[index].feedback : data.questions[index].incorrectFeedback;
+          const ask = feedback.querySelector<HTMLButtonElement>("[data-quiz-companion]")!;
+          ask.hidden = correct;
+          if (!correct) {
+            root.dataset.quizQuestion = data.questions[index].prompt;
+            root.dataset.quizAnswer = data.questions[index].options[state.answers[index]];
+            root.dataset.quizFeedback = data.questions[index].incorrectFeedback;
+          }
+        }
+        const hint = panel.querySelector<HTMLElement>("[data-quiz-hint]")!;
+        const hintButton = panel.querySelector<HTMLButtonElement>("[data-quiz-hint-button]")!;
+        hint.hidden = !state.quizHintsUsed[index];
+        hintButton.disabled = checked || state.quizHintsUsed[index];
+        hintButton.setAttribute("aria-expanded", String(state.quizHintsUsed[index]));
+        hintButton.setAttribute("aria-label", `${quizText("hintButton")} ${state.quizHintsUsed[index] ? `· ${quizText("hintUsed")}` : ""}`.trim());
+        panel.querySelector<HTMLButtonElement>("[data-quiz-previous]")!.disabled = index === 0;
+        panel.querySelector<HTMLButtonElement>("[data-quiz-check]")!.hidden = checked;
+        const next = panel.querySelector<HTMLButtonElement>("[data-quiz-next]")!;
+        next.hidden = !checked;
+        next.textContent = index === data.questions.length - 1 ? quizText("summary") : quizText("nextQuestion");
+        panel.querySelector<HTMLButtonElement>("[data-quiz-return-summary]")!.hidden = !reviewingCompletedQuiz;
+        panel.querySelector<HTMLElement>("[data-quiz-validation]")!.textContent = "";
+        panel.querySelector<HTMLElement>("[data-quiz-count]")!.textContent = `${quizText("question")} ${index + 1} ${quizText("of")} ${data.questions.length}`;
+      });
+      quizRoot.querySelectorAll<HTMLElement>("[data-quiz-segment]").forEach((segment, index) => {
+        segment.classList.toggle("is-complete", state.quizChecked[index]);
+        segment.classList.toggle("is-current", !complete && index === state.quizIndex);
+      });
+      const quizProgress = quizRoot.querySelector<HTMLElement>("[data-quiz-progress]")!;
+      const answeredCount = state.quizChecked.filter(Boolean).length;
+      quizProgress.setAttribute("aria-valuenow", String(answeredCount));
+      quizProgress.setAttribute("aria-valuetext", complete ? `${data.questions.length} / ${data.questions.length} · ${quizText("quizComplete")}` : `${quizText("question")} ${state.quizIndex + 1} ${quizText("of")} ${data.questions.length} · ${answeredCount} ${french ? "validée(s)" : "checked"}`);
+      quizSummary.hidden = !complete;
+      quizReflection.hidden = !complete;
+      if (complete) renderQuizSummary();
+      quizStatus.textContent = complete ? quizText("quizComplete") : "";
+      const currentQuestion = complete ? -1 : state.quizIndex;
+      if (currentQuestion >= 0 && state.quizChecked[currentQuestion] && state.answers[currentQuestion] !== data.questions[currentQuestion].answer) {
+        root.dataset.quizQuestion = data.questions[currentQuestion].prompt;
+        root.dataset.quizAnswer = data.questions[currentQuestion].options[state.answers[currentQuestion]];
+        root.dataset.quizFeedback = data.questions[currentQuestion].incorrectFeedback;
+      } else {
+        delete root.dataset.quizQuestion;
+        delete root.dataset.quizAnswer;
+        delete root.dataset.quizFeedback;
+      }
+      const activePanel = quizPanels[state.quizIndex];
+      if (activePanel && !complete) activePanel.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+
+    quizPanels.forEach((panel, index) => {
+      panel.querySelectorAll<HTMLInputElement>('input[type="radio"]').forEach((input) => input.addEventListener("change", () => {
+        if (state.quizChecked[index]) return;
+        state = { ...state, answers: state.answers.map((answer, itemIndex) => itemIndex === index ? Number(input.value) : answer) };
+        panel.querySelectorAll<HTMLElement>("[data-quiz-answer-card]").forEach((card) => card.classList.toggle("is-selected", card.querySelector<HTMLInputElement>("input")?.checked === true));
+        persist();
+      }));
+      panel.querySelector<HTMLButtonElement>("[data-quiz-hint-button]")!.addEventListener("click", () => {
+        if (state.quizChecked[index] || state.quizHintsUsed[index]) return;
+        state = { ...state, quizHintsUsed: state.quizHintsUsed.map((used, itemIndex) => itemIndex === index || used) };
+        persist(); renderQuizQuestion();
+      });
+      panel.querySelector<HTMLButtonElement>("[data-quiz-check]")!.addEventListener("click", () => {
+        if (state.quizChecked[index]) return;
+        if (state.answers[index] < 0) {
+          panel.querySelector<HTMLElement>("[data-quiz-validation]")!.textContent = quizText("selectAnswer");
+          panel.querySelector<HTMLInputElement>(`input[name="quiz-answer-${index}"]`)?.focus();
+          return;
+        }
+        state = submitQuizAnswer(state, index, state.answers[index]);
+        if (index === data.questions.length - 1) state = completeQuiz(state, data.questions.map((question) => question.answer));
+        persist(); renderQuizQuestion();
+      });
+      panel.querySelector<HTMLButtonElement>("[data-quiz-previous]")!.addEventListener("click", () => {
+        if (index > 0) { state = { ...state, quizIndex: index - 1 }; persist(); renderQuizQuestion(); }
+      });
+      panel.querySelector<HTMLButtonElement>("[data-quiz-next]")!.addEventListener("click", () => {
+        if (!state.quizChecked[index]) return;
+        if (reviewingCompletedQuiz) {
+          reviewingCompletedQuiz = false;
+        } else if (index === data.questions.length - 1) {
+          state = completeQuiz(state, data.questions.map((question) => question.answer));
+        } else state = { ...state, quizIndex: index + 1 };
+        persist(); renderQuizQuestion();
+      });
+      panel.querySelector<HTMLButtonElement>("[data-quiz-return-summary]")!.addEventListener("click", () => {
+        reviewingCompletedQuiz = false; renderQuizQuestion();
+      });
+    });
+    quizSummary.querySelector<HTMLButtonElement>("[data-quiz-retry]")!.addEventListener("click", () => {
+      state = restartQuiz(state); persist(); renderQuizQuestion();
+    });
+    quizSummary.querySelector<HTMLButtonElement>("[data-quiz-review]")!.addEventListener("click", () => {
+      const missed = data.questions.findIndex((question, index) => state.answers[index] !== question.answer);
+      if (missed >= 0) { reviewingCompletedQuiz = true; state = { ...state, quizIndex: missed }; renderQuizQuestion(); }
+    });
+    quizRoot.querySelectorAll<HTMLButtonElement>("[data-quiz-companion]").forEach((button) => button.addEventListener("click", () => {
+      const panel = document.querySelector<HTMLElement>("#companion-lesson");
+      const input = panel?.querySelector<HTMLTextAreaElement>("[data-companion-input]");
+      if (!input) return;
+      input.value = button.textContent?.trim() ?? "";
+      panel?.scrollIntoView({ block: "center", behavior: "smooth" });
+      window.setTimeout(() => input.focus(), 250);
+    }));
+
+    function showSequence(index: number): void {
+      activeIndex = Math.max(0, Math.min(sections.length - 1, index));
+      sections.forEach((section, itemIndex) => { section.hidden = itemIndex !== activeIndex; });
+      tabs.forEach((tab, itemIndex) => { if (itemIndex === activeIndex) tab.setAttribute("aria-current", "step"); else tab.removeAttribute("aria-current"); });
+      progressFill.style.width = `${((activeIndex + 1) / sections.length) * 100}%`;
+      stepCount.textContent = `${copy.lessonProgress}: ${activeIndex + 1} / ${sections.length} · ${data.sequenceTitles[activeIndex]}`;
+      root.dataset.lessonObjective = data.sequenceObjectives[activeIndex];
+      root.dataset.currentSequence = data.sequenceTitles[activeIndex];
+      root.dataset.currentSequenceIndex = String(activeIndex);
+      root.dataset.currentInstructions = data.sequenceBriefs[activeIndex];
+      if (activeIndex === sections.length - 1 && lessonMascot) lessonMascot.dataset.mood = "recommendation";
+      root.querySelectorAll<HTMLButtonElement>("[data-previous]").forEach((button) => { button.disabled = activeIndex === 0; });
+      persist();
+      window.scrollTo({ top: root.offsetTop, behavior: "smooth" });
+    }
+
+    tabs.forEach((button) => button.addEventListener("click", () => showSequence(Number(button.dataset.goSequence))));
+    root.querySelectorAll<HTMLButtonElement>("[data-previous]").forEach((button) => button.addEventListener("click", () => showSequence(activeIndex - 1)));
+    root.querySelectorAll<HTMLButtonElement>("[data-next]").forEach((button) => button.addEventListener("click", () => showSequence(activeIndex + 1)));
+    codeInput.addEventListener("input", () => {
+      state = { ...state, testsPassed: false, testResults: [] };
+      testResults.replaceChildren();
+      if (state.attempts) runtimeStatus.textContent = copy.changed;
+      persist();
+    });
+    reflectionInput.addEventListener("input", () => { state = { ...state, reflectionSubmitted: false }; persist(); });
+    let runId = 0;
+    let worker: Worker | null = null;
+    testButton.addEventListener("click", () => {
+      if (!codeInput.value.trim()) { runtimeStatus.textContent = copy.noCode; return; }
+      testButton.disabled = true;
+      if (lessonMascot) lessonMascot.dataset.mood = "thinking";
+      runtimeStatus.textContent = copy.running;
+      testResults.replaceChildren();
+      const id = ++runId;
+      if (!worker) worker = new Worker(new URL("../../../scripts/py-worker.ts", import.meta.url), { type: "module" });
+      const activeWorker = worker;
+      const timeout = window.setTimeout(() => {
+        activeWorker.terminate();
+        if (worker === activeWorker) worker = null;
+        testButton.disabled = false;
+        runtimeStatus.textContent = copy.error;
+      }, 60_000);
+      activeWorker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+        if (event.data.id !== id) return;
+        window.clearTimeout(timeout);
+        testButton.disabled = false;
+        const { error, tests } = event.data.result;
+        if (error) {
+          runtimeStatus.textContent = error;
+          state = withLessonEvent({ ...state, attempts: state.attempts + 1, testsPassed: false, testResults: [] }, "exercise-tested");
+        } else {
+          tests.forEach((result) => {
+            const item = document.createElement("li");
+            item.textContent = `${result.ok ? "✓" : "○"} ${result.name}${result.msg ? ` — ${result.msg}` : ""}`;
+            item.classList.toggle("is-passed", result.ok);
+            testResults.append(item);
+          });
+          const passed = tests.length === data.checkNames.length && tests.every((result) => result.ok);
+          runtimeStatus.textContent = passed ? copy.passed : copy.failed;
+          if (lessonMascot) lessonMascot.dataset.mood = passed ? "success" : "difficulty";
+          state = withLessonEvent({ ...state, attempts: state.attempts + 1, testsPassed: passed, passedBeforeSolution: state.passedBeforeSolution || (passed && !state.solutionViewed), testResults: tests.map((result) => result.ok) }, "exercise-tested");
+          if (passed && !state.events.some((entry) => entry.type === "exercise-passed")) state = withLessonEvent(state, "exercise-passed");
+        }
+        persist();
+      };
+      activeWorker.onerror = () => {
+        window.clearTimeout(timeout);
+        activeWorker.terminate();
+        if (worker === activeWorker) worker = null;
+        testButton.disabled = false;
+        runtimeStatus.textContent = copy.error;
+      };
+      activeWorker.postMessage({ id, base: data.base, code: codeInput.value, tests: data.checksCode });
+    });
+
+    root.querySelector<HTMLButtonElement>("#save-lesson-reflection")?.addEventListener("click", () => {
+      const submitted = reflectionInput.value.trim().length >= 30;
+      state = withLessonEvent({ ...state, reflectionSubmitted: submitted }, "reflection-submitted");
+      root.querySelector<HTMLElement>("#lesson-reflection-status")!.textContent = submitted
+        ? copy.reflectionSaved
+        : (data.lang === "fr" ? "Ajoute quelques mots sur tes vérifications avant d’enregistrer." : "Add a few words about your safeguards before saving.");
+      persist();
+    });
+
+    const solutionButton = root.querySelector<HTMLButtonElement>("#reveal-lesson-solution")!;
+    const solutionCode = root.querySelector<HTMLElement>("#lesson-solution-code")!;
+    solutionButton.addEventListener("click", () => {
+      state = withLessonEvent({ ...state, solutionViewed: true }, "exercise-tested");
+      solutionCode.querySelector("code")!.textContent = data.serverCode;
+      solutionCode.hidden = false;
+      persist();
+    });
+
+    const copyButton = root.querySelector<HTMLButtonElement>("[data-copy-server]");
+    copyButton?.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(data.serverCode); copyButton.textContent = data.lang === "fr" ? "Copié" : "Copied"; }
+      catch { copyButton.textContent = data.lang === "fr" ? "Sélectionne le code" : "Select the code"; }
+    });
+
+    showSequence(activeIndex);
+    renderQuizQuestion();
+    renderEvidence();
+  </script>
+</App>

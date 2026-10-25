@@ -46,9 +46,11 @@ const dynamicDrillTitle = lang === "fr" ? "Exercice ciblé" : "Tailored job dril
     <article class="level-card">
       <div class="level-badge" aria-hidden="true"><span data-level-n>1</span></div>
       <div class="level-body">
+        <p class="section-eyebrow">{lang === "fr" ? "NIVEAU DE PRATIQUE · POINTS DU JEU" : "PRACTICE LEVEL · GAME POINTS"}</p>
         <p class="level-name" data-level-name></p>
         <div class="level-meter"><span data-level-bar></span></div>
         <p class="level-xp" data-level-xp></p>
+        <p class="note">{lang === "fr" ? "Ce niveau suit les tentatives enregistrées ; il ne représente pas un niveau professionnel." : "This level tracks saved practice attempts; it is not a professional skill rating."}</p>
       </div>
     </article>
 
@@ -113,5 +115,33 @@ const dynamicDrillTitle = lang === "fr" ? "Exercice ciblé" : "Tailored job dril
       <h2 id="xp-h">{t.xpRules}</h2>
       <ul>{t.xpRulesList.map((r) => <li>{r}</li>)}</ul>
     </section>
+
+    <section class="panel course-progress-card" aria-labelledby="course-progress-title">
+      <p class="section-eyebrow">{lang === "fr" ? "APPRENTISSAGE GUIDÉ" : "GUIDED LEARNING"}</p>
+      <h2 id="course-progress-title">{lang === "fr" ? "Cours suivis" : "Course activity"}</h2>
+      <div id="course-progress-summary" data-lesson-progress data-lang={lang} data-href={href(`/${lang}/learn/mcp-python-server/`)}>
+        <p class="note" id="course-progress-empty">{lang === "fr" ? "Aucune leçon enregistrée pour le moment." : "No lesson activity saved yet."}</p>
+      </div>
+    </section>
   </section>
+  <script>
+    import { readLessonState } from "../../lib/lesson-progress";
+    const summary = document.querySelector<HTMLElement>("[data-lesson-progress]");
+    if (summary) {
+      let storage: Storage | null = null;
+      try { storage = window.localStorage; } catch { /* Progress remains available without course storage. */ }
+      const state = storage ? readLessonState(storage, "mcp-python-server") : null;
+      const lang = summary.dataset.lang === "fr" ? "fr" : "en";
+      if (state) {
+        const title = lang === "fr" ? "Construire ton premier serveur MCP en Python" : "Build your first MCP server in Python";
+        const status = state.passedBeforeSolution ? (lang === "fr" ? "Logique vérifiée avant la solution" : "Logic checked before solution") : state.attempts ? (lang === "fr" ? "Exercice tenté" : "Exercise attempted") : (lang === "fr" ? "Leçon consultée" : "Lesson viewed");
+        const link = document.createElement("a");
+        link.className = "course-activity-link";
+        link.href = summary.dataset.href ?? "#";
+        link.textContent = `${title} · ${status} · ${state.attempts} ${lang === "fr" ? "tentative(s)" : "attempt(s)"}`;
+        summary.querySelector("#course-progress-empty")?.remove();
+        summary.prepend(link);
+      }
+    }
+  </script>
 </App>

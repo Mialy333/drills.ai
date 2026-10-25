@@ -107,6 +107,26 @@ class CoachExerciseContext(BaseModel):
     latest_feedback: str | None = Field(default=None, max_length=2_000)
 
 
+class CoachQuizReview(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(max_length=800)
+    learner_answer: str = Field(max_length=500)
+    revealed_feedback: str = Field(max_length=1_200)
+
+
+class CoachLessonContext(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(max_length=160)
+    objective: str = Field(max_length=600)
+    sequence: str = Field(max_length=160)
+    instructions: str = Field(max_length=2_000)
+    code: str | None = Field(default=None, max_length=12_000)
+    feedback: str | None = Field(default=None, max_length=2_000)
+    quiz_review: CoachQuizReview | None = None
+
+
 class CompanionRequest(BaseModel):
     """Minimal context for a stateless, contextual learning-companion turn."""
 
@@ -118,6 +138,7 @@ class CompanionRequest(BaseModel):
     learner: CoachLearnerContext | None = None
     roadmap: CoachRoadmapContext | None = None
     exercise: CoachExerciseContext | None = None
+    lesson: CoachLessonContext | None = None
 
 
 @app.get("/health")

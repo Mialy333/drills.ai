@@ -39,6 +39,14 @@ export const DynamicDrillSchema = z.object({
   model_answer_ideas: z.array(z.string()).min(3).max(5),
 }).strict();
 
+/** Local diagnostic exercises carry one observed focus, while generated job plans retain the API's three-skill minimum. */
+export const AssessmentDrillSchema = DynamicDrillSchema.extend({
+  required_skills: z.array(RequiredSkillSchema).min(1).max(8),
+  roadmap: z.array(RoadmapStepSchema).min(1).max(6),
+}).strict();
+
+export const StoredDynamicDrillSchema = z.union([DynamicDrillSchema, AssessmentDrillSchema]);
+
 export type DynamicDrill = z.infer<typeof DynamicDrillSchema>;
 
 export const LearnerProfileSchema = z.object({
@@ -82,6 +90,15 @@ export const CompanionRequestSchema = z.object({
     mission: z.string().max(1600),
     current_answer: z.string().max(12000).optional(),
     latest_feedback: z.string().max(2000).optional(),
+  }).strict().optional(),
+  lesson: z.object({
+    title: z.string().max(160),
+    objective: z.string().max(600),
+    sequence: z.string().max(160),
+    instructions: z.string().max(2000),
+    code: z.string().max(12000).optional(),
+    feedback: z.string().max(2000).optional(),
+    quiz_review: z.object({ question: z.string().max(800), learner_answer: z.string().max(500), revealed_feedback: z.string().max(1200) }).strict().optional(),
   }).strict().optional(),
 }).strict();
 

@@ -101,6 +101,28 @@ function activeExercise(lang: "fr" | "en"): CompanionRequest["exercise"] {
   return { title, context, mission, current_answer: currentAnswer || undefined, latest_feedback: latestFeedback || undefined };
 }
 
+function activeLesson(panel: HTMLElement): CompanionRequest["lesson"] {
+  const root = document.querySelector<HTMLElement>("[data-lesson-context]");
+  if (!root) return undefined;
+  const instructions = root.dataset.currentInstructions ?? "";
+  const sequence = root.dataset.currentSequence ?? "";
+  const code = root.querySelector<HTMLTextAreaElement>("#lesson-code")?.value;
+  const shareCode = panel.querySelector<HTMLInputElement>("[data-lesson-share-code]")?.checked === true;
+  const feedback = root.querySelector<HTMLElement>("[data-lesson-feedback]")?.textContent?.trim();
+  const quizQuestion = root.dataset.quizQuestion;
+  const quizAnswer = root.dataset.quizAnswer;
+  const quizFeedback = root.dataset.quizFeedback;
+  return {
+    title: root.dataset.lessonTitle ?? "",
+    objective: root.dataset.lessonObjective ?? "",
+    sequence,
+    instructions: instructions.slice(0, 2_000),
+    ...(shareCode && code ? { code: code.slice(0, 12_000) } : {}),
+    ...(feedback ? { feedback: feedback.slice(0, 2_000) } : {}),
+    ...(quizQuestion && quizAnswer && quizFeedback ? { quiz_review: { question: quizQuestion.slice(0, 800), learner_answer: quizAnswer.slice(0, 500), revealed_feedback: quizFeedback.slice(0, 1_200) } } : {}),
+  };
+}
+
 function appendMessage(transcript: HTMLElement, role: Turn["role"] | "guide", text: string): void {
   const message = document.createElement("p");
   message.className = `companion-message companion-message-${role}`;
@@ -116,6 +138,7 @@ function initializePanel(panel: HTMLElement): void {
   const transcript = panel.querySelector<HTMLElement>("[data-companion-transcript]");
   const status = panel.querySelector<HTMLElement>("[data-companion-status]");
   const retry = panel.querySelector<HTMLButtonElement>("[data-companion-retry]");
+  const mascot = panel.querySelector<SVGSVGElement>("[data-mascot]");
   if (!form || !input || !submit || !transcript || !status || !retry) return;
 
   const lang = document.body.dataset.lang === "fr" ? "fr" : "en";
@@ -147,6 +170,7 @@ function initializePanel(panel: HTMLElement): void {
 
   panel.querySelectorAll<HTMLButtonElement>("[data-companion-suggestion]").forEach((button) => {
     button.addEventListener("click", () => {
+      if (mascot) mascot.dataset.mood = "help";
       input.value = button.dataset.companionSuggestion ?? "";
       input.focus();
     });
@@ -165,6 +189,7 @@ function initializePanel(panel: HTMLElement): void {
     input.disabled = true;
     status.dataset.state = "busy";
     status.textContent = copy.waiting;
+    if (mascot) mascot.dataset.mood = "thinking";
 
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 90_000);
@@ -187,8 +212,10 @@ function initializePanel(panel: HTMLElement): void {
       failedRequest = null;
       status.textContent = "";
       delete status.dataset.state;
+      if (mascot) mascot.dataset.mood = "encouragement";
     } catch (error: unknown) {
       status.dataset.state = "error";
+      if (mascot) mascot.dataset.mood = "difficulty";
       status.textContent = error instanceof Error && error.message === "rate-limited"
         ? copy.rateLimited
         : error instanceof Error && error.message === "invalid-response"
@@ -217,6 +244,7 @@ function initializePanel(panel: HTMLElement): void {
       learner: learnerContext(lang),
       roadmap: activeRoadmap(lang),
       exercise: panel.dataset.scope === "exercise" ? activeExercise(lang) : undefined,
+      lesson: panel.dataset.scope === "lesson" ? activeLesson(panel) : undefined,
     });
     if (!parsed.success) {
       status.dataset.state = "error";

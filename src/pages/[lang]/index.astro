@@ -17,16 +17,16 @@ const french = lang === "fr";
   <div class="home-page">
     <section class="welcome" aria-labelledby="welcome-title">
       <div class="welcome-text">
-        <p class="home-kicker">{french ? "PARCOURS GUIDÉ · AI AGENT ENGINEERING" : "GUIDED PRACTICE · AI AGENT ENGINEERING"}</p>
-        <h1 class="welcome-title" id="welcome-title">{french ? "Construis les compétences. Prouve-les en pratiquant." : "Build the skills. Prove them through practice."}</h1>
-        <p class="welcome-lead">{french
-          ? "Un parcours Python guidé pour préparer une reconversion vers les métiers d’ingénierie des agents IA, à ton rythme et à partir de ton niveau actuel."
-          : "A guided Python path for people moving into AI Agent Engineering, shaped around your starting point and the role you want."}</p>
+          <p class="home-kicker">{french ? "PRÉPARATION CANDIDATURE · AI AGENT ENGINEERING" : "APPLICATION PREP · AI AGENT ENGINEERING"}</p>
+          <h1 class="welcome-title" id="welcome-title">{french ? "Ton profil correspond-il à cette offre ?" : "Does your profile fit this role?"}</h1>
+          <p class="welcome-lead">{french
+          ? "Colle une annonce de stage, d’alternance ou de premier poste. Compare ses critères aux expériences que tu as réellement décrites, puis prépare la suite."
+          : "Paste an internship, apprenticeship, or entry-level posting. Compare its requirements with experience you have actually described, then prepare your next step."}</p>
         <div class="welcome-actions">
-          <a class="btn btn-primary" href={href(`/${lang}/python/dynamic-job/`)} id="sample-drill-link">{french ? "Essayer un exercice gratuit" : "Try a free practice exercise"}</a>
-          <a class="btn btn-secondary" href={href(`/${lang}/assess/`)}>{french ? "Faire le diagnostic" : "Take the skill check"}</a>
+          <a class="btn btn-primary" href={href(`/${lang}/generate/`)}>{french ? "Analyser une annonce" : "Check a job posting"}</a>
+          <a class="btn btn-secondary" href={href(`/${lang}/assess/`)}>{french ? "Faire le diagnostic technique" : "Take the technical diagnostic"}</a>
         </div>
-        <p class="welcome-note">{french ? "Sans compte ni clé API. Tu peux aussi coller une annonce pour créer un parcours ciblé." : "No account or API key needed. You can also paste a job posting to build a focused roadmap."}</p>
+        <p class="welcome-note">{french ? "Pas de CV brut envoyé à l’IA. Le texte de l’annonce est analysé ; tes expériences restent dans ce navigateur." : "No raw CV is sent to AI. The posting is analysed; your experience stays in this browser."}</p>
       </div>
     </section>
 
@@ -109,14 +109,14 @@ const french = lang === "fr";
     <section class="journey-section" id="journey" aria-labelledby="journey-title">
       <div class="section-heading">
         <p class="section-eyebrow">{french ? "CHOISIS TON PROCHAIN PAS" : "CHOOSE YOUR NEXT STEP"}</p>
-        <h2 id="journey-title">{french ? "Apprendre en faisant" : "Learn by doing"}</h2>
+      <h2 id="journey-title">{french ? "De l’annonce à la préparation" : "From posting to preparation"}</h2>
       </div>
       <div class="journey-grid">
-        <a class="journey-card journey-card-primary" href={href(`/${lang}/python/dynamic-job/`)}>
-          <span class="journey-index">{french ? "COMMENCER SANS PRÉREQUIS" : "START WITH NO SETUP"}</span>
-          <h3>{french ? "Essayer un exercice" : "Try a practice exercise"}</h3>
-          <p>{french ? "Un mini-défi Python guidé, sans compte, clé API ni annonce à coller." : "A guided Python mini-challenge. No account, API key, or job posting required."}</p>
-          <span class="journey-action">{french ? "Commencer" : "Start practising"}<span aria-hidden="true">→</span></span>
+        <a class="journey-card journey-card-primary" href={href(`/${lang}/generate/`)}>
+          <span class="journey-index">{french ? "ÉTAPE 1 · TON OFFRE CIBLE" : "STEP 1 · YOUR TARGET POSTING"}</span>
+          <h3>{french ? "Comparer mon profil à une annonce" : "Compare my profile with a posting"}</h3>
+          <p>{french ? "Colle l’annonce, ajoute quelques éléments vérifiables de ton parcours et examine les critères couverts ou à documenter." : "Paste the posting, add a few verifiable details from your background, and review which requirements are evidenced or still need attention."}</p>
+          <span class="journey-action">{french ? "Commencer l’analyse" : "Start the analysis"}<span aria-hidden="true">→</span></span>
         </a>
         <a class="journey-card" href={href(`/${lang}/assess/`)}>
           <span class="journey-index">{french ? "DIAGNOSTIC TECHNIQUE" : "TECHNICAL DIAGNOSTIC"}</span>
@@ -124,11 +124,11 @@ const french = lang === "fr";
           <p>{french ? "Huit questions donnent un premier signal sur Python, les outils, le contexte et la fiabilité." : "Eight questions give an initial signal across Python, tools, context, and reliability."}</p>
           <span class="journey-action">{french ? "Faire le diagnostic" : "Take the skill check"}<span aria-hidden="true">→</span></span>
         </a>
-        <a class="journey-card" href={href(`/${lang}/generate/`)}>
-          <span class="journey-index">{french ? "OBJECTIF PROFESSIONNEL" : "ROLE-BASED PREPARATION"}</span>
-          <h3>{french ? "Préparer une offre" : "Prepare for a role"}</h3>
-          <p>{french ? "Colle une annonce pour relier ses exigences à un plan de préparation et un exercice ciblé." : "Paste a job posting to connect its requirements to a preparation plan and a tailored exercise."}</p>
-          <span class="journey-action">{french ? "Analyser l’annonce" : "Analyse a posting"}<span aria-hidden="true">→</span></span>
+        <a class="journey-card" href={href(`/${lang}/python/dynamic-job/`)} id="sample-drill-link">
+          <span class="journey-index">{french ? "PRATIQUE TECHNIQUE" : "TECHNICAL PRACTICE"}</span>
+          <h3>{french ? "Essayer un exercice Python" : "Try a Python exercise"}</h3>
+          <p>{french ? "Teste le format d’un exercice ciblé sans préparer de candidature." : "Try a focused exercise without preparing an application."}</p>
+          <span class="journey-action">{french ? "Voir l’exercice" : "Open the exercise"}<span aria-hidden="true">→</span></span>
         </a>
       </div>
     </section>
@@ -166,11 +166,14 @@ const french = lang === "fr";
           resumeDetail: "Continue là où tu t’es arrêté·e.",
           diagnosticTitle: "Faire mon diagnostic technique",
           diagnosticDetail: "Commence par un repère fondé sur tes réponses au quiz.",
-          roleTitle: "Préparer une offre d’emploi",
-          roleDetail: "Relie les exigences d’un poste à un exercice Python ciblé.",
+          roleTitle: "Commencer l’exercice recommandé",
+          roleDetail: "Ton diagnostic a préparé un exercice à partir d’une réponse précise.",
+          roleFallbackTitle: "Préparer une offre d’emploi",
+          roleFallbackDetail: "Colle une annonce pour créer un exercice ciblé.",
+          roleFallbackButton: "Préparer une offre",
           resumeButton: "Reprendre l’exercice",
           diagnosticButton: "Faire le diagnostic",
-          roleButton: "Préparer une offre",
+          roleButton: "Commencer l’exercice",
         }
       : {
           goal: { "career-change": "career transition", "target-role": "target role", "skill-building": "skill building" },
@@ -182,11 +185,14 @@ const french = lang === "fr";
           resumeDetail: "Pick up where you left off.",
           diagnosticTitle: "Take my technical diagnostic",
           diagnosticDetail: "Start with a snapshot based on your quiz answers.",
-          roleTitle: "Prepare for a job posting",
-          roleDetail: "Connect a role’s requirements to a tailored Python exercise.",
+          roleTitle: "Start the recommended exercise",
+          roleDetail: "Your diagnostic prepared an exercise from one specific answer.",
+          roleFallbackTitle: "Prepare for a job posting",
+          roleFallbackDetail: "Paste a posting to create a focused exercise.",
+          roleFallbackButton: "Prepare for a role",
           resumeButton: "Continue the exercise",
           diagnosticButton: "Take the diagnostic",
-          roleButton: "Prepare for a role",
+          roleButton: "Start the exercise",
         };
 
     function showDashboard(): void {
@@ -226,12 +232,13 @@ const french = lang === "fr";
       const resume = latestAttempt?.track === "python" && (latestAttempt.id === "dynamic-job" || hasGeneratedDrill);
       const destination = resume
         ? `${base}${pageLang}/python/dynamic-job/`
-        : hasAssessment ? `${base}${pageLang}/generate/` : `${base}${pageLang}/assess/`;
-      if (nextTitle) nextTitle.textContent = resume ? profileCopy.resumeTitle : hasAssessment ? profileCopy.roleTitle : profileCopy.diagnosticTitle;
-      if (nextDetail) nextDetail.textContent = resume ? profileCopy.resumeDetail : hasAssessment ? profileCopy.roleDetail : profileCopy.diagnosticDetail;
+        : hasAssessment && hasGeneratedDrill ? `${base}${pageLang}/python/dynamic-job/`
+          : hasAssessment ? `${base}${pageLang}/generate/` : `${base}${pageLang}/assess/`;
+      if (nextTitle) nextTitle.textContent = resume ? profileCopy.resumeTitle : hasAssessment && hasGeneratedDrill ? profileCopy.roleTitle : hasAssessment ? profileCopy.roleFallbackTitle : profileCopy.diagnosticTitle;
+      if (nextDetail) nextDetail.textContent = resume ? profileCopy.resumeDetail : hasAssessment && hasGeneratedDrill ? profileCopy.roleDetail : hasAssessment ? profileCopy.roleFallbackDetail : profileCopy.diagnosticDetail;
       if (nextLink) {
         nextLink.href = destination;
-        nextLink.textContent = resume ? profileCopy.resumeButton : hasAssessment ? profileCopy.roleButton : profileCopy.diagnosticButton;
+        nextLink.textContent = resume ? profileCopy.resumeButton : hasAssessment && hasGeneratedDrill ? profileCopy.roleButton : hasAssessment ? profileCopy.roleFallbackButton : profileCopy.diagnosticButton;
       }
     }
 

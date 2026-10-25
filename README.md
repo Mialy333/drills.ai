@@ -1,16 +1,26 @@
 # DRILLS.ai
 
-DRILLS.ai helps career changers prepare for AI Agent Engineering through guided Python practice. The Astro frontend is a static GitHub Pages site. Learners can start with a sample exercise, take a short diagnostic, and build a role-specific roadmap from a job posting.
+DRILLS.ai helps career changers prepare an application for an internship, apprenticeship, or entry-level AI Agent Engineer role in France. Its first demo starts with a pasted job posting: candidates compare the posting with experience they choose to enter, then review an evidence summary and a focused Python exercise. It is not a general coding course or a job board. The Astro frontend is a static GitHub Pages site; generation is handled by the separate API service.
 
 ## Learner journey
 
-1. Take a short diagnostic to get an initial skills snapshot.
-2. Paste a job posting to map its technical requirements into a focused preparation roadmap.
-3. Generate a Python exercise tied to those requirements, then run tests, answer a concept check, and explain the approach.
-4. Ask the contextual learning companion for progressive hints and explanations.
-5. Save attempts and track progress in the browser.
+1. Paste a France-based internship, apprenticeship, or entry-level job posting.
+2. Enter an experience title and a short description of work or projects. Company, period, and school names are optional; a full CV is not required.
+3. Review a local, keyword-based evidence comparison against the skills extracted from the posting. Core requirements carry more weight; a missing text match is not proof that the candidate lacks a skill, and the score is not a hiring probability.
+4. Review the posting-grounded preparation steps and generate a focused Python exercise, then run its tests, answer the concept check, and explain the approach.
+5. Use the optional technical diagnostic, reviewed MCP lesson, and learning companion as supporting practice. Save attempts and track progress in the browser.
 
 The exercises should help learners build job-relevant ability, not predict interview questions or promise a hiring outcome.
+
+This MVP does not search or rank live job listings, generate CVs or cover letters, contact recruiters, or submit applications. It does not claim a candidate is qualified from a keyword score. The first flow is deliberately a pasted-posting demo so the candidate can inspect what evidence the comparison used.
+
+## Learning design and visual system
+
+The first course is the reference for future structured lessons. Its content is reviewed, versioned, and bilingual in `src/lib/lessons.ts`; browser progress is validated separately from drill XP and stored locally. For this lesson, “complete” means that all eight function checks passed before viewing the solution, all four comprehension answers are correct, and a security reflection was saved. The browser checks exercise only the pure Python function; `tests/test_mcp_lesson.py` uses the official SDK for actual in-process tool discovery and invocation.
+
+The interface uses a soft lavender and ivory palette with mint success and warm amber caution. Core tokens live in `src/styles/global.css`: `--bg: #faf9ff`, `--panel: #fffcfa`, `--raise: #ede7ff`, `--accent: #7664e8`, `--ink: #24213a`, and `--muted: #68657c`. Typography uses the system UI sans-serif stack, with monospace reserved for code; this avoids a remote font dependency. Body text is 16px at 1.6 line height, labels use 12px, and the title scales from 1.8rem to 2.75rem. Cards use a 24px radius and a low-contrast shadow.
+
+`DrillsMascot.astro` is an original, inline SVG companion with welcome, thinking, encouragement, success, help, recommendation, and difficulty expressions. Its motion is disabled when `prefers-reduced-motion` is set. Progress visuals are tied to saved events: the practice chart plots recorded attempts and their actual scores, streaks use attempt dates and show an empty state until the first attempt, and course evidence keeps reading, attempts, passing checks, quiz results, reflection, and solution viewing distinct. Empty states explain when there is not enough data; course completion is not described as professional mastery.
 
 ## Multi-agent pipeline and FastAPI backend
 
@@ -28,7 +38,7 @@ The API currently runs the four specialist stages sequentially in one request. I
 
 ### Contextual learning companion
 
-The optional `/api/coach` endpoint powers the learning companion on the home and exercise pages. It receives the learner's optional self-reported profile, diagnostic summary, roadmap, visible exercise instructions, current answer, and recent feedback. It does not receive the reference solution or hidden tests. The endpoint is stateless; the short conversation history stays in the current browser page only. The same server-side `OPENAI_API_KEY` is used as the drill generator.
+The optional `/api/coach` endpoint powers the learning companion on the home, exercise, and course pages. It receives the learner's optional self-reported profile, diagnostic summary, roadmap, visible exercise instructions, current answer, and recent feedback. On the course page, submitted code is included only after the learner checks the explicit sharing option. It does not receive the reference solution or hidden tests. The endpoint is stateless; the short conversation history stays in the current browser page only. Course questions can be answered without an API key. The same server-side `OPENAI_API_KEY` is used if the learner asks the AI companion for help.
 
 The public production build contains only the guided routes and the `dynamic-job` exercise shell; legacy catalog routes and the drill map are included in local development builds. This is a static-build visibility boundary, not access control. Progress and profile data stay in each browser's local storage.
 
@@ -59,7 +69,7 @@ A small, reviewed starter set of generic AI-agent Python exercises would also le
 
 ## Privacy and API key
 
-There is no user account system. The pasted job posting and optional quiz snapshot are sent to the configured DRILLS.ai API, which forwards the request to OpenAI using a server-side secret. Companion messages include the current page's recent conversation and only the visible exercise context. Do not log or persist this content unnecessarily. Generated content and learner progress remain in browser storage. No OpenAI key is requested from or stored in the learner's browser.
+There is no user account system. The candidate profile stores only experience titles and descriptions, optional company names and periods, and school names in the current browser for 30 days. The user can export or delete it from the posting page; expired or invalid data is removed when read. The profile is not sent to the model. Only the pasted job posting and output language are sent to the configured DRILLS.ai API for analysis and generation. Candidate matching runs locally in the browser and uses only the experience title and description; company, period, and school names are not used as skill evidence. The separate optional companion may receive the current page's recent conversation, diagnostic summary, and visible exercise context as described above. Do not log or persist submitted content unnecessarily. Generated content and learning progress remain in browser storage. No OpenAI key is requested from or stored in the learner's browser.
 
 ## Run locally
 
@@ -70,13 +80,14 @@ npm run build     # static output in dist/
 npm run preview   # preview the built site
 ```
 
-Python test dependencies are listed in `requirements-devday.txt`. Install them in a virtual environment before running Python tests. Run the complete offline suite with:
+Use `uv` to install the pinned MCP SDK and its Inspector CLI, then run the course integration and offline API tests with:
 
 ```bash
-python -m pytest -q
+uv sync --dev
+uv run pytest -q
 ```
 
-These tests use mocked clients and do not require an `OPENAI_API_KEY` or make paid API calls.
+The course test uses MCP Python SDK `2.3.0` to verify tool discovery and an in-process call. The remaining tests use mocked clients and do not require an `OPENAI_API_KEY` or make paid API calls. To inspect the server locally, run `uv run mcp dev src/learning/mcp_calculator.py`.
 
 ### Run the API locally
 
@@ -98,12 +109,18 @@ The `render.yaml` blueprint defines a separate Python web service. In Render, cr
 |---|---|
 | `src/pages/[lang]/` | English and French pages, including diagnostic, generator, roadmap, and exercise routes |
 | `src/lib/assessment.ts` | Diagnostic questions and scoring |
+| `src/lib/candidate-profile.ts` | Validated candidate profile storage with a 30-day expiry and user export/deletion |
+| `src/lib/candidate-match.ts` | Browser-only evidence comparison between entered experience and posting skills |
 | `src/lib/drills.ts` | Public drill types, routes, and base-aware links |
 | `src/scripts/app.ts` | Browser state, generated drill hydration, Pyodide execution, and progress |
 | `src/scripts/companion.ts` | Context-limited browser client for the learning companion |
 | `src/components/CompanionPanel.astro` | Shared companion UI for the learner path and exercises |
 | `src/lib/contracts.ts` | Zod contracts for generated content, profiles, and companion requests |
 | `src/lib/learner.ts` | Validated local learner profile storage and snapshots |
+| `src/lib/lessons.ts` | Typed, bilingual, versioned course content |
+| `src/lib/lesson-progress.ts` | Validated local course progress, resume state, and evidence |
+| `src/learning/mcp_calculator.py` | Pinned-SDK MCP calculator lesson example |
+| `src/pages/[lang]/learn/` | Bilingual course hub and interactive lesson routes |
 | `src/scripts/py-worker.ts` | Worker-based Python exercise execution |
 | `src/ai_generator/agents/` | Experimental specialist agents |
 | `src/ai_generator/orchestrator.py` | Experimental sequential pipeline orchestration |

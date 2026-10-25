@@ -9,14 +9,13 @@ export function getStaticPaths() {
 const lang = Astro.params.lang as Lang;
 ---
 
-<App lang={lang} title={lang === "fr" ? "Générateur de drills" : "Drill generator"} path="/generate/" section="generate">
+<App lang={lang} title={lang === "fr" ? "Comparer mon profil à une offre" : "Match my profile to a role"} path="/generate/" section="generate">
   <section class="generator-page" aria-labelledby="generator-title">
     <header class="generator-head">
-      <p class="generator-kicker">{lang === "fr" ? "PROTOCOLE // GÉNÉRATEUR" : "PROTOCOL // GENERATOR"}</p>
-      <h1 id="generator-title">{lang === "fr" ? "Générateur de drills dynamiques" : "Dynamic drill generator"}</h1>
-      <p>{lang === "fr" ? "Collez une annonce complète pour obtenir son analyse de compétences, un plan de préparation et un exercice Python ciblé." : "Paste a complete job posting to get its skill analysis, preparation roadmap, and a tailored Python exercise."}</p>
-      <p>{lang === "fr" ? "Cette version cible les postes d’AI Agent Engineer. L’annonce doit mentionner l’IA ou les agents, ainsi que des compétences techniques." : "This version targets AI Agent Engineer roles. The posting must mention AI or agents, plus technical skills."}</p>
-      <p>{lang === "fr" ? "Le parcours et l’exercice suivent la langue de l’interface. Une annonce rédigée dans une autre langue sera analysée sans changer la langue des résultats." : "The roadmap and exercise follow the interface language. A posting written in another language will be analysed without changing the language of the results."}</p>
+      <p class="generator-kicker">{lang === "fr" ? "OFFRE CIBLE · FRANCE" : "TARGET POSTING · FRANCE"}</p>
+      <h1 id="generator-title">{lang === "fr" ? "Commence par l’annonce" : "Start with the job posting"}</h1>
+      <p>{lang === "fr" ? "Colle une offre de stage, d’alternance ou de premier poste en AI Agent Engineering. Compare ses compétences à tes expériences, puis prépare un exercice Python ciblé." : "Paste an AI Agent Engineering internship, apprenticeship, or entry-level posting. Compare its skills with your experience, then prepare a targeted Python exercise."}</p>
+      <p>{lang === "fr" ? "Pas besoin de CV complet : décris une expérience pertinente. Le score indique la couverture des éléments écrits, pas tes chances d’être recruté·e." : "No full CV needed: describe one relevant experience. The score measures written evidence coverage, not your chance of being hired."}</p>
     </header>
     <style>
         .generator-page { max-width: 860px; margin: 0 auto; }
@@ -37,6 +36,24 @@ const lang = Astro.params.lang as Lang;
             margin-bottom: 15px;
         }
         .generator-card textarea { font-family: var(--mono); height: 180px; }
+        .generator-card #candidateExperience, .generator-card #candidateSchools { height: auto; }
+        .generator-card input, .generator-card select { width: 100%; min-height: 44px; margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--code-bg); color: var(--ink); font: inherit; }
+        .candidate-fields { display: grid; gap: 8px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+        .candidate-fields h2 { margin: 0; font-size: 1.2rem; }
+        .candidate-fields > p { margin: 0 0 4px; color: var(--muted); font-size: .92rem; }
+        .profile-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+        .generator-card .profile-actions button { width: auto; flex: 1 1 180px; background: var(--raise); color: var(--ink); border-color: var(--line); }
+        .profile-status { min-height: 1.4em; margin: 0; color: var(--muted); font-size: .9rem; }
+        .match-card { margin: 24px 0; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--raise); }
+        .match-card[hidden] { display: none; }
+        .match-score { display: flex; align-items: baseline; gap: 8px; margin: 8px 0; color: var(--ok); font: 2rem var(--pixel); }
+        .match-explainer { color: var(--muted); line-height: 1.55; }
+        .match-skills { display: grid; gap: 8px; padding: 0; list-style: none; }
+        :global(.match-skills li) { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+        :global(.match-skills small) { color: var(--muted); text-align: right; }
+        :global(.match-matched) { color: var(--ok); }
+        :global(.match-partial) { color: var(--warn); }
+        :global(.match-not-found) { color: var(--muted); }
         .generator-card button {
             background: var(--accent);
             color: var(--accent-ink);
@@ -76,31 +93,64 @@ const lang = Astro.params.lang as Lang;
     </style>
 
     <div class="generator-card">
-        <label for="jobDescription">{lang === "fr" ? "> COLLE L'ANNONCE COMPLÈTE" : "> PASTE THE FULL JOB POSTING"}</label>
+        <label for="jobDescription">{lang === "fr" ? "1. COLLE L'ANNONCE COMPLÈTE" : "1. PASTE THE FULL JOB POSTING"}</label>
         <textarea id="jobDescription" placeholder={lang === "fr" ? "Colle les missions et compétences requises, pas seulement les avantages ou la localisation." : "Include responsibilities and required skills, not only benefits or location."}></textarea>
-        
-        <button id="generateBtn" type="button">{lang === "fr" ? "⚡ ANALYSER L'ANNONCE ET CRÉER MON PARCOURS" : "⚡ ANALYZE POSTING AND BUILD MY ROADMAP"}</button>
+
+        <div class="candidate-fields" aria-labelledby="candidate-profile-title">
+          <h2 id="candidate-profile-title">{lang === "fr" ? "2. Ajoute quelques éléments de ton parcours" : "2. Add a few details about your background"}</h2>
+          <p>{lang === "fr" ? "Une expérience suffit pour commencer. N’importe pas ton CV brut : indique seulement les faits que tu veux comparer." : "One experience is enough to start. Don’t paste a raw CV: enter only the facts you want to compare."}</p>
+          <label for="candidateRole">{lang === "fr" ? "Intitulé de ton expérience" : "Experience title"}</label>
+          <input id="candidateRole" maxlength="120" placeholder={lang === "fr" ? "Ex. Analyste, développeuse web, cheffe de projet" : "e.g. Analyst, web developer, project manager"} />
+          <label for="candidateCompany">{lang === "fr" ? "Nom de l’entreprise (facultatif)" : "Company name (optional)"}</label>
+          <input id="candidateCompany" maxlength="120" />
+          <label for="candidatePeriod">{lang === "fr" ? "Période (facultatif)" : "Period (optional)"}</label>
+          <input id="candidatePeriod" maxlength="80" placeholder={lang === "fr" ? "Ex. 2022–2025" : "e.g. 2022–2025"} />
+          <label for="candidateExperience">{lang === "fr" ? "Ce que tu as réellement fait" : "What you actually did"}</label>
+          <textarea id="candidateExperience" maxlength="2000" minlength="20" rows="4" placeholder={lang === "fr" ? "Décris tes tâches, projets, outils ou responsabilités pertinents. 20 caractères minimum." : "Describe relevant tasks, projects, tools, or responsibilities. At least 20 characters."}></textarea>
+          <label for="candidateSchools">{lang === "fr" ? "École(s) ou formation(s) (facultatif, une par ligne)" : "School(s) or training provider(s) (optional, one per line)"}</label>
+          <textarea id="candidateSchools" maxlength="600" rows="2"></textarea>
+          <p class="profile-status" id="candidateProfileStatus" role="status" aria-live="polite"></p>
+          <div class="profile-actions">
+            <button id="exportCandidateProfile" type="button" hidden>{lang === "fr" ? "Exporter mon profil" : "Export my profile"}</button>
+            <button id="deleteCandidateProfile" type="button" hidden>{lang === "fr" ? "Supprimer mon profil" : "Delete my profile"}</button>
+          </div>
+          <p>{lang === "fr" ? "Le profil reste dans ce navigateur pendant 30 jours. Il n’est pas envoyé à l’IA ; seul le texte de l’annonce est transmis au service de génération. Tu peux l’exporter ou le supprimer à tout moment." : "The profile stays in this browser for 30 days. It is not sent to AI; only the posting text goes to the generation service. You can export or delete it at any time."}</p>
+        </div>
+
+        <button id="generateBtn" type="button">{lang === "fr" ? "⚡ CALCULER LE MATCH ET PRÉPARER MON EXERCICE" : "⚡ CHECK THE MATCH AND PREPARE MY DRILL"}</button>
         <div id="generatorStatus" class="generator-status" role="status" aria-live="polite" hidden></div>
     </div>
 
     <section class="roadmap-panel" id="roadmapPanel" hidden aria-live="polite" aria-labelledby="roadmapTitle">
-        <p class="generator-kicker">{lang === "fr" ? "PLAN DE PRÉPARATION // FONDÉ SUR L'ANNONCE" : "PREPARATION ROADMAP // GROUNDED IN THE POSTING"}</p>
+        <p class="generator-kicker">{lang === "fr" ? "PARCOURS DE PRATIQUE" : "PRACTICE PATH"}</p>
         <h2 id="roadmapTitle" tabindex="-1"></h2>
         <p class="roadmap-summary" id="roadmapSummary"></p>
-        <h3>{lang === "fr" ? "Compétences demandées" : "Skills requested"}</h3>
+        <div class="match-card" id="candidateMatchPanel" hidden aria-live="polite" aria-labelledby="candidateMatchTitle">
+          <h3 id="candidateMatchTitle">{lang === "fr" ? "Couverture des compétences" : "Skill evidence coverage"}</h3>
+          <p class="match-score"><span id="candidateMatchScore"></span><span aria-hidden="true">%</span></p>
+          <p class="match-explainer" id="candidateMatchSummary"></p>
+          <ul class="match-skills" id="candidateMatchSkills"></ul>
+          <p class="match-explainer">{lang === "fr" ? "Score heuristique : critères essentiels pondérés davantage. Un élément non retrouvé dans ton texte n’indique pas que tu ne possèdes pas la compétence. Ce score n’est pas une probabilité de recrutement." : "Heuristic score: core requirements carry more weight. A requirement not found in your text does not mean you lack the skill. This is not a hiring probability."}</p>
+        </div>
+        <h3 id="roadmapSkillsTitle">{lang === "fr" ? "Repères de pratique" : "Practice signals"}</h3>
         <ul class="roadmap-skills" id="roadmapSkills"></ul>
-        <h3>{lang === "fr" ? "Étapes de préparation" : "Preparation steps"}</h3>
+        <h3 id="roadmapStepsTitle">{lang === "fr" ? "Étapes de préparation" : "Preparation steps"}</h3>
         <ol class="roadmap-steps" id="roadmapSteps"></ol>
-        <p class="roadmap-note">{lang === "fr" ? "Les priorités tiennent compte du diagnostic s'il a été effectué. Sans diagnostic, ce plan reflète uniquement les exigences de l'annonce." : "Priorities use your diagnostic if available. Without one, this plan reflects the job posting only."}</p>
+        <p class="roadmap-note" id="roadmapNote"></p>
         <button id="launchDrill" class="btn btn-primary btn-big" type="button" data-href={href(`/${lang}/python/dynamic-job/`)}>
           {lang === "fr" ? "▶ LANCER L'EXERCICE CIBLÉ" : "▶ LAUNCH THE TAILORED DRILL"}
         </button>
     </section>
 
     <script>
-        import { DynamicDrillSchema, type DynamicDrill } from "../../lib/contracts";
+        import { DynamicDrillSchema, StoredDynamicDrillSchema, type DynamicDrill } from "../../lib/contracts";
         import { apiEndpoint } from "../../lib/api-client";
-        import { profileSnapshot, readLearnerProfile, ASSESSMENT_KEY } from "../../lib/learner";
+        import { readLearnerProfile, ASSESSMENT_KEY } from "../../lib/learner";
+        import { CandidateProfileInputSchema, createCandidateProfile, deleteCandidateProfile as removeCandidateProfile, readCandidateProfile, writeCandidateProfile, type CandidateProfileInput } from "../../lib/candidate-profile";
+        import { matchCandidateToDrill, type CandidateMatchResult } from "../../lib/candidate-match";
+        import { createRecommendationProvenance, createStoredRecommendationPlan, provenanceCopy, resolveStoredProvenance, type RecommendationProvenance } from "../../lib/recommendation-provenance";
+        import { PILLARS, type SkillPillar } from "../../lib/assessment";
+        import type { Lang } from "../../lib/drills";
 
         // UI Element Selectors
         const jobDescriptionInput = document.querySelector<HTMLTextAreaElement>("#jobDescription");
@@ -109,12 +159,30 @@ const lang = Astro.params.lang as Lang;
         const launchDrill = document.querySelector<HTMLButtonElement>("#launchDrill");
         const generatorStatus = document.querySelector<HTMLDivElement>("#generatorStatus");
         const roadmapPanel = document.querySelector<HTMLElement>("#roadmapPanel");
+        const roadmapKicker = document.querySelector<HTMLElement>("#roadmapPanel .generator-kicker");
         const roadmapTitle = document.querySelector<HTMLElement>("#roadmapTitle");
         const roadmapSummary = document.querySelector<HTMLElement>("#roadmapSummary");
         const roadmapSkills = document.querySelector<HTMLUListElement>("#roadmapSkills");
+        const roadmapSkillsTitle = document.querySelector<HTMLElement>("#roadmapSkillsTitle");
+        const roadmapStepsTitle = document.querySelector<HTMLElement>("#roadmapStepsTitle");
         const roadmapSteps = document.querySelector<HTMLOListElement>("#roadmapSteps");
+        const roadmapNote = document.querySelector<HTMLElement>("#roadmapNote");
+        const candidateRole = document.querySelector<HTMLInputElement>("#candidateRole");
+        const candidateCompany = document.querySelector<HTMLInputElement>("#candidateCompany");
+        const candidatePeriod = document.querySelector<HTMLInputElement>("#candidatePeriod");
+        const candidateExperience = document.querySelector<HTMLTextAreaElement>("#candidateExperience");
+        const candidateSchools = document.querySelector<HTMLTextAreaElement>("#candidateSchools");
+        const candidateProfileStatus = document.querySelector<HTMLElement>("#candidateProfileStatus");
+        const exportCandidateProfile = document.querySelector<HTMLButtonElement>("#exportCandidateProfile");
+        const candidateProfileDeleteBtn = document.querySelector<HTMLButtonElement>("#deleteCandidateProfile");
+        const candidateMatchPanel = document.querySelector<HTMLElement>("#candidateMatchPanel");
+        const candidateMatchScore = document.querySelector<HTMLElement>("#candidateMatchScore");
+        const candidateMatchSummary = document.querySelector<HTMLElement>("#candidateMatchSummary");
+        const candidateMatchSkills = document.querySelector<HTMLUListElement>("#candidateMatchSkills");
         const isFrench = document.documentElement.lang === "fr";
+        const lang = (isFrench ? "fr" : "en") as Lang;
         const dynamicDrillStorageKey = `DRILLS_DYNAMIC_JOB_DATA_${document.documentElement.lang.toUpperCase()}`;
+        const provenanceStorageKey = `DRILLS_DYNAMIC_JOB_PROVENANCE_${document.documentElement.lang.toUpperCase()}`;
         const copy = {
             missingPosting: isFrench ? "Colle l'annonce complète pour continuer." : "Paste the complete job posting to continue.",
             shortPosting: isFrench ? "Ajoute les missions et compétences requises pour obtenir une analyse utile." : "Add the role responsibilities and required skills for a useful analysis.",
@@ -128,28 +196,116 @@ const lang = Astro.params.lang as Lang;
             failed: isFrench ? "La préparation a échoué. Vérifie ta connexion puis réessaie." : "Preparation failed. Check your connection and try again.",
             rateLimited: isFrench ? "Trop de demandes rapprochées. Attends un instant puis réessaie." : "Too many requests in a short time. Wait a moment, then try again.",
             invalidResponse: isFrench ? "La réponse reçue n'a pas pu être vérifiée. Réessaie." : "The response could not be validated. Please try again.",
+            missingExperience: isFrench ? "Décris au moins une expérience ou un projet (20 caractères minimum) pour comparer les critères." : "Describe at least one experience or project (20 characters minimum) to compare the requirements.",
+            profileSaved: isFrench ? "Profil enregistré dans ce navigateur pour 30 jours. Les informations du profil ne sont pas envoyées à l’IA." : "Profile saved in this browser for 30 days. Profile details are not sent to AI.",
+            profileSaveFailed: isFrench ? "L’analyse est prête, mais le profil n’a pas pu être enregistré dans ce navigateur." : "The analysis is ready, but the profile could not be saved in this browser.",
+            profileDeleted: isFrench ? "Profil supprimé de ce navigateur." : "Profile deleted from this browser.",
+            profileExported: isFrench ? "Export du profil téléchargé." : "Profile export downloaded.",
+            matched: isFrench ? "Correspondance dans" : "Text match in",
+            partial: isFrench ? "Élément partiel" : "Partial evidence",
+            notFound: isFrench ? "Non retrouvé dans le texte" : "Not found in the text",
+            highMatch: isFrench ? "Au moins 60 % des critères pondérés apparaissent dans les expériences décrites. Tu peux poursuivre la préparation de cette candidature." : "At least 60% of weighted requirements appear in the experience you described. You can continue preparing this application.",
+            lowMatch: isFrench ? "Moins de 60 % des critères pondérés apparaissent dans les expériences décrites. Examine les éléments non retrouvés : cela ne signifie pas que tu ne possèdes pas ces compétences." : "Fewer than 60% of weighted requirements appear in the experience you described. Review the items not found; this does not mean you lack those skills.",
         };
 
-        function renderRoadmap(drill: DynamicDrill) {
-            if (!roadmapPanel || !roadmapTitle || !roadmapSummary || !roadmapSkills || !roadmapSteps) return;
+        function candidateProfileInput(): CandidateProfileInput | null {
+            const result = CandidateProfileInputSchema.safeParse({
+                experiences: [{
+                    role: candidateRole?.value ?? "",
+                    company: candidateCompany?.value ?? "",
+                    period: candidatePeriod?.value ?? "",
+                    summary: candidateExperience?.value ?? "",
+                }],
+                schools: (candidateSchools?.value ?? "").split("\n").map((school) => school.trim()).filter(Boolean).slice(0, 5),
+            });
+            return result.success ? result.data : null;
+        }
+
+        function fillCandidateProfile(): void {
+            const profile = readCandidateProfile();
+            if (!profile) return;
+            if (candidateRole) candidateRole.value = profile.experiences[0]?.role ?? "";
+            if (candidateCompany) candidateCompany.value = profile.experiences[0]?.company ?? "";
+            if (candidatePeriod) candidatePeriod.value = profile.experiences[0]?.period ?? "";
+            if (candidateExperience) candidateExperience.value = profile.experiences[0]?.summary ?? "";
+            if (candidateSchools) candidateSchools.value = profile.schools.join("\n");
+            if (candidateProfileStatus) candidateProfileStatus.textContent = `${copy.profileSaved} (${new Intl.DateTimeFormat(isFrench ? "fr-FR" : "en-GB", { dateStyle: "medium" }).format(new Date(profile.expiresAt))})`;
+            if (exportCandidateProfile) exportCandidateProfile.hidden = false;
+            if (candidateProfileDeleteBtn) candidateProfileDeleteBtn.hidden = false;
+        }
+
+        function renderCandidateMatch(result: CandidateMatchResult): void {
+            if (!candidateMatchPanel || !candidateMatchScore || !candidateMatchSummary || !candidateMatchSkills) return;
+            candidateMatchScore.textContent = String(result.score);
+            candidateMatchSummary.textContent = result.score >= 60 ? copy.highMatch : copy.lowMatch;
+            candidateMatchSkills.replaceChildren(...result.skills.map((skill) => {
+                const item = document.createElement("li");
+                const label = document.createElement("strong");
+                label.textContent = skill.name;
+                const status = document.createElement("small");
+                status.className = `match-${skill.status}`;
+                status.textContent = skill.status === "matched"
+                    ? `${copy.matched}: ${skill.evidenceSource ?? (isFrench ? "expérience décrite" : "described experience")}`
+                    : skill.status === "partial" ? copy.partial : copy.notFound;
+                item.append(label, status);
+                return item;
+            }));
+            candidateMatchPanel.hidden = false;
+        }
+
+        function readAssessmentSnapshot(): unknown {
+            try { return JSON.parse(localStorage.getItem(ASSESSMENT_KEY) ?? "null"); } catch { return null; }
+        }
+
+        function renderRoadmap(drill: DynamicDrill, provenance: RecommendationProvenance, snapshot: unknown = null, match: CandidateMatchResult | null = null) {
+            if (!roadmapPanel || !roadmapTitle || !roadmapSummary || !roadmapSkills || !roadmapSteps || !roadmapKicker || !roadmapSkillsTitle || !roadmapStepsTitle || !roadmapNote) return;
             const language = document.documentElement.lang;
-            roadmapTitle.textContent = drill.role_title;
-            roadmapSummary.textContent = drill.role_summary;
-            roadmapSkills.replaceChildren(...drill.required_skills.map((skill) => {
+            const sourceCopy = provenanceCopy(provenance, lang);
+            roadmapKicker.textContent = sourceCopy.title;
+            roadmapNote.textContent = sourceCopy.description;
+            const unattributedLegacy = provenance.migration === "legacy-unattributed";
+            roadmapTitle.textContent = unattributedLegacy
+                ? (isFrench ? "Exercice enregistré" : "Saved exercise")
+                : drill.role_title;
+            roadmapSummary.textContent = unattributedLegacy
+                ? (isFrench ? "Les détails de ce parcours ne sont pas disponibles pour cet ancien exercice." : "Roadmap details are unavailable for this older exercise.")
+                : drill.role_summary;
+            roadmapSkillsTitle.textContent = provenance.source === "job-posting"
+                ? (isFrench ? "Compétences relevées dans l'annonce" : "Skills identified in the posting")
+                : (isFrench ? "Repères observés au diagnostic" : "Diagnostic signals");
+            const snapshotData = snapshot && typeof snapshot === "object" ? snapshot as { pillars?: unknown } : null;
+            const pillarScores = provenance.source === "diagnostic" && snapshotData?.pillars && typeof snapshotData.pillars === "object"
+                ? Object.entries(snapshotData.pillars as Record<string, unknown>).flatMap(([pillar, value]) => {
+                    if (!(pillar in PILLARS[lang]) || !value || typeof value !== "object") return [];
+                    const score = value as { correct?: unknown; total?: unknown };
+                    if (typeof score.correct !== "number" || typeof score.total !== "number") return [];
+                    return [{ name: PILLARS[lang][pillar as SkillPillar], correct: score.correct, total: score.total }];
+                })
+                : [];
+            const skillItems = provenance.source === "job-posting"
+                ? drill.required_skills.map((skill) => ({ name: skill.name, priority: skill.priority, evidence: skill.evidence }))
+                : pillarScores.map((score) => ({ name: score.name, priority: null, evidence: isFrench ? `${score.correct}/${score.total} réponses correctes` : `${score.correct}/${score.total} correct answers` }));
+            roadmapSkills.hidden = unattributedLegacy || (provenance.source !== "job-posting" && skillItems.length === 0);
+            roadmapSkillsTitle.hidden = roadmapSkills.hidden;
+            roadmapSkills.replaceChildren(...skillItems.map((skill) => {
                 const item = document.createElement("li");
                 const name = document.createElement("strong");
                 name.textContent = skill.name;
-                const priority = document.createElement("span");
-                priority.className = `roadmap-priority roadmap-priority-${skill.priority.toLowerCase()}`;
-                priority.textContent = language === "fr"
-                    ? ({ Core: "Essentielle", Important: "Importante", Supporting: "Complémentaire" } as const)[skill.priority]
-                    : skill.priority;
                 const evidence = document.createElement("small");
                 evidence.textContent = skill.evidence;
-                item.append(name, priority, evidence);
+                if (skill.priority) {
+                    const priority = document.createElement("span");
+                    priority.className = `roadmap-priority roadmap-priority-${skill.priority.toLowerCase()}`;
+                    priority.textContent = language === "fr"
+                        ? ({ Core: "Essentielle", Important: "Importante", Supporting: "Complémentaire" } as const)[skill.priority]
+                        : skill.priority;
+                    item.append(name, priority, evidence);
+                } else item.append(name, evidence);
                 return item;
             }));
-            roadmapSteps.replaceChildren(...drill.roadmap.map((step, index) => {
+            roadmapSteps.hidden = unattributedLegacy;
+            roadmapStepsTitle.hidden = unattributedLegacy;
+            roadmapSteps.replaceChildren(...(unattributedLegacy ? [] : drill.roadmap.map((step, index) => {
                 const item = document.createElement("li");
                 const title = document.createElement("strong");
                 title.textContent = step.title;
@@ -158,8 +314,9 @@ const lang = Astro.params.lang as Lang;
                 item.append(title, detail);
                 item.value = index + 1;
                 return item;
-            }));
+            })));
             roadmapPanel.hidden = false;
+            if (match) renderCandidateMatch(match);
         }
 
         function isSupportedPosting(text: string): boolean {
@@ -180,11 +337,44 @@ const lang = Astro.params.lang as Lang;
             if (target) window.location.assign(target);
         });
 
+        fillCandidateProfile();
+        exportCandidateProfile?.addEventListener("click", () => {
+            const profile = readCandidateProfile();
+            if (!profile) return;
+            const file = new Blob([JSON.stringify(profile, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(file);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "drills-candidate-profile.json";
+            link.click();
+            window.setTimeout(() => URL.revokeObjectURL(url), 0);
+            if (candidateProfileStatus) candidateProfileStatus.textContent = copy.profileExported;
+        });
+        candidateProfileDeleteBtn?.addEventListener("click", () => {
+            removeCandidateProfile();
+            if (candidateRole) candidateRole.value = "";
+            if (candidateCompany) candidateCompany.value = "";
+            if (candidatePeriod) candidatePeriod.value = "";
+            if (candidateExperience) candidateExperience.value = "";
+            if (candidateSchools) candidateSchools.value = "";
+            if (exportCandidateProfile) exportCandidateProfile.hidden = true;
+            if (candidateProfileDeleteBtn) candidateProfileDeleteBtn.hidden = true;
+            if (candidateMatchPanel) candidateMatchPanel.hidden = true;
+            if (candidateProfileStatus) candidateProfileStatus.textContent = copy.profileDeleted;
+        });
+
         // Restore the generated roadmap when returning from its drill.
         try {
             const cached: unknown = JSON.parse(localStorage.getItem(dynamicDrillStorageKey) ?? "null");
-            const previous = DynamicDrillSchema.safeParse(cached);
-            if (previous.success) renderRoadmap(previous.data);
+            const previous = StoredDynamicDrillSchema.safeParse(cached);
+            if (previous.success) {
+                const snapshot = readAssessmentSnapshot();
+                const savedProvenance: unknown = JSON.parse(localStorage.getItem(provenanceStorageKey) ?? "null");
+                const provenance = resolveStoredProvenance(savedProvenance, previous.data.drill_id, snapshot, readLearnerProfile() !== null);
+                const candidateProfile = readCandidateProfile();
+                const match = candidateProfile ? matchCandidateToDrill(candidateProfile, previous.data) : null;
+                renderRoadmap(previous.data, provenance, snapshot, match);
+            }
         } catch {
             // A malformed or unavailable saved payload should not block a new generation.
         }
@@ -207,40 +397,29 @@ const lang = Astro.params.lang as Lang;
                 setStatus(copy.unsupportedPosting, "error");
                 return;
             }
+            const profileInput = candidateProfileInput();
+            if (!profileInput) {
+                setStatus(copy.missingExperience, "error");
+                candidateExperience?.focus();
+                return;
+            }
+            const candidateProfile = createCandidateProfile(profileInput);
+            if (!candidateProfile) {
+                setStatus(copy.missingExperience, "error");
+                return;
+            }
             if (!drillsEndpoint) {
                 setStatus(copy.unavailable, "error");
                 return;
             }
 
             if (roadmapPanel) roadmapPanel.hidden = true;
+            if (candidateMatchPanel) candidateMatchPanel.hidden = true;
             generateBtn.disabled = true;
             setStatus(copy.connecting, "busy");
 
             try {
                 setStatus(copy.sending, "busy");
-
-                let learnerContext = "";
-                try {
-                    const profile = readLearnerProfile();
-                    if (profile) learnerContext = profileSnapshot(profile, isFrench ? "fr" : "en");
-                    const snapshot: unknown = JSON.parse(localStorage.getItem(ASSESSMENT_KEY) ?? "null");
-                    if (snapshot && typeof snapshot === "object" && "pillars" in snapshot && snapshot.pillars && typeof snapshot.pillars === "object") {
-                        const pillars = snapshot.pillars as Record<string, unknown>;
-                        const scores = Object.entries(pillars).flatMap(([pillar, score]) => {
-                            if (!score || typeof score !== "object" || !("correct" in score) || !("total" in score)) return [];
-                            const { correct, total } = score as { correct: unknown; total: unknown };
-                            return typeof correct === "number" && typeof total === "number" ? [`${pillar}: ${correct}/${total} quiz answers correct`] : [];
-                        });
-                        if (scores.length) {
-                            const demonstrated = isFrench
-                                ? `Résultat du quiz (compétences démontrées uniquement par ces questions) : ${scores.join(" ; ")}.`
-                                : `Quiz result (demonstrated only on these questions): ${scores.join("; ")}.`;
-                            learnerContext = [learnerContext, demonstrated].filter(Boolean).join(" ");
-                        }
-                    }
-                } catch {
-                    // The job-based roadmap can still be generated without a saved diagnostic.
-                }
 
                 const controller = new AbortController();
                 const timeout = window.setTimeout(() => controller.abort(), 120_000);
@@ -252,7 +431,7 @@ const lang = Astro.params.lang as Lang;
                         body: JSON.stringify({
                             job_description: jobDesc,
                             output_language: isFrench ? "fr" : "en",
-                            learner_snapshot: learnerContext || null,
+                            learner_snapshot: null,
                         }),
                         signal: controller.signal,
                     });
@@ -266,8 +445,18 @@ const lang = Astro.params.lang as Lang;
                 const validation = DynamicDrillSchema.safeParse(generatedPayload);
                 if (!validation.success) throw new Error("invalid-response");
                 const structuralDrillJson = validation.data;
+                const persistedCandidateProfile = writeCandidateProfile(profileInput);
+                const savedCandidateProfile = persistedCandidateProfile ?? candidateProfile;
+                if (candidateProfileStatus) candidateProfileStatus.textContent = persistedCandidateProfile ? copy.profileSaved : copy.profileSaveFailed;
+                if (exportCandidateProfile) exportCandidateProfile.hidden = false;
+                if (candidateProfileDeleteBtn) candidateProfileDeleteBtn.hidden = false;
+                const snapshot = readAssessmentSnapshot();
+                const hasDiagnostic = !!snapshot && typeof snapshot === "object" && Array.isArray((snapshot as { answers?: unknown }).answers) && (snapshot as { answers: unknown[] }).answers.length > 0;
+                const provenance = createRecommendationProvenance({ diagnostic: hasDiagnostic, profile: readLearnerProfile() !== null, analyzedPosting: true });
+                localStorage.removeItem(provenanceStorageKey);
                 localStorage.setItem(dynamicDrillStorageKey, JSON.stringify(structuralDrillJson));
-                renderRoadmap(structuralDrillJson);
+                localStorage.setItem(provenanceStorageKey, JSON.stringify(createStoredRecommendationPlan(structuralDrillJson.drill_id, provenance)));
+                renderRoadmap(structuralDrillJson, provenance, snapshot, matchCandidateToDrill(savedCandidateProfile, structuralDrillJson));
                 roadmapTitle?.focus({ preventScroll: true });
                 roadmapPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
                 setStatus(copy.ready, "success");

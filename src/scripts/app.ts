@@ -2,7 +2,7 @@
 // State is kept in localStorage only; every access is guarded because storage can be
 // missing (private windows) or full.
 
-import { compute, type CatalogEntry, type GameState } from "../lib/game";
+import { compute, streakDisplay, type CatalogEntry, type GameState } from "../lib/game";
 import { initializeCompanionPanels } from "./companion";
 
 type Attempt = {
@@ -556,14 +556,23 @@ function mountDynamicJob(article: HTMLElement): boolean {
   const fieldset = document.createElement("fieldset");
   fieldset.className = "options";
   fieldset.dataset.answerChoice = "";
-  fieldset.dataset.correct = String(data.multiple_choice.correct_answer_index);
-  data.multiple_choice.options.forEach((option, index) => {
+  const choiceOrder = data.multiple_choice.options.map((_, index) => index);
+  for (let index = choiceOrder.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [choiceOrder[index], choiceOrder[swapIndex]] = [choiceOrder[swapIndex], choiceOrder[index]];
+  }
+  if (choiceOrder[0] === data.multiple_choice.correct_answer_index && choiceOrder.length > 1) {
+    [choiceOrder[0], choiceOrder[1]] = [choiceOrder[1], choiceOrder[0]];
+  }
+  fieldset.dataset.correct = String(choiceOrder.indexOf(data.multiple_choice.correct_answer_index));
+  choiceOrder.forEach((originalIndex, displayIndex) => {
+    const option = data.multiple_choice.options[originalIndex];
     const label = document.createElement("label");
     label.className = "option";
     const radio = document.createElement("input");
     radio.type = "radio";
     radio.name = "a-q2";
-    radio.value = String(index);
+    radio.value = String(displayIndex);
     const span = document.createElement("span");
     span.textContent = option;
     label.append(radio, span);
@@ -1282,8 +1291,9 @@ function setupProgress(): void {
     kpi("attempts", String(g.attempts));
     const minutes = Math.round(g.seconds / 60);
     kpi("time", minutes >= 60 ? `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")}` : `${minutes} min`);
-    kpi("streak", days(g.streak));
-    kpi("bestStreak", days(g.bestStreak));
+    const streaks = streakDisplay(g.attempts, g.streak, g.bestStreak, days, s.neverTried as string);
+    kpi("streak", streaks.current);
+    kpi("bestStreak", streaks.best);
 
     // per family
     root.querySelectorAll<HTMLElement>("[data-cat]").forEach((li) => {

@@ -53,4 +53,35 @@ const strings = {
     </label>
     <button class="btn" type="button" id="paste-add">{t.pasteBtn}</button>
   </section>
+  <section class="block course-journal panel" aria-labelledby="course-journal-title">
+    <h2 id="course-journal-title">{lang === "fr" ? "Activité des cours" : "Course activity"}</h2>
+    <p class="lead">{lang === "fr" ? "Cette activité pédagogique est séparée des tentatives d’exercices et des points." : "Course activity is kept separate from drill attempts and game points."}</p>
+    <ol id="course-journal-list" class="course-journal-list"><li class="note">{lang === "fr" ? "Aucune activité de cours enregistrée." : "No course activity recorded."}</li></ol>
+  </section>
+  <script>
+    import { readLessonState } from "../../lib/lesson-progress";
+    const list = document.getElementById("course-journal-list");
+    if (list) {
+      let storage: Storage | null = null;
+      try { storage = window.localStorage; } catch { /* Existing drill journal remains available. */ }
+      const state = storage ? readLessonState(storage, "mcp-python-server") : null;
+      const lang = document.body.dataset.lang === "fr" ? "fr" : "en";
+      if (state) {
+        const labels: Record<string, string> = lang === "fr"
+          ? { started: "Leçon commencée", "exercise-tested": "Exercice testé", "exercise-passed": "Vérifications réussies avant solution", "quiz-submitted": "Quiz enregistré", "reflection-submitted": "Réflexion sécurité enregistrée", completed: "Leçon terminée" }
+          : { started: "Lesson started", "exercise-tested": "Exercise checked", "exercise-passed": "Checks passed before solution", "quiz-submitted": "Quiz saved", "reflection-submitted": "Security reflection saved", completed: "Lesson completed" };
+        const items = [...state.events].reverse().map((event) => {
+          const item = document.createElement("li");
+          const date = document.createElement("time");
+          date.dateTime = event.at;
+          date.textContent = new Date(event.at).toLocaleString(lang);
+          const label = document.createElement("span");
+          label.textContent = labels[event.type];
+          item.append(date, label);
+          return item;
+        });
+        list.replaceChildren(...items);
+      }
+    }
+  </script>
 </App>

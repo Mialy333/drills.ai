@@ -1,0 +1,33 @@
+---
+import App from "../../../layouts/App.astro";
+import { href, LANGS, type Lang } from "../../../lib/drills";
+import { MCP_PYTHON_LESSON, lessonText } from "../../../lib/lessons";
+import { ui } from "../../../lib/i18n";
+
+export function getStaticPaths() {
+  return LANGS.map((lang) => ({ params: { lang } }));
+}
+const lang = Astro.params.lang as Lang;
+const t = ui[lang];
+---
+
+<App lang={lang} title={lang === "fr" ? "Cours" : "Learn"} path="/learn/" section="learn">
+  <section class="block course-hub" aria-labelledby="courses-title">
+    <p class="section-eyebrow">{lang === "fr" ? "APPRENDRE PAR LA PRATIQUE" : "LEARN BY BUILDING"}</p>
+    <h1 id="courses-title">{lang === "fr" ? "Cours guidés" : "Guided lessons"}</h1>
+    <p class="lead">{lang === "fr" ? "Des notions vérifiées, une pratique immédiate et des preuves de progression lisibles." : "Reviewed concepts, immediate practice, and clear evidence of progress."}</p>
+    <article class="course-card">
+      <div class="course-card-copy">
+        <p class="course-module">{lessonText(MCP_PYTHON_LESSON.module, lang)}</p>
+        <h2>{lessonText(MCP_PYTHON_LESSON.title, lang)}</h2>
+        <p>{lessonText(MCP_PYTHON_LESSON.subtitle, lang)}</p>
+        <ul class="course-objectives">
+          {MCP_PYTHON_LESSON.objectives.map((objective) => <li>{lessonText(objective, lang)}</li>)}
+        </ul>
+        <div class="course-card-meta"><span>Python</span><span>≈ {MCP_PYTHON_LESSON.durationMinutes} {t.minutes}</span><span>6 {lang === "fr" ? "séquences" : "steps"}</span></div>
+        <a class="btn btn-primary" href={href(`/${lang}/learn/${MCP_PYTHON_LESSON.id}/`)}>{lang === "fr" ? "Ouvrir la leçon" : "Open lesson"}<span aria-hidden="true"> →</span></a>
+      </div>
+      <div class="course-card-art" aria-hidden="true"><span>⌘</span><span>mcp</span><span>→</span><span>tool()</span></div>
+    </article>
+  </section>
+</App>

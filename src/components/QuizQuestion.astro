@@ -1,0 +1,33 @@
+---
+import QuizFeedback from "./QuizFeedback.astro";
+interface Props { index: number; total: number; module: string; topic: string; prompt: string; options: string[]; hint: string; labels: Record<string, string> }
+const { index, total, module, topic, prompt, options, hint, labels } = Astro.props;
+---
+<section class="quiz-question-panel retro-window" data-window-label={module + " // " + topic} data-quiz-question={index} aria-labelledby={`quiz-question-title-${index}`} hidden={index !== 0}>
+  <header class="quiz-question-header">
+    <div><p class="quiz-module">{module} · {topic}</p><p class="quiz-count" data-quiz-count>{labels.question} {index + 1} {labels.of} {total}</p></div>
+    <span class="quiz-question-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+  </header>
+  <h3 id={`quiz-question-title-${index}`} class="quiz-question-title">{prompt}</h3>
+  <fieldset class="quiz-answer-list" data-quiz-answer-list>
+    <legend class="visually-hidden">{prompt}</legend>
+    {options.map((option, optionIndex) => <label class="quiz-answer-card" data-quiz-answer-card>
+      <input type="radio" name={`quiz-answer-${index}`} value={optionIndex} />
+      <span class="quiz-answer-marker" aria-hidden="true"></span>
+      <span class="quiz-answer-text">{option}</span>
+      <span class="quiz-answer-state" aria-hidden="true" data-quiz-answer-state></span>
+    </label>)}
+  </fieldset>
+  <div class="quiz-hint-wrap">
+    <button type="button" class="quiz-hint-button" data-quiz-hint-button aria-expanded="false" aria-controls={`quiz-hint-${index}`}>♡ {labels.hintButton}</button>
+    <p class="quiz-hint" id={`quiz-hint-${index}`} data-quiz-hint hidden>{hint}</p>
+  </div>
+  <QuizFeedback askCompanion={labels.askCompanion} />
+  <p class="quiz-validation-message" data-quiz-validation role="status" aria-live="polite"></p>
+  <div class="quiz-question-actions">
+    <button type="button" class="btn btn-secondary" data-quiz-previous>{labels.previous}</button>
+    <button type="button" class="btn btn-primary" data-quiz-check>{labels.check}</button>
+    <button type="button" class="btn btn-primary" data-quiz-next hidden>{index === total - 1 ? labels.summary : labels.next}</button>
+    <button type="button" class="text-button" data-quiz-return-summary hidden>{labels.returnSummary}</button>
+  </div>
+</section>

@@ -1,9 +1,10 @@
 ---
 import type { Lang } from "../lib/drills";
+import DrillsMascot from "./DrillsMascot.astro";
 
 interface Props {
   lang: Lang;
-  scope: "dashboard" | "exercise";
+  scope: "dashboard" | "exercise" | "lesson";
 }
 
 const { lang, scope } = Astro.props;
@@ -12,13 +13,14 @@ const french = lang === "fr";
 
 <section
   class="companion-panel"
+  data-window-label={french ? "COMPAGNON IA" : "AI COMPANION"}
   id={`companion-${scope}`}
   data-companion
   data-scope={scope}
   aria-labelledby={`companion-title-${scope}`}
 >
   <header class="companion-header">
-    <span class="companion-mark" aria-hidden="true">✦</span>
+    <DrillsMascot mood="welcome" size={48} />
     <div>
       <p class="section-eyebrow">{french ? "COMPAGNON IA" : "AI COMPANION"}</p>
       <h2 id={`companion-title-${scope}`}>{french ? "Un indice au bon moment" : "Help when you need it"}</h2>
@@ -27,13 +29,15 @@ const french = lang === "fr";
   </header>
 
   <div class="companion-prompts" aria-label={french ? "Questions proposées" : "Suggested prompts"}>
-    <button class="companion-prompt" type="button" data-companion-suggestion={french ? "Peux-tu m’expliquer le concept en termes simples ?" : "Can you explain the concept in simple terms?"}>{french ? "Explique-moi le concept" : "Explain this concept"}</button>
+    <button class="companion-prompt" type="button" data-companion-suggestion={scope === "lesson" ? (french ? "Explique-moi MCP simplement." : "Explain MCP simply.") : (french ? "Peux-tu m’expliquer le concept en termes simples ?" : "Can you explain the concept in simple terms?")}>{scope === "lesson" ? (french ? "Explique-moi MCP simplement" : "Explain MCP simply") : (french ? "Explique-moi le concept" : "Explain this concept")}</button>
     <button class="companion-prompt" type="button" data-companion-suggestion={french ? "Donne-moi un indice sans révéler la solution." : "Give me a hint without revealing the solution."}>{french ? "Donne-moi un indice" : "Give me a hint"}</button>
-    <button class="companion-prompt" type="button" data-companion-suggestion={french ? "Pose-moi une question pour m’aider à avancer." : "Ask me a question that will help me move forward."}>{french ? "Aide-moi à raisonner" : "Help me reason it out"}</button>
+    <button class="companion-prompt" type="button" data-companion-suggestion={scope === "lesson" ? (french ? "Aide-moi à comprendre mon erreur, sans donner la solution." : "Help me understand my error without giving me the solution.") : (french ? "Pose-moi une question pour m’aider à avancer." : "Ask me a question that will help me move forward.")}>{scope === "lesson" ? (french ? "Aide-moi à comprendre mon erreur" : "Help me understand my error") : (french ? "Aide-moi à raisonner" : "Help me reason it out")}</button>
   </div>
 
   <div class="companion-transcript" data-companion-transcript role="log" aria-live="polite" aria-relevant="additions text">
-    <p class="companion-message companion-message-guide">{french ? "Je peux t’aider à avancer étape par étape. Je ne reçois ni la solution de référence ni les tests cachés." : "I can guide you one step at a time. I do not receive the reference solution or hidden tests."}</p>
+    <p class="companion-message companion-message-guide">{scope === "lesson"
+      ? (french ? "Je peux t’aider à avancer étape par étape. Je ne reçois ni la solution de référence ni les vérifications du cours." : "I can guide you one step at a time. I do not receive the reference solution or the course checks.")
+      : (french ? "Je peux t’aider à avancer étape par étape. Je ne reçois ni la solution de référence ni les tests cachés." : "I can guide you one step at a time. I do not receive the reference solution or hidden tests.")}</p>
   </div>
 
   <form class="companion-form" data-companion-form>
@@ -43,6 +47,13 @@ const french = lang === "fr";
       <span aria-hidden="true">↑</span>
     </button>
   </form>
+
+  {scope === "lesson" && (
+    <label class="lesson-share-code">
+      <input type="checkbox" data-lesson-share-code />
+      <span>{french ? "Inclure mon code dans ma question" : "Include my code with my question"}</span>
+    </label>
+  )}
 
   <p class="companion-status" data-companion-status role="status" aria-live="polite"></p>
   <button class="companion-retry" type="button" data-companion-retry hidden>{french ? "Réessayer" : "Try again"}</button>

@@ -1,0 +1,9 @@
+---
+interface Props { askCompanion: string }
+const { askCompanion } = Astro.props;
+---
+<section class="quiz-feedback" data-quiz-feedback hidden role="status" aria-live="polite" aria-atomic="true">
+  <h3 data-quiz-feedback-title></h3>
+  <p data-quiz-feedback-copy></p>
+  <button type="button" class="text-button" data-quiz-companion hidden>{askCompanion}</button>
+</section>

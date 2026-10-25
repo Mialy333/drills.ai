@@ -1,0 +1,7 @@
+---
+interface Props { total: number; label: string }
+const { total, label } = Astro.props;
+---
+<div class="quiz-progress" role="progressbar" aria-label={label} aria-valuemin="0" aria-valuemax={total} aria-valuenow="0" data-quiz-progress style={`--quiz-question-count:${total}`}>
+  {Array.from({ length: total }, (_, index) => <span class="quiz-progress-segment" data-quiz-segment={index} aria-hidden="true"></span>)}
+</div>

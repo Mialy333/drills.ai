@@ -1,0 +1,15 @@
+---
+import DrillsMascot from "./DrillsMascot.astro";
+import ProgressRing from "./ProgressRing.astro";
+interface Props { label: string; title: string; subtitle: string; max: number; retry: string; review: string; understood: string; toReview: string; scoreCaption: string; lang: "fr" | "en" }
+const { label, title, subtitle, max, retry, review, understood, toReview, scoreCaption, lang } = Astro.props;
+---
+<section class="quiz-summary retro-window" data-window-label={label} data-quiz-summary hidden aria-labelledby="quiz-summary-title">
+  <div class="quiz-summary-heading"><DrillsMascot mood="recommendation" size={54} label={lang === "fr" ? "Mascotte Drills.ai encourageant l’apprenant" : "Drills.ai mascot encouraging the learner"} />
+    <div><p class="quiz-module">{label}</p><h3 id="quiz-summary-title">{title}</h3><p>{subtitle}</p></div>
+  </div>
+  <div class="quiz-summary-score"><ProgressRing id="lesson-quiz-summary-ring" value={0} max={max} label={lang === "fr" ? `Score du quiz sur ${max} réponses` : `Quiz score out of ${max} answers`} /><p><strong data-quiz-summary-score>0 / {max}</strong><span>{scoreCaption}</span></p></div>
+  <div class="quiz-summary-sections"><section><h4>{understood}</h4><ul data-quiz-understood></ul></section><section><h4>{toReview}</h4><ul data-quiz-review-list></ul></section></div>
+  <p class="quiz-summary-note">{lang === "fr" ? "Ce résultat décrit uniquement tes réponses à ce quiz. Il ne mesure pas une maîtrise professionnelle." : "This result describes only your answers in this quiz. It does not measure professional mastery."}</p>
+  <div class="quiz-summary-actions"><button type="button" class="btn btn-secondary" data-quiz-review>{review}</button><button type="button" class="btn btn-primary" data-quiz-retry>{retry}</button></div>
+</section>

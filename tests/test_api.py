@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from api import main as api_main
+import pytest
 
 
 def test_health_reports_service_and_generator_configuration(monkeypatch):
@@ -24,6 +25,40 @@ def test_api_allows_the_local_astro_origin_for_json_requests():
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:4321"
     assert "POST" in response.headers["access-control-allow-methods"]
+
+
+def test_quiz_review_context_accepts_only_a_revealed_current_question():
+    request = api_main.CompanionRequest.model_validate(
+        {
+            "output_language": "fr",
+            "message": "Explique-moi pourquoi cette réponse n’est pas correcte.",
+            "lesson": {
+                "title": "Construire un serveur MCP",
+                "objective": "Comprendre la découverte des outils.",
+                "sequence": "Quiz",
+                "instructions": "Question validée et feedback affiché.",
+                "quiz_review": {
+                    "question": "Comment découvre-t-on les outils ?",
+                    "learner_answer": "Le client lit les fichiers Python.",
+                    "revealed_feedback": "Le client demande les capacités annoncées par le serveur.",
+                },
+            },
+        }
+    )
+    assert request.lesson.quiz_review.question.startswith("Comment")
+    assert request.lesson.quiz_review.learner_answer.startswith("Le client")
+
+
+def test_quiz_review_context_rejects_unapproved_or_unbounded_fields():
+    with pytest.raises(Exception):
+        api_main.CoachQuizReview.model_validate(
+            {
+                "question": "Q",
+                "learner_answer": "A",
+                "revealed_feedback": "F",
+                "answer_key": "not allowed",
+            }
+        )
 
 
 def test_generate_rejects_short_job_posting():
@@ -164,3 +199,22 @@ def test_companion_returns_contextual_reply_without_persisting_conversation(monk
 
     assert response.status_code == 200
     assert response.json() == {"reply": "Commence par vérifier le type de la valeur reçue."}
+
+
+def test_companion_accepts_opt_in_lesson_code_but_rejects_test_or_solution_fields():
+    response = TestClient(api_main.app).post(
+        "/api/coach",
+        json={
+            "output_language": "en",
+            "message": "Give me a hint",
+            "lesson": {
+                "title": "Build an MCP server",
+                "objective": "Complete the tool function",
+                "sequence": "Practice",
+                "instructions": "Validate inputs before calculating.",
+                "code": "def calculate_total(price, quantity): pass",
+                "hidden_test_harness": "private checks",
+            },
+        },
+    )
+    assert response.status_code == 422
