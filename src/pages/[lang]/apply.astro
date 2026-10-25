@@ -70,19 +70,19 @@ const fr = lang === "fr";
             <p>{fr ? "Ton profil est repris automatiquement : aucune expérience à ressaisir ici." : "Your profile is reused automatically: no experience to enter again here."}</p>
             <p id="application-saved-profile" hidden>{fr ? "Ton profil enregistré sera utilisé." : "Your saved profile will be used."} <a href={href(`/${lang}/apply/?step=profile`)}>{fr ? "Consulter ou modifier mon profil" : "View or edit my profile"}</a></p>
             <div class="opportunity-tabs"><button type="button" class="btn btn-secondary" id="jobs-show-list">{fr ? "Chercher des offres" : "Browse openings"}</button><button type="button" class="btn btn-secondary" id="jobs-show-posting">{fr ? "Coller une annonce" : "Paste a posting"}</button></div>
-            <section id="jobs-browser">
-              <label for="jobs-location">{fr ? "Lieu" : "Location"}</label><input id="jobs-location" type="text" maxlength="100" placeholder="Paris" />
-              <button id="jobs-load" type="button" class="btn btn-secondary">{fr ? "Rechercher" : "Search"}</button>
+            <section id="jobs-browser" hidden>
+              <div class="jobs-search-row"><div><label for="jobs-location">{fr ? "Lieu" : "Location"}</label><input id="jobs-location" type="text" maxlength="100" placeholder="Paris" /></div>
+              <button id="jobs-load" type="button" class="btn btn-secondary">{fr ? "Rechercher" : "Search"}</button></div>
               <p id="jobs-status" role="status"></p><div id="jobs-results"></div>
-              <div class="application-actions"><button type="button" id="jobs-previous" class="btn btn-secondary">{fr ? "Précédent" : "Previous"}</button><span id="jobs-page"></span><button type="button" id="jobs-next" class="btn btn-secondary">{fr ? "Suivant" : "Next"}</button></div>
+              <div class="application-actions" id="jobs-pagination" hidden><button type="button" id="jobs-previous" class="btn btn-secondary">{fr ? "Précédent" : "Previous"}</button><span id="jobs-page"></span><button type="button" id="jobs-next" class="btn btn-secondary">{fr ? "Suivant" : "Next"}</button></div>
             </section>
-            <section id="jobs-posting-editor">
+            <section id="jobs-posting-editor" hidden>
             <label for="application-posting-url">{fr ? "Lien de l’annonce ou du formulaire de candidature (facultatif)" : "Posting or application form URL (optional)"}</label>
             <input id="application-posting-url" type="url" maxlength="2000" placeholder="https://…" />
             <label for="application-posting">{fr ? "Texte de l’annonce" : "Job posting text"}</label>
             <textarea id="application-posting" required minlength="50" maxlength="20000" rows="7" autocomplete="off" placeholder={fr ? "Intitulé · missions · compétences · contrat · localisation…" : "Title · duties · skills · contract · location…"}></textarea>
             </section>
-            <p class="application-note">{fr ? "Les conditions de candidature sont séparées des compétences. Le bilan ne prédit pas tes chances de recrutement." : "Application conditions are separate from skills. The assessment does not predict hiring chances."}</p>
+            <p class="application-note" id="jobs-explanation" hidden>{fr ? "Les conditions de candidature sont séparées des compétences. Le bilan ne prédit pas tes chances de recrutement." : "Application conditions are separate from skills. The assessment does not predict hiring chances."}</p>
           </section>
         </div>
         <div class="application-card application-consent" id="application-consent-panel">
@@ -166,10 +166,17 @@ const fr = lang === "fr";
     @media(max-width:650px) { #jobs-results { grid-template-columns:1fr; } }
     .application-page { max-width: 1080px; margin: 0 auto; }
     .application-page .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-    .application-heading { max-width: 760px; margin-bottom: 28px; }
+    .application-heading { max-width: 100%; margin-bottom: 28px; }
     .application-heading h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.2; }
     .application-eyebrow { color: var(--accent); font-family: var(--pixel); letter-spacing: .06em; }
-    .application-steps { display: flex; list-style: none; flex-wrap: wrap; gap: 12px 34px; padding-left: 22px; }
+    .application-steps { display: grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; padding:0; margin:24px 0; align-items:stretch; }
+    .application-steps > button { width:100%; height:100%; min-height:60px; margin:0; padding:12px 8px; display:flex; align-items:center; justify-content:center; text-align:center; box-sizing:border-box; }
+    .jobs-search-row { display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:end;margin:18px 0; }
+    #jobs-location { display:block; width:100%;min-height:56px;box-sizing:border-box;padding:14px 16px;font:inherit;border:2px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink); }
+    #jobs-load {min-height:56px;margin:0;}
+    .opportunity-tabs {flex-wrap:wrap;}
+    .opportunity-tabs > button {margin:0;}
+    @media(max-width:650px){ .application-steps {grid-template-columns:repeat(2,minmax(0,1fr));} .jobs-search-row {grid-template-columns:1fr;} .opportunity-tabs {display:grid;grid-template-columns:1fr;} }
     .application-inputs { border: 0; padding: 0; margin: 0; min-width: 0; }
     .application-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
     .application-single-step .application-grid { grid-template-columns: 1fr; }

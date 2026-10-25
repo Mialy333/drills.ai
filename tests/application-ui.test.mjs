@@ -286,3 +286,12 @@ test('work rights are explicit country-scoped declarations and changes invalidat
  get('work-authorization').value='unknown';get('work-authorization').dispatchEvent(new w.Event('input'));assert.equal(get('results').hidden,true);
  get('posting-url').value='javascript:alert(1)';get('posting-url').dispatchEvent(new w.Event('input'));assert.equal(get('apply-link').hasAttribute('href'),false);
 });
+
+test('opportunities start with only two choices and reveal controls only on request',t=>{
+ const {w,get}=setup(t);const el=id=>w.document.getElementById('jobs-'+id);
+ assert.equal(el('browser').hidden,true);assert.equal(el('posting-editor').hidden,true);assert.equal(el('pagination').hidden,true);assert.equal(el('explanation').hidden,true);assert.equal(get('consent-panel').hidden,true);
+ el('show-list').click();assert.equal(el('browser').hidden,false);assert.equal(el('posting-editor').hidden,true);assert.equal(el('pagination').hidden,true);assert.equal(get('consent-panel').hidden,true);
+ el('show-posting').click();assert.equal(el('browser').hidden,true);assert.equal(el('posting-editor').hidden,false);assert.equal(get('consent-panel').hidden,false);
+ w.document.querySelector('[data-application-step=profile]').click();assert.equal(get('profile-card').hidden,false);
+ w.document.querySelector('[data-application-step=posting]').click();assert.equal(get('consent-panel').hidden,false);
+});

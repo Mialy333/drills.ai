@@ -332,8 +332,8 @@ function setStep(step:string, updateUrl=true):void {
   element('application-reset-actions').hidden=step==='documents';
   posting.required=!profileMode;
   element('application-example').hidden=!profileMode;
-  element('application-submit').hidden=step==='posting'&&!element('jobs-browser').hidden;
-  element('application-consent-panel').hidden=step==='posting'&&!element('jobs-browser').hidden;
+  element('application-submit').hidden=step==='posting'&&element('jobs-posting-editor').hidden;
+  element('application-consent-panel').hidden=step==='posting'&&element('jobs-posting-editor').hidden;
   element('application-submit').textContent=profileMode?say('Suivant : les opportunités →','Next: opportunities →'):say('Analyser cette annonce','Assess this posting');
   element('application-saved-profile').hidden=profile.value.trim().length<50;
   results.hidden=form.hidden===false;
@@ -391,8 +391,11 @@ element('cv-reformat').addEventListener('click',()=>{
 });
 
 let availableJobs:any[]=[];let jobsPage=0;
-function showPosting(value:boolean):void{
- element('jobs-browser').hidden=value;element('jobs-posting-editor').hidden=!value;
+function showPosting(value:boolean|null):void{
+ element('jobs-browser').hidden=value!==false;element('jobs-posting-editor').hidden=value!==true;
+ element('jobs-explanation').hidden=value===null;
+ element('jobs-show-list').setAttribute('aria-pressed',String(value===false));
+ element('jobs-show-posting').setAttribute('aria-pressed',String(value===true));
  element('application-submit').hidden=!value&&!profileMode;
  element('application-consent-panel').hidden=!value&&!profileMode;
 }
@@ -400,7 +403,7 @@ function renderJobs():void{
  const target=element('jobs-results');target.replaceChildren();
  const query=element<HTMLInputElement>('jobs-location').value.trim().toLocaleLowerCase();
  const jobs=availableJobs.filter(job=>!query||String(job.location).toLocaleLowerCase().includes(query));
- const pages=Math.max(1,Math.ceil(jobs.length/4));jobsPage=Math.min(jobsPage,pages-1);
+ const pages=Math.max(1,Math.ceil(jobs.length/4));element('jobs-pagination').hidden=pages<=1;jobsPage=Math.min(jobsPage,pages-1);
  element('jobs-page').textContent=`${jobsPage+1} / ${pages}`;
  element<HTMLButtonElement>('jobs-previous').disabled=jobsPage===0;
  element<HTMLButtonElement>('jobs-next').disabled=jobsPage===pages-1;
@@ -425,7 +428,7 @@ element('jobs-show-posting').addEventListener('click',()=>showPosting(true));
 element('jobs-previous').addEventListener('click',()=>{jobsPage--;renderJobs();});
 element('jobs-next').addEventListener('click',()=>{jobsPage++;renderJobs();});
 element('jobs-location').addEventListener('input',()=>{jobsPage=0;renderJobs();});
-showPosting(!!posting.value.trim());
+showPosting(posting.value.trim()?true:null);
 element('jobs-load').addEventListener('click',async()=>{
  const button=element<HTMLButtonElement>('jobs-load');if(button.disabled)return;
  const message=element('jobs-status');const endpoint=apiEndpoint('/api/jobs');
