@@ -85,7 +85,7 @@ def test_fabricated_or_inconsistent_evidence_is_rejected(analysis, payload, targ
 
 
 def test_responses_api_uses_schema_no_storage_and_only_approved_inputs(analysis, payload, monkeypatch):
-    parse = AsyncMock(return_value=SimpleNamespace(output_parsed=analysis))
+    parse = AsyncMock(return_value=SimpleNamespace(output_parsed=as_selection(analysis)))
     monkeypatch.setenv("OPENAI_APPLICATION_MODEL", "test-model")
     agent = ApplicationAgent(SimpleNamespace(responses=SimpleNamespace(parse=parse)))
     result = asyncio.run(agent.prepare(payload))
@@ -93,8 +93,8 @@ def test_responses_api_uses_schema_no_storage_and_only_approved_inputs(analysis,
     args = parse.call_args.kwargs
     assert args["store"] is False
     assert args["model"] == "test-model"
-    assert args["text_format"] is ApplicationAnalysis
-    assert set(json.loads(args["input"])) == {"candidate_text", "job_description", "output_language"}
+    assert issubclass(args["text_format"], ApplicationAnalysis)
+    assert set(json.loads(args["input"])) == {"profile_excerpts", "job_excerpts", "output_language"}
 
 
 def test_refusal_does_not_become_a_successful_application(payload):
@@ -194,6 +194,7 @@ def test_typographic_apostrophes_are_accepted_but_changed_facts_are_not():
 
 
 def test_invalid_quotes_get_one_repair_then_validate_original_sources(analysis, payload):
+    analysis = as_selection(analysis)
     invalid = analysis.model_copy(deep=True)
     invalid.pitch.source_quotes = ["A fabricated private achievement"]
     parse = AsyncMock(side_effect=[SimpleNamespace(output_parsed=invalid), SimpleNamespace(output_parsed=analysis)])
@@ -202,11 +203,12 @@ def test_invalid_quotes_get_one_repair_then_validate_original_sources(analysis, 
     assert parse.await_count == 2
     assert "draft_quote:" in parse.call_args.kwargs["instructions"]
     assert "A fabricated private achievement" not in parse.call_args.kwargs["instructions"]
-    assert json.loads(parse.call_args.kwargs["input"])["candidate_text"] == PROFILE
+    assert json.loads(parse.call_args.kwargs["input"])["profile_excerpts"]["profile_0"] == PROFILE
 
 
 def test_persistent_invalid_quotes_never_create_a_score_or_retry_loop(analysis, payload):
     from src.ai_generator.application import EvidenceError
+    analysis = as_selection(analysis)
     analysis.requirements[0].candidate_quote = "Invented skill that is absent from the CV"
     parse = AsyncMock(return_value=SimpleNamespace(output_parsed=analysis))
     with pytest.raises(EvidenceError, match="candidate_quote:0"):
@@ -222,3 +224,41 @@ def test_evidence_failure_has_safe_api_code(client, payload, monkeypatch, caplog
     assert response.json()["detail"]["code"] == "evidence_validation"
     assert "draft_quote:2" in caplog.text
     assert PROFILE not in caplog.text + response.text
+
+
+def as_selection(analysis):
+    selected = analysis.model_copy(deep=True)
+    for requirement in selected.requirements:
+        requirement.posting_quote = "job_0"
+        requirement.candidate_quote = None if requirement.status == "not_documented" else "profile_0"
+    for section in [*selected.cv_sections, selected.pitch]:
+        section.source_quotes = ["profile_0"]
+    return selected
+
+
+def test_reference_schema_and_resolution_preserve_original_quotes(analysis, payload):
+    from src.ai_generator.application import source_excerpts, selection_schema, resolve_selection
+    profile = source_excerpts(PROFILE, "profile")
+    posting = source_excerpts(POSTING, "job")
+    schema = selection_schema(profile, posting)
+    selected = schema.model_validate(as_selection(analysis).model_dump())
+    resolved = resolve_selection(selected, profile, posting)
+    assert resolved.requirements[0].candidate_quote == PROFILE
+    assert resolved.pitch.source_quotes == [PROFILE]
+    assert validate_analysis(resolved, payload).score == 100
+    bad = selected.model_dump()
+    bad["pitch"]["source_quotes"] = ["job_0"]
+    with pytest.raises(ValidationError):
+        schema.model_validate(bad)
+    bad["pitch"]["source_quotes"] = ["profile_999"]
+    with pytest.raises(ValidationError):
+        schema.model_validate(bad)
+
+
+def test_source_slices_keep_original_text_and_fit_public_quote_limits():
+    from src.ai_generator.application import source_excerpts
+    text = "L’expérience réelle : je n’ai pas déployé cet agent. " * 200
+    excerpts = source_excerpts(text, "profile")
+    assert len(excerpts) > 1
+    assert all(8 <= len(value) <= 600 and value in text for value in excerpts.values())
+    assert any("je n’ai pas déployé" in value for value in excerpts.values())

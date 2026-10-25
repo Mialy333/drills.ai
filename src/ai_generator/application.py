@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Literal
 
 from openai import AsyncOpenAI
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, create_model
 
 from src.ai_generator.config import OPENAI_MODEL
 
@@ -91,9 +91,10 @@ Assess scope from actual duties and seniority, not merely the job title. Senior,
 staff, lead roles or roles unrelated to building AI agents are out_of_scope; use
 uncertain when level/duties are unclear. Include explicit contract, availability
 and location requirements as eligibility; do not infer legal eligibility.
-Extract distinct material requirements with EXACT contiguous posting_quote excerpts.
-For each requirement, cite an EXACT contiguous candidate_quote (at least 8 characters)
-or null. Negated experience, aspirations, a school's name or a certificate title
+Extract distinct material requirements. Source excerpts are supplied as numbered maps.
+In posting_quote return a job excerpt ID; in candidate_quote return a profile excerpt
+ID or null. These fields are REFERENCES, never text to copy or rewrite. Select only
+excerpts that actually support the requirement, preserving negations and context. Negated experience, aspirations, a school's name or a certificate title
 alone are NOT proof of practical mastery. Distinguish partial evidence, transferable
 experience and not_documented. Never say an undocumented skill is absent. Missing
 evidence must have a concrete next_action. Do not calculate a score or a hiring probability.
@@ -121,8 +122,8 @@ Do not use stock phrases such as "fort de", "passionné", "solutions innovantes"
 "mon parcours témoigne", "j'apporte un diplôme", "j'attends avec impatience",
 "leverage", "unique blend" or unsupported enthusiasm. No salutation or letter
 closing. Specificity comes from candidate facts, not inflated vocabulary.
-Both drafts use only supplied candidate facts. Each section needs exact source_quotes
-from candidate_text (at least 8 characters). Preserve dates and qualification status.
+Both drafts use only supplied candidate facts. Each section needs source_quotes containing profile excerpt IDs, not quotation text.
+These IDs must support the claims in that section; never cite job IDs for a CV or pitch. Preserve dates and qualification status.
 Never invent names, employers, dates, diplomas, metrics, skills, years of experience
 or proficiency. Omit unknown contact details. Show the target role as a goal, not a
 job already held. Avoid generic praise and keyword stuffing. Include relevant
@@ -195,6 +196,48 @@ def select_interview_cases(posting: str, language: str) -> list[InterviewQuestio
                               looking_for=case[language]["scenario"] + " " + " ".join(case[language]["criteria"]))
             for case in ordered]
 
+def source_excerpts(text: str, prefix: str) -> dict[str, str]:
+    """Bounded overlapping slices, each preserved verbatim from the approved input."""
+    excerpts = {}
+    for start in range(0, len(text), 500):
+        excerpt = text[start:start + 600].strip()
+        if len(excerpt) >= 8:
+            excerpts[f"{prefix}_{len(excerpts)}"] = excerpt
+    return excerpts
+
+
+def selection_schema(profile: dict[str, str], posting: dict[str, str]):
+    # Enum constraints prevent the model from inventing IDs or mixing sources.
+    profile_id = Literal[tuple(profile)]
+    posting_id = Literal[tuple(posting)]
+    requirement = create_model("RequirementSelection", __base__=Requirement,
+        posting_quote=(posting_id, ...), candidate_quote=(profile_id | None, ...))
+    draft = create_model("DraftSelection", __base__=DraftSection,
+        source_quotes=(list[profile_id], Field(min_length=1, max_length=8)))
+    return create_model("ApplicationSelection", __base__=ApplicationAnalysis,
+        requirements=(list[requirement], Field(min_length=1, max_length=12)),
+        cv_sections=(list[draft], Field(min_length=1, max_length=8)), pitch=(draft, ...))
+
+
+def resolve_selection(selection, profile: dict[str, str], posting: dict[str, str]) -> ApplicationAnalysis:
+    data = selection.model_dump()
+    for index, requirement in enumerate(data["requirements"]):
+        key = requirement["posting_quote"]
+        if key not in posting:
+            raise EvidenceError(f"posting_quote:{index}")
+        requirement["posting_quote"] = posting[key]
+        key = requirement["candidate_quote"]
+        if key is not None:
+            if key not in profile:
+                raise EvidenceError(f"candidate_quote:{index}")
+            requirement["candidate_quote"] = profile[key]
+    for index, section in enumerate([*data["cv_sections"], data["pitch"]]):
+        if any(key not in profile for key in section["source_quotes"]):
+            raise EvidenceError(f"draft_quote:{index}")
+        section["source_quotes"] = [profile[key] for key in section["source_quotes"]]
+    return ApplicationAnalysis.model_validate(data)
+
+
 class ApplicationAgent:
     def __init__(self, client=None):
         self.client = client
@@ -213,23 +256,23 @@ class ApplicationAgent:
         return response.output_parsed
 
     async def prepare(self, payload: ApplicationRequest) -> ApplicationResult:
-        inputs = {
-            "candidate_text": payload.candidate_text,
-            "job_description": payload.job_description,
-            "output_language": payload.output_language,
-        }
-        # At most two calls, both inside the endpoint's existing 95-second deadline.
-        # Do not weaken validation or turn a failed analysis into a fabricated score.
+        profile = source_excerpts(payload.candidate_text, "profile")
+        posting = source_excerpts(payload.job_description, "job")
+        schema = selection_schema(profile, posting)
+        inputs = {"profile_excerpts": profile, "job_excerpts": posting,
+                  "output_language": payload.output_language}
+        # Still bounded by the endpoint's deadline; inconsistent status or
+        # duplicate requirements may need one retry. Quotes are never rewritten.
         for attempt in range(2):
             instructions = SYSTEM_PROMPT
             if attempt:
-                instructions += ("\nThe prior response failed evidence validation (" + issue +
-                    "). Produce a fresh response from the original sources. Copy short EXACT "
-                    "contiguous excerpts, never translate, paraphrase or combine fragments inside "
-                    "quotes. Use null candidate_quote for not_documented. Keep requirements unique. "
-                    "All CV and pitch source_quotes must come from candidate_text, not the posting.")
-            analysis = await self._parse(ApplicationAnalysis, instructions, json.dumps(inputs, ensure_ascii=False))
+                instructions += ("\nThe previous selection failed validation (" + issue +
+                    "). Select only provided IDs. Use null candidate_quote for "
+                    "not_documented. Keep requirements unique. CV and pitch "
+                    "source_quotes must contain profile IDs only.")
+            selection = await self._parse(schema, instructions, json.dumps(inputs, ensure_ascii=False))
             try:
+                analysis = resolve_selection(selection, profile, posting)
                 return validate_analysis(analysis, payload)
             except EvidenceError as exc:
                 if attempt:
