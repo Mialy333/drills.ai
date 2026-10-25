@@ -12,7 +12,9 @@ const fr = lang === "fr";
       <p class="application-eyebrow">{fr ? "TON PARCOURS → TA PROCHAINE OPPORTUNITÉ" : "YOUR EXPERIENCE → YOUR NEXT OPPORTUNITY"}</p>
       <h1 id="application-heading-title">{fr ? "Ta prochaine candidature commence ici." : "Your next application starts here."}</h1>
       <p>{fr ? "Fais le lien entre ton parcours et un premier poste d’Agent Engineer. Repars avec des preuves, des priorités et une candidature à personnaliser." : "Connect your experience to a first Agent Engineer role. Leave with evidence, priorities and an application to make your own."}</p>
-      <ol class="application-steps"><li>{fr ? "Ton parcours" : "Your experience"}</li><li>{fr ? "L’offre cible" : "The target role"}</li><li>{fr ? "Ta candidature" : "Your application"}</li></ol>
+      <nav class="application-steps" aria-label={fr ? "Étapes de candidature" : "Application steps"}>
+        {[['profile',fr?'1 · Mon profil':'1 · My profile'],['posting',fr?'2 · Opportunités':'2 · Opportunities'],['diagnostic',fr?'3 · Diagnostic':'3 · Assessment'],['documents',fr?'4 · Mes documents':'4 · My documents']].map(([step,label])=><button type="button" class="btn btn-secondary" data-application-step={step}>{label}</button>)}
+      </nav>
     </header>
 
     <form id="application-form" novalidate>
@@ -55,18 +57,21 @@ const fr = lang === "fr";
             <p>{fr ? "Stage, alternance ou premier emploi : colle l’annonce complète, avec les missions, compétences et conditions. Un lien seul ne suffit pas." : "Internship, apprenticeship or first job: paste the full posting, including duties, skills and conditions. A link alone is not enough."}</p>
             <p>{fr ? "Ton profil est repris automatiquement : aucune expérience à ressaisir ici." : "Your profile is reused automatically: no experience to enter again here."}</p>
             <p id="application-saved-profile" hidden>{fr ? "Ton profil enregistré sera utilisé." : "Your saved profile will be used."} <a href={href(`/${lang}/apply/?step=profile`)}>{fr ? "Consulter ou modifier mon profil" : "View or edit my profile"}</a></p>
-            <details class="application-import"><summary>{fr ? "Découvrir des annonces" : "Discover job openings"}</summary>
-              <p>{fr ? "Sources : Greenhouse et Ashby — Anthropic, Databricks, Scale AI, Mistral AI et Dust. Filtre stages, alternance et junior avec mention d’agents IA. Les missions, la localisation et l’éligibilité restent à vérifier. Ce n’est pas un classement selon ton profil." : "Sources: Greenhouse and Ashby — Anthropic, Databricks, Scale AI, Mistral AI and Dust. Filtered for internships, apprenticeships and junior roles mentioning agents. Review duties, location and eligibility. These are not ranked against your profile."}</p>
-              <label for="jobs-location">{fr ? "Lieu (facultatif, par exemple Paris ou France)" : "Location (optional, for example Paris or France)"}</label><input id="jobs-location" type="text" maxlength="100" />
-              <button id="jobs-load" type="button" class="btn btn-secondary">{fr ? "Consulter les offres actuelles" : "Check current openings"}</button>
+            <div class="opportunity-tabs"><button type="button" class="btn btn-secondary" id="jobs-show-list">{fr ? "Chercher des offres" : "Browse openings"}</button><button type="button" class="btn btn-secondary" id="jobs-show-posting">{fr ? "Coller une annonce" : "Paste a posting"}</button></div>
+            <section id="jobs-browser">
+              <label for="jobs-location">{fr ? "Lieu" : "Location"}</label><input id="jobs-location" type="text" maxlength="100" placeholder="Paris" />
+              <button id="jobs-load" type="button" class="btn btn-secondary">{fr ? "Rechercher" : "Search"}</button>
               <p id="jobs-status" role="status"></p><div id="jobs-results"></div>
-            </details>
+              <div class="application-actions"><button type="button" id="jobs-previous" class="btn btn-secondary">{fr ? "Précédent" : "Previous"}</button><span id="jobs-page"></span><button type="button" id="jobs-next" class="btn btn-secondary">{fr ? "Suivant" : "Next"}</button></div>
+            </section>
+            <section id="jobs-posting-editor">
             <label for="application-posting">{fr ? "Texte de l’annonce" : "Job posting text"}</label>
-            <textarea id="application-posting" required minlength="50" maxlength="20000" rows="13" autocomplete="off" placeholder={fr ? "Intitulé · missions · compétences · contrat · localisation…" : "Title · duties · skills · contract · location…"}></textarea>
+            <textarea id="application-posting" required minlength="50" maxlength="20000" rows="7" autocomplete="off" placeholder={fr ? "Intitulé · missions · compétences · contrat · localisation…" : "Title · duties · skills · contract · location…"}></textarea>
+            </section>
             <p class="application-note">{fr ? "Les conditions de candidature sont séparées des compétences. Le bilan ne prédit pas tes chances de recrutement." : "Application conditions are separate from skills. The assessment does not predict hiring chances."}</p>
           </section>
         </div>
-        <div class="application-card application-consent">
+        <div class="application-card application-consent" id="application-consent-panel">
           <label class="application-check"><input id="application-consent" type="checkbox" required />
             <span>{fr ? "J’accepte l’envoi des données saisies (et du PDF si je l’importe) au serveur DRILLS et à OpenAI pour cette préparation. Je retire les informations sensibles inutiles." : "I agree to send the entered data (and the PDF if imported) to the DRILLS server and OpenAI for this preparation. I remove unnecessary sensitive information."}</span>
           </label>
@@ -80,26 +85,23 @@ const fr = lang === "fr";
         </div>
       </fieldset>
     </form>
-    <div class="application-actions">
+    <div class="application-actions" id="application-reset-actions">
       <button type="button" class="btn btn-secondary" id="application-cancel" hidden>{fr ? "Annuler" : "Cancel"}</button>
       <button type="button" class="text-button" id="application-clear">{fr ? "Effacer mon dossier et son profil enregistré" : "Delete this application and its saved profile"}</button>
     </div>
 
 
     <section id="application-results" hidden aria-labelledby="application-result-title">
-      <div class="application-card">
+      <div class="application-card" id="application-diagnostic-panel">
         <p class="application-eyebrow">{fr ? "03 · TES PREUVES, TES PROCHAINES ÉTAPES" : "03 · YOUR EVIDENCE, YOUR NEXT STEPS"}</p>
         <h2 id="application-result-title" tabindex="-1"></h2>
         <p id="application-scope"></p>
         <p class="application-score" id="application-score"></p>
         <p id="application-decision"></p>
-        <details><summary>{fr ? "Comment ce matching est calculé" : "How this match is calculated"}</summary><p id="application-score-method"></p></details>
-        <details><summary>{fr ? "Comment lire ce bilan ?" : "How should I read this assessment?"}</summary>
-          <p>{fr ? "Couverture des compétences extraites : essentielle ×3, importante ×2, complémentaire ×1 ; preuve documentée = 1, partielle = 0,5, non documentée = 0. Les conditions de candidature ne sont pas incluses dans ce pourcentage. Le choix des exigences et leur interprétation restent proposés par l’IA : vérifie-les. Un score de 60 % n’est ni une validation professionnelle ni une garantie d’entretien." : "Coverage of extracted skills: core ×3, important ×2, supporting ×1; documented evidence = 1, partial = 0.5, undocumented = 0. Application conditions are excluded from this percentage. Requirement selection and interpretation are AI suggestions: review them. A 60% score is neither professional validation nor an interview guarantee."}</p>
-        </details>
         <div id="application-evidence" class="application-evidence"></div>
+        <button type="button" class="btn btn-primary" data-application-step="documents">{fr ? "Préparer mes documents →" : "Prepare my documents →"}</button>
       </div>
-      <section class="application-card">
+      <section class="application-card" id="application-documents-panel">
         <h2>{fr ? "Tes textes, à relire et à personnaliser" : "Your drafts, ready for your review"}</h2>
         <p>{fr ? "Les citations ont été retrouvées dans tes sources. Cela ne garantit pas que chaque reformulation soit exacte. Vérifie les faits, les dates et le niveau de maîtrise ; aucun résultat de recrutement ou de filtrage ATS n’est garanti." : "Quotes were found in your sources. This does not guarantee that every rephrased statement is accurate. Check facts, dates and proficiency; no hiring or ATS outcome is guaranteed."}</p>
         <details class="draft-editor" open><summary>{fr ? "Mon CV ciblé" : "My targeted CV"}</summary><p>{fr ? "Garde les contributions concrètes, les dates et les projets que tu peux expliquer. Ajuste les formulations pour qu’elles te ressemblent." : "Keep concrete contributions, dates and projects you can explain. Adjust the wording to sound like you."}</p>
@@ -134,21 +136,29 @@ const fr = lang === "fr";
           <button type="button" class="btn btn-secondary" id="application-download" disabled>{fr ? "Télécharger CV et pitch (.txt)" : "Download CV and pitch (.txt)"}</button>
         </div>
       </section>
-      <div class="application-actions application-next"><a class="btn btn-primary" href={href(`/${lang}/prepare/`)}>{fr ? "Étape suivante : préparer mon entretien →" : "Next step: prepare for my interview →"}</a></div>
+      <div class="application-actions application-next" id="application-interview-next"><a class="btn btn-primary" href={href(`/${lang}/prepare/`)}>{fr ? "Étape suivante : préparer mon entretien →" : "Next step: prepare for my interview →"}</a></div>
       <section id="application-print" hidden><div id="application-print-text"></div></section>
     </section>
   </section>
   <noscript>{fr ? "Active JavaScript pour importer ton CV et obtenir un diagnostic." : "Enable JavaScript to import your CV and get an assessment."}</noscript>
   <script>import "../../scripts/application.ts";</script>
   <style is:global>
+    #jobs-results { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+    #jobs-results .application-card { margin: 0; padding: 18px; }
+    #jobs-results h3 { font: 700 1.1rem/1.4 var(--font-body); }
+    .opportunity-tabs { display: flex; gap: 12px; margin: 12px 0; }
+    [data-application-step][aria-current="step"] { background: #e7dfff; }
+    #application-evidence details.evidence-card { padding: 14px; margin: 10px 0; border: 1px solid var(--line); border-radius: 8px; }
+    .evidence-card > summary { cursor: pointer; font-weight: 700; }
+    @media(max-width:650px) { #jobs-results { grid-template-columns:1fr; } }
     .application-page { max-width: 1080px; margin: 0 auto; }
     .application-page .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .application-heading { max-width: 760px; margin-bottom: 28px; }
     .application-heading h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.2; }
     .application-eyebrow { color: var(--accent); font-family: var(--pixel); letter-spacing: .06em; }
-    .application-steps { display: flex; flex-wrap: wrap; gap: 12px 34px; padding-left: 22px; }
+    .application-steps { display: flex; list-style: none; flex-wrap: wrap; gap: 12px 34px; padding-left: 22px; }
     .application-inputs { border: 0; padding: 0; margin: 0; min-width: 0; }
-    .application-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .application-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
     .application-single-step .application-grid { grid-template-columns: 1fr; }
     .application-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 24px; margin-bottom: 20px; min-width: 0; }
     .application-card h2 { font-size: 1.5rem; margin-top: 0; }

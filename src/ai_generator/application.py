@@ -92,6 +92,10 @@ Assess scope from actual duties and seniority, not merely the job title. Senior,
 staff, lead roles or roles unrelated to building AI agents are out_of_scope; use
 uncertain when level/duties are unclear. Include explicit contract, availability
 and location requirements as eligibility; do not infer legal eligibility.
+Also extract explicit degree, current enrolment and graduation-window requirements
+as separate eligibility items. Preserve exact dates in explanations and next actions;
+a different degree or equivalent experience does not prove a graduation-window condition.
+A company description mentioning AI agents does not establish that this role builds agents.
 Extract distinct material requirements. Source excerpts are supplied as numbered maps.
 In posting_quote return a job excerpt ID; in candidate_quote return a profile excerpt
 ID or null. These fields are REFERENCES, never text to copy or rewrite. Select only

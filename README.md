@@ -146,3 +146,20 @@ DRILLS_ENABLE_MCP=true python -m uvicorn api.main:app --reload --port 8000
 MCP URL locally: `http://localhost:8000/mcp/`. ChatGPT needs a reachable deployed HTTPS endpoint, not this localhost URL. The Render blueprint now targets `feat/hackathon-mvp`, installs `requirements-mcp.txt` and enables MCP. Its public hostname is automatically allowed by the MCP transport; other hosting requires `DRILLS_MCP_HOSTS`. After deploying, configure the ChatGPT connection with `https://YOUR-API-HOST/mcp/` and verify tool discovery. This repository change does not itself create the hosting account, deploy the service, configure its OpenAI key, or connect ChatGPT.
 
 The existing GitHub Pages workflow can be dispatched on the MVP branch once repository variable `DRILLS_API_URL` points to the deployed backend. No merge into main is required for that manual workflow. Validate both /health and MCP initialization before recording the demo.
+
+### Compact candidate journey and application tracking
+
+The application page uses separate Profile → Opportunities → Diagnosis → Documents views.
+Opportunity cards paginate four at a time; choosing one opens its posting editor.
+Internal scoring/provider explanations are omitted from the candidate interface.
+Unresolved eligibility conditions take headline precedence over skill coverage;
+degree, enrolment and graduation windows must be assessed separately. This does
+not turn coverage into a hiring probability or guarantee model interpretation.
+Pitch rehearsal and the technical case selector occupy separate views.
+
+The tracker retains up to 100 distinct posting texts with role, company, assessment
+date, eligibility gaps, manually updated status, sent date and notes. Reassessing
+the same trimmed posting updates its entry and preserves status/notes. CV export
+never marks a submission. An older saved result migrates without an invented date.
+Interview count reflects current interview statuses. Storage uses the same tab/
+opt-in local expiry as the dossier; there is no server database or cross-device sync.

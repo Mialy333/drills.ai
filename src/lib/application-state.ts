@@ -1,8 +1,10 @@
+import { HistoryEntrySchema } from "./application-history.ts";
 import { z } from "zod";
 import { ApplicationResultSchema } from "./application.ts";
 
 export const APPLICATION_KEY = "drills.application.v1";
 export const ApplicationStateSchema = z.object({
+  history: z.array(HistoryEntrySchema).max(100).optional(),
   version: z.literal(1), expiresAt: z.number(),
   profile: z.string().max(16000), posting: z.string().max(20000),
   result: ApplicationResultSchema.nullable(),

@@ -1,3 +1,4 @@
+import { recordAnalysis, type HistoryEntry } from "../lib/application-history";
 import { locale, translator, cvHeading } from "../lib/locale";
 import { fetchGithubProject } from "../lib/github-project";
 import { createCvEditor, cleanCvHtml } from "../lib/cv-editor";
@@ -11,7 +12,9 @@ const fr = language === "fr";
 const say = translator(language);
 const element = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 const form = element<HTMLFormElement>("application-form");
-const profileMode = new URLSearchParams(location.search).get("step") === "profile";
+const requestedStep = new URLSearchParams(location.search).get("step");
+let profileMode = requestedStep === "profile";
+let historyRows: HistoryEntry[] = [];
 const fields = element<HTMLFieldSetElement>("application-inputs");
 const profile = element<HTMLTextAreaElement>("application-profile");
 const posting = element<HTMLTextAreaElement>("application-posting");
@@ -39,7 +42,7 @@ function profileSummary(): void {
 function persist(): boolean {
   profileSummary();
   try {
-    const saved = saveApplicationState({version: 1, expiresAt: Date.now() + (remember.checked ? 30 : 1) * 86400000,
+    const saved = saveApplicationState({history:historyRows, version: 1, expiresAt: Date.now() + (remember.checked ? 30 : 1) * 86400000,
       practice_text: readApplicationState(sessionStorage,localStorage)?.practice_text, contact: contact.value, profile: profile.value, posting: posting.value, result: currentResult, cv: cv.value, cv_html: cvEditor.html(), pitch: pitch.value,
       reviewed: reviewed.checked, remember: remember.checked}, sessionStorage, localStorage);
     if (!saved) status(say("Le stockage est indisponible. Garde cet onglet ouvert et exporte tes textes avant de quitter.", "Storage is unavailable. Keep this tab open and export your text before leaving."));
@@ -118,7 +121,10 @@ function render(result: ApplicationResult): void {
   currentResult = result;
   element("application-result-title").textContent = result.role_title;
   element("application-scope").textContent = result.scope_reason;
-  element("application-score").textContent = result.score === null
+  const conditions=result.requirements.filter(item=>item.kind==='eligibility'&&item.status!=='documented');
+  element("application-score").textContent = conditions.length
+    ? say(`${conditions.length} condition(s) de candidature à confirmer`, `${conditions.length} application condition(s) to confirm`)
+    : result.score === null
     ? say("Périmètre à vérifier — score non affiché", "Scope needs review — score not shown")
     : `${result.score} % · ${say("couverture documentée des compétences", "documented skill coverage")}`;
   element("application-decision").textContent = result.decision === "prepare"
@@ -126,21 +132,16 @@ function render(result: ApplicationResult): void {
     : result.decision === "strengthen"
       ? say("Renforce ou précise les points ci-dessous. Tu peux quand même préparer ta candidature : ce bilan ne décide pas à ta place.", "Strengthen or clarify the points below. You can still prepare your application: this assessment does not decide for you.")
       : say("Vérifie le niveau et les missions : cette annonce n’est pas clairement dans le périmètre premier poste Agent Engineer.", "Review the level and duties: this posting is not clearly within the first Agent Engineer role scope.");
-  const skills=result.requirements.filter(item=>item.kind==='skill');
-  const weights={core:3,important:2,supporting:1};const coverage={documented:1,partial:0.5,not_documented:0};
-  const total=skills.reduce((sum,item)=>sum+weights[item.priority],0);
-  const covered=skills.reduce((sum,item)=>sum+weights[item.priority]*coverage[item.status],0);
-  const method=element('application-score-method');
-  if(method) method.textContent=say(`Compétence essentielle : poids 3 ; importante : 2 ; complémentaire : 1. Preuve documentée : 100 % du poids ; partielle : 50 % ; non documentée : 0 %. Ici : ${covered} / ${total} points pondérés. Les conditions d’éligibilité restent séparées. Le score est masqué si le poste est hors périmètre ou incertain.`, `Core skill: weight 3; important: 2; supporting: 1. Documented evidence: full weight; partial: half; undocumented: zero. Here: ${covered} / ${total} weighted points. Eligibility is assessed separately. The score is hidden for uncertain or out-of-scope roles.`);
   const evidence = element("application-evidence");
-  evidence.replaceChildren(...result.requirements.map((item) => {
-    const card = document.createElement("article");
+  evidence.replaceChildren(...[...result.requirements].sort((a,b)=>Number(b.kind==='eligibility')-Number(a.kind==='eligibility')).map((item) => {
+    const card = document.createElement("details"); card.className="evidence-card";
     card.dataset.evidence = item.status;
     const state = { documented: say("Documenté", "Documented"), partial: say("Partiel", "Partial"), not_documented: say("Non documenté", "Not documented") }[item.status];
     const priority = { core: say("Essentielle", "Core"), important: say("Importante", "Important"), supporting: say("Complémentaire", "Supporting") }[item.priority];
     const badge = text("span", state); badge.className = "evidence-badge";
     const meaning = { documented: say("Une preuve figure dans ton profil. Prépare un exemple pour l’entretien.", "Your profile contains evidence. Prepare an example for the interview."), partial: say("Ton profil couvre une partie du besoin. Précise ta contribution ou ajoute une preuve.", "Your profile covers part of this requirement. Clarify your contribution or add evidence."), not_documented: say("Aucune preuve suffisante dans les éléments fournis : cela ne signifie pas que tu ne sais pas le faire.", "No sufficient evidence in the supplied information: this does not mean you cannot do it.") }[item.status];
-    card.append(badge, text("h3", item.name), text("p", meaning), text("small", `${item.kind === "eligibility" ? say("Condition à vérifier", "Condition to review") : say("Compétence", "Skill")} · ${priority}`), text("p", item.explanation));
+    const summary=document.createElement('summary');summary.append(badge,document.createTextNode(' '+item.name));card.append(summary);
+    card.append( text("p", meaning), text("small", `${item.kind === "eligibility" ? say("Condition à vérifier", "Condition to review") : say("Compétence", "Skill")} · ${priority}`), text("p", item.explanation));
     const quotes = document.createElement("details");
     quotes.append(text("summary", say("Voir les preuves citées", "View quoted evidence")), text("p", say("Dans l’annonce", "In the posting")), text("blockquote", item.posting_quote));
     quotes.append(text("p", say("Dans ton parcours", "In your experience")), text("blockquote", item.candidate_quote ?? say("Aucune preuve citée. Ajoute un exemple si tu en as un.", "No evidence cited. Add an example if you have one.")));
@@ -158,7 +159,7 @@ function render(result: ApplicationResult): void {
   }));
   reviewed.checked = false;
   printButton.disabled = download.disabled = true;
-  results.hidden = false;
+  setStep("diagnostic");
   element("application-result-title").focus();
 }
 
@@ -185,6 +186,7 @@ async function extractProfile(file: File, signal: AbortSignal): Promise<void> {
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   if (controller) return;
+  if (profileMode && !pdf.files?.length && profile.value.trim().length>=50) { if(persist()) setStep('posting'); return; }
   if (!consent.checked) { consent.reportValidity(); status(say("Confirme l’envoi à l’IA avant de continuer.", "Confirm sharing with AI before continuing.")); return; }
   const file = pdf.files?.[0];
   const job = posting.value.trim();
@@ -192,15 +194,14 @@ form.addEventListener("submit", (event) => {
     status(say("Colle le texte complet de l’annonce (50 caractères minimum).", "Paste the full posting (at least 50 characters).")); posting.focus(); return;
   }
   if (!file && profile.value.trim().length < 50) {
-    element("application-profile-card").hidden = false; editor.open = true;
+    setStep('profile'); editor.open = true;
     status(say("Ajoute ton CV PDF ou renseigne ton profil une seule fois. Aucun profil exploitable n’est encore enregistré.", "Add your PDF CV or enter your profile once. No usable profile has been saved yet.")); profile.focus(); return;
   }
   void perform(async (signal) => {
     if (file) await extractProfile(file, signal);
     if (profileMode) {
       if (!persist()) return;
-      const next = new URL(location.href); next.search = "?step=posting"; next.hash = "";
-      location.assign(next.href); return;
+      setStep('posting'); status(say('Profil prêt. Choisis ou colle une annonce.', 'Profile ready. Choose or paste a posting.')); return;
     }
     const candidate = profile.value.trim();
     resetResults(); persist();
@@ -210,9 +211,10 @@ form.addEventListener("submit", (event) => {
     const result = ApplicationResultSchema.parse(raw);
     if (result.output_language !== (fr ? "fr" : "en")) throw new Error("language");
     inputSnapshot = { profile: candidate, posting: job };
+    historyRows=recordAnalysis(historyRows,job,result);
     render(result); persist();
     status(say("Diagnostic prêt. Vérifie les preuves et les textes proposés, notamment les informations extraites du CV.", "Assessment ready. Review the evidence and drafts, including the information extracted from your CV."));
-    results.scrollIntoView?.({behavior: "smooth", block: "start"});
+    element("application-page").scrollIntoView?.({behavior:"smooth",block:"start"});
   }, say("Préparation de ton dossier…", "Preparing your application…"));
 });
 
@@ -275,7 +277,7 @@ download.addEventListener("click", () => {
 cancel.addEventListener("click", () => controller?.abort());
 element("application-clear").addEventListener("click", () => {
   controller?.abort(); controller = null; busy(false);
-  form.reset(); resetResults(); contact.value = ""; element("cv-contact-preview").textContent="";
+  form.reset(); resetResults(); historyRows=[]; setStep("profile"); contact.value = ""; element("cv-contact-preview").textContent="";
   try { clearApplicationState(sessionStorage, localStorage); } catch {}
   deleteCandidateProfile();
   profileSummary();
@@ -288,6 +290,7 @@ element("application-clear").addEventListener("click", () => {
 try {
   const saved = readApplicationState(sessionStorage, localStorage);
   if (saved) {
+    historyRows=saved.history ?? (saved.result ? recordAnalysis([],saved.posting,saved.result,null) : []);
     contact.value = saved.contact ?? ""; element("cv-contact-preview").textContent=contact.value;
     profile.value = saved.profile; posting.value = saved.posting; remember.checked = saved.remember;
     editor.open = false;
@@ -308,23 +311,36 @@ pdf.addEventListener("change", () => {
   element("application-file-name").textContent=pdf.files?.[0]?.name ?? say("Aucun fichier sélectionné", "No file selected");
   if (pdf.files?.length) status(say("CV sélectionné. Coche ton accord, puis clique sur le bouton principal : le CV sera lu avant de continuer.", "CV selected. Check your consent, then click the main button: your CV will be read before continuing."));
 });
-if (profileMode) {
-  form.classList.add("application-single-step");
-  element("application-posting-card").hidden = true; posting.required = false;
-  element("application-submit").textContent = say("Enregistrer mon profil et choisir une annonce", "Save my profile and choose a posting");
-  element("application-example").hidden = true;
-  element("application-heading-title").textContent = say("Ton profil, une seule fois.", "Your profile, entered once.");
-  results.hidden = true;
-} else if (new URLSearchParams(location.search).get("step") === "posting") {
-  element("application-heading-title").textContent = say("Quelle annonce veux-tu viser ?", "Which posting are you targeting?");
-  if (profile.value.trim().length >= 50) {
-    form.classList.add("application-single-step");
-    element("application-profile-card").hidden = true;
-    element("application-saved-profile").hidden = false;
+function setStep(step:string, updateUrl=true):void {
+  if(!['profile','posting','diagnostic','documents'].includes(step))step='profile';
+  if((step==='diagnostic'||step==='documents')&&!currentResult)step='posting';
+  profileMode=step==='profile';
+  form.hidden=step==='diagnostic'||step==='documents';
+  form.classList.add('application-single-step');
+  element('application-profile-card').hidden=!profileMode;
+  element('application-posting-card').hidden=step!=='posting';
+  element('application-reset-actions').hidden=step==='documents';
+  posting.required=!profileMode;
+  element('application-example').hidden=!profileMode;
+  element('application-submit').hidden=step==='posting'&&!element('jobs-browser').hidden;
+  element('application-consent-panel').hidden=step==='posting'&&!element('jobs-browser').hidden;
+  element('application-submit').textContent=profileMode?say('Suivant : les opportunités →','Next: opportunities →'):say('Analyser cette annonce','Assess this posting');
+  element('application-saved-profile').hidden=profile.value.trim().length<50;
+  results.hidden=form.hidden===false;
+  element('application-diagnostic-panel').hidden=step!=='diagnostic';
+  element('application-documents-panel').hidden=step!=='documents';
+  element('application-interview-next').hidden=step!=='documents';
+  const titles:Record<string,string>={profile:say('Ton profil, ton CV, tes projets.','Your profile, CV and projects.'),posting:say('Trouve ta prochaine opportunité.','Find your next opportunity.'),diagnostic:say('Ton diagnostic pour cette offre.','Your assessment for this role.'),documents:say('Prépare ta candidature.','Prepare your application.')};
+  element('application-heading-title').textContent=titles[step];
+  for(const button of document.querySelectorAll<HTMLButtonElement>('[data-application-step]')){
+    button.setAttribute('aria-current',button.dataset.applicationStep===step?'step':'false');
+    button.disabled=['diagnostic','documents'].includes(button.dataset.applicationStep!)&&!currentResult;
   }
-  posting.focus();
+  if(updateUrl){const url=new URL(location.href);url.searchParams.set('step',step);history.replaceState(null,'',url);}
 }
-
+for(const button of document.querySelectorAll<HTMLButtonElement>('[data-application-step]'))button.addEventListener('click',()=>{if(controller)return;setStep(button.dataset.applicationStep!);element('application-heading-title').scrollIntoView?.({block:'start'});});
+window.addEventListener('popstate',()=>setStep(new URLSearchParams(location.search).get('step')??'profile',false));
+setStep(requestedStep??(currentResult?'diagnostic':'profile'),false);
 
 const githubStatus=element('github-status');
 const githubReview=element('github-review');
@@ -365,34 +381,54 @@ element('cv-reformat').addEventListener('click',()=>{
   if(currentResult) cvEditor.reformat(currentResult.cv_sections.map(section=>section.heading));
 });
 
+let availableJobs:any[]=[];let jobsPage=0;
+function showPosting(value:boolean):void{
+ element('jobs-browser').hidden=value;element('jobs-posting-editor').hidden=!value;
+ element('application-submit').hidden=!value&&!profileMode;
+ element('application-consent-panel').hidden=!value&&!profileMode;
+}
+function renderJobs():void{
+ const target=element('jobs-results');target.replaceChildren();
+ const query=element<HTMLInputElement>('jobs-location').value.trim().toLocaleLowerCase();
+ const jobs=availableJobs.filter(job=>!query||String(job.location).toLocaleLowerCase().includes(query));
+ const pages=Math.max(1,Math.ceil(jobs.length/4));jobsPage=Math.min(jobsPage,pages-1);
+ element('jobs-page').textContent=`${jobsPage+1} / ${pages}`;
+ element<HTMLButtonElement>('jobs-previous').disabled=jobsPage===0;
+ element<HTMLButtonElement>('jobs-next').disabled=jobsPage===pages-1;
+ if(!jobs.length)element('jobs-status').textContent=say('Aucune offre pour ce lieu. Tu peux coller ton annonce.','No openings for this location. You can paste your own posting.');
+ for(const job of jobs.slice(jobsPage*4,jobsPage*4+4)){
+  if(typeof job.description!=='string'||job.description.length>20000)continue;
+  let url:URL;try{url=new URL(job.url);if(url.protocol!=='https:')continue;}catch{continue;}
+  const card=document.createElement('article');card.className='application-card';
+  const link=text('a',say('Voir l’annonce','View posting')) as HTMLAnchorElement;link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';
+  const choose=text('button',say('Choisir cette offre →','Choose this opening →')) as HTMLButtonElement;choose.type='button';choose.className='btn btn-secondary';
+  choose.addEventListener('click',()=>{
+   if(posting.value.trim()&&posting.value!==job.description&&!window.confirm(say('Remplacer l’annonce actuelle ?','Replace the current posting?')))return;
+   posting.value=job.description;posting.dispatchEvent(new Event('input',{bubbles:true}));showPosting(true);
+   element('application-heading-title').scrollIntoView?.({block:'start'});posting.focus();
+   status(say('Offre sélectionnée. Vérifie le texte et lance ton diagnostic.','Opening selected. Review the text and start your assessment.'));
+  });
+  card.append(text('h3',job.title),text('p',job.company+' · '+job.location),link,document.createElement('br'),choose);target.append(card);
+ }
+}
+element('jobs-show-list').addEventListener('click',()=>showPosting(false));
+element('jobs-show-posting').addEventListener('click',()=>showPosting(true));
+element('jobs-previous').addEventListener('click',()=>{jobsPage--;renderJobs();});
+element('jobs-next').addEventListener('click',()=>{jobsPage++;renderJobs();});
+element('jobs-location').addEventListener('input',()=>{jobsPage=0;renderJobs();});
+showPosting(!!posting.value.trim());
 element('jobs-load').addEventListener('click',async()=>{
-  const button=element<HTMLButtonElement>('jobs-load');if(button.disabled)return;
-  const target=element('jobs-results');const message=element('jobs-status');
-  const endpoint=apiEndpoint('/api/jobs');if(!endpoint){message.textContent=say('Service d’annonces indisponible. Colle ton annonce ci-dessous.','Job service unavailable. Paste your posting below.');return;}
-  button.disabled=true;target.replaceChildren();message.textContent=say('Consultation des sources…','Checking sources…');
-  const active=new AbortController();const timer=window.setTimeout(()=>active.abort(),20000);
-  try {
-    const response=await fetch(endpoint,{signal:active.signal});if(!response.ok)throw new Error('jobs');
-    const data=await response.json();if(!Array.isArray(data.jobs)||!Array.isArray(data.unavailable_sources))throw new Error('jobs');
-    message.textContent=(data.jobs.length?say('Offres à examiner. Vérifie la source avant de candidater.','Openings to review. Check the source before applying.'):say('Aucune offre correspondant au filtre dans les sources disponibles. Tu peux toujours coller ton annonce.','No openings match the filter in available sources. You can still paste your posting.'))+
-      (data.unavailable_sources.length?' '+say('Sources indisponibles : ','Unavailable sources: ')+data.unavailable_sources.join(', '):'')+
-      ' '+say('Consultation : ','Checked: ')+new Date(data.checked_at).toLocaleString();
-    const locationFilter=element<HTMLInputElement>('jobs-location').value.trim().toLocaleLowerCase();
-    const visibleJobs=data.jobs.filter((job:any)=>!locationFilter||String(job.location).toLocaleLowerCase().includes(locationFilter));
-    if(!visibleJobs.length && data.jobs.length) message.textContent=say('Aucune offre pour ce lieu. Essaie un autre lieu ou colle ton annonce.','No openings for this location. Try another location or paste your posting.');
-    for(const job of visibleJobs) {
-      if(typeof job.description!=='string'||job.description.length>20000)continue;
-      const url=new URL(job.url);if(url.protocol!=='https:')continue;
-      const card=document.createElement('article');card.className='application-card';
-      const link=text('a',say('Voir l’annonce source','View original posting')) as HTMLAnchorElement;link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';
-      const choose=text('button',say('Utiliser cette annonce','Use this posting')) as HTMLButtonElement;choose.type='button';choose.className='btn btn-secondary';
-      choose.addEventListener('click',()=>{
-        if(posting.value.trim() && posting.value!==job.description && !window.confirm(say('Remplacer l’annonce actuelle ? Le diagnostic devra être relancé.','Replace the current posting? You will need to run the assessment again.')))return;
-        posting.value=job.description;posting.dispatchEvent(new Event('input',{bubbles:true}));posting.focus();
-        message.textContent=say('Annonce chargée. Relis-la puis lance le diagnostic avec ton profil.','Posting loaded. Review it and run the assessment with your profile.');
-      });
-      card.append(text('h3',job.title),text('p',job.company+' · '+job.location),link,document.createElement('br'),choose);target.append(card);
-    }
-  }catch{message.textContent=say('Impossible de consulter les annonces. Ton dossier est conservé : colle une annonce pour continuer.','Cannot load openings. Your application is preserved: paste a posting to continue.');}
-  finally{window.clearTimeout(timer);button.disabled=false;}
+ const button=element<HTMLButtonElement>('jobs-load');if(button.disabled)return;
+ const message=element('jobs-status');const endpoint=apiEndpoint('/api/jobs');
+ if(!endpoint){message.textContent=say('Recherche indisponible. Colle ton annonce.','Search unavailable. Paste your posting.');return;}
+ button.disabled=true;message.textContent=say('Recherche en cours…','Searching…');
+ const active=new AbortController();const timer=window.setTimeout(()=>active.abort(),20000);
+ try{
+  const response=await fetch(endpoint,{signal:active.signal});if(!response.ok)throw new Error('jobs');
+  const data=await response.json();if(!Array.isArray(data.jobs))throw new Error('jobs');
+  availableJobs=data.jobs;jobsPage=0;message.textContent=say(`${availableJobs.length} offres à explorer.`,`${availableJobs.length} openings to explore.`);
+  if(data.unavailable_sources?.length)message.textContent+=' '+say('Certaines offres sont temporairement indisponibles.','Some openings are temporarily unavailable.');
+  renderJobs();
+ }catch{message.textContent=say('Recherche indisponible. Ton dossier est conservé ; colle une annonce pour continuer.','Search unavailable. Your application is preserved; paste a posting to continue.');}
+ finally{window.clearTimeout(timer);button.disabled=false;}
 });

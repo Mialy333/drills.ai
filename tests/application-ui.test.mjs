@@ -7,7 +7,7 @@ const html = readFileSync(new URL('../dist/en/apply/index.html', import.meta.url
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/application.json',import.meta.url),'utf8'));
 const bundle = await build({entryPoints:['src/scripts/application.ts'],bundle:true,write:false,format:'iife',define:{'import.meta.env':'{"DEV":true}'}});
 const profileText = 'I built an API with validation and automated tests and documented customer support workflows.';
-function setup(t, query='') {
+function setup(t, query='?step=posting') {
  const dom=new JSDOM(html,{url:'http://localhost:4321/drills.ai/en/apply/'+query,runScripts:'outside-only'});
  t.after(()=>dom.window.close());
  const w=dom.window, get=id=>w.document.getElementById('application-'+id);
@@ -54,9 +54,9 @@ test('an imported profile survives an analysis service failure and no diagnostic
 });
 test('profile entry and posting entry have distinct visible steps',t=>{
  const {get}=setup(t,'?step=profile');assert.equal(get('posting-card').hidden,true);
- assert.equal(get('posting').required,false);assert.match(get('submit').textContent,/Save my profile/);
+ assert.equal(get('posting').required,false);assert.match(get('submit').textContent,/Next: opportunities/);
  const second=setup(t,'?step=posting');assert.equal(second.get('posting-card').hidden,false);
- assert.match(second.get('heading-title').textContent,/Which posting/);
+ assert.match(second.get('heading-title').textContent,/Find your next opportunity/);
 });
 test('a saved profile is reused for another posting without uploading a CV',async t=>{
  const {w,get,calls}=setup(t); get('profile').value=profileText;get('profile').dispatchEvent(new w.Event('input'));
@@ -106,6 +106,7 @@ test('evidence validation failure explains the problem and preserves the importe
 test('CV toolbar formats selected text and preserves formatting and links in print',async t=>{
  const {w,get}=setup(t);get('profile').value=profileText;get('posting').value='AI Agent Engineer internship with API integration, tests and workflow design.';get('consent').checked=true;
  submit(w,get);await done(get);
+ w.document.querySelector('[data-application-step=documents]').click();
  const editor=w.document.getElementById('cv-rich-editor');
  const editable=editor.querySelector('.tiptap');editable.focus();
  const range=w.document.createRange();range.selectNodeContents(editable);
@@ -131,6 +132,7 @@ test('restored CV formatting strips executable HTML and unsafe links',t=>{
 test('formatting toggles off on second click and links can be edited and removed',async t=>{
  const {w,get}=setup(t);get('profile').value=profileText;get('posting').value='AI Agent Engineer internship with API integration, tests and workflow design.';get('consent').checked=true;
  submit(w,get);await done(get);
+ w.document.querySelector('[data-application-step=documents]').click();
  const editable=w.document.querySelector('#cv-rich-editor .tiptap');editable.focus();
  const range=w.document.createRange();range.selectNodeContents(editable);
  w.getSelection().removeAllRanges();w.getSelection().addRange(range);w.document.dispatchEvent(new w.Event('selectionchange'));await tick();await tick();
@@ -234,4 +236,32 @@ test('all public MVP routes declare their language and use localized navigation'
   assert.match(nav,lang==='fr'?/Ma candidature/:/My application/);
   assert.doesNotMatch(nav,lang==='fr'?/My application/:/Ma candidature/);
  }
+});
+
+
+test('profile next moves to opportunities without AI and diagnosis/documents are separate',async t=>{
+ const {w,get,calls}=setup(t,'');
+ assert.equal(get('profile-card').hidden,false);assert.equal(get('posting-card').hidden,true);
+ get('profile').value=profileText;submit(w,get);await done(get);
+ assert.equal(calls.length,0);assert.equal(get('profile-card').hidden,true);assert.equal(get('posting-card').hidden,false);
+ w.document.getElementById('jobs-show-posting').click();
+ get('posting').value='AI Agent Engineer internship with API integration, tests and workflow design.';get('consent').checked=true;
+ const result=structuredClone(fixture);result.requirements.push({...result.requirements[0],name:'Graduation in 2027',kind:'eligibility',status:'not_documented',candidate_quote:null});result.decision='strengthen';
+ w.fetch=async()=>({ok:true,json:async()=>result});submit(w,get);await done(get);
+ assert.equal(get('form').hidden,true);assert.equal(get('diagnostic-panel').hidden,false);assert.equal(get('documents-panel').hidden,true);
+ assert.match(get('score').textContent,/condition/);assert.doesNotMatch(get('score').textContent,/100/);
+ assert.match(get('evidence').firstChild.textContent,/Graduation/);
+ w.document.querySelector('[data-application-step=documents]').click();
+ assert.equal(get('diagnostic-panel').hidden,true);assert.equal(get('documents-panel').hidden,false);
+ const saved=JSON.parse(w.sessionStorage.getItem('drills.application.v1'));assert.equal(saved.history.length,1);assert.equal(saved.history[0].sent_at,null);
+});
+
+
+test('opportunities paginate four at a time and selection opens the posting editor',async t=>{
+ const {w}=setup(t);const el=id=>w.document.getElementById('jobs-'+id);
+ const jobs=Array.from({length:9},(_,i)=>({title:'Agent Intern '+i,company:'Example',location:'Paris',url:'https://example.com/jobs/'+i,description:'Role '+i+' building AI agents with tools, APIs and automated evaluations.'}));
+ w.fetch=async()=>({ok:true,json:async()=>({jobs,unavailable_sources:[]})});el('load').click();await tick();
+ assert.equal(el('results').children.length,4);assert.equal(el('page').textContent,'1 / 3');el('next').click();
+ assert.equal(el('results').children.length,4);assert.match(el('results').textContent,/Agent Intern 4/);el('next').click();assert.equal(el('results').children.length,1);
+ el('results').querySelector('button').click();assert.equal(el('browser').hidden,true);assert.equal(el('posting-editor').hidden,false);
 });

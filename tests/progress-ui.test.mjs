@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {JSDOM} from 'jsdom';
+import {build} from 'esbuild';
+const fixture=JSON.parse(readFileSync('tests/fixtures/application.json','utf8'));
+const script=await build({entryPoints:['src/scripts/progress.ts'],bundle:true,write:false,format:'iife'});
+const helper=await build({stdin:{contents:"export {recordAnalysis} from './src/lib/application-history.ts'",resolveDir:process.cwd()},bundle:true,write:false,format:'iife',globalName:'historyHelpers'});
+test('tracking migrates one prior diagnosis, counts explicit sends and preserves reanalysis details',t=>{
+ const dom=new JSDOM(readFileSync('dist/en/progress/index.html','utf8'),{url:'https://example.com/drills.ai/en/progress/',runScripts:'outside-only'});t.after(()=>dom.window.close());const w=dom.window;
+ const initial={version:1,expiresAt:Date.now()+86400000,profile:'A documented profile with API development experience and automated tests.',posting:'Agent internship posting',result:fixture,cv:'CV',pitch:'Pitch',reviewed:true,remember:true};
+ w.sessionStorage.setItem('drills.application.v1',JSON.stringify(initial));w.eval(script.outputFiles[0].text);
+ const el=id=>w.document.getElementById('tracking-'+id);
+ assert.equal(el('analysed').textContent,'1');assert.equal(el('sent').textContent,'0');assert.equal(el('profile').textContent,'Yes');
+ let saved=JSON.parse(w.sessionStorage.getItem('drills.application.v1'));assert.equal(saved.history[0].analysed_at,null);
+ el('list').querySelector('input').value='Example';el('list').querySelector('textarea').value='Follow up Monday';el('list').querySelector('select').value='sent';el('list').querySelector('button').click();
+ assert.equal(el('sent').textContent,'1');saved=JSON.parse(w.localStorage.getItem('drills.application.v1'));assert.equal(saved.history[0].notes,'Follow up Monday');assert.ok(saved.history[0].sent_at);
+ w.eval(helper.outputFiles[0].text);const repeated=w.historyHelpers.recordAnalysis(saved.history,initial.posting,fixture);
+ assert.equal(repeated.length,1);assert.equal(repeated[0].analyses,2);assert.equal(repeated[0].status,'sent');assert.equal(repeated[0].company,'Example');assert.equal(repeated[0].notes,'Follow up Monday');
+ const different=w.historyHelpers.recordAnalysis(repeated,'Another posting',fixture);assert.equal(different.length,2);assert.equal(different[0].sent_at,null);
+});

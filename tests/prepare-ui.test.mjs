@@ -67,3 +67,13 @@ test('identical feedback requests reuse the last result without another API call
  get('review').click();await tick();get('review').click();await tick();assert.equal(calls,1);
  get('text').value+=' I also tested retries.';get('text').dispatchEvent(new w.Event('input'));get('review').click();await tick();assert.equal(calls,2);
 });
+
+
+test('pitch and technical cases occupy separate views with one case at a time',t=>{
+ const {w,get}=setup(t);assert.equal(get('pitch-panel').hidden,false);assert.equal(get('technical-panel').hidden,true);
+ get('tab-technical').click();assert.equal(get('pitch-panel').hidden,true);assert.equal(get('technical-panel').hidden,false);
+ const cards=[...w.document.querySelectorAll('[data-interview-case]')];assert.equal(cards.filter(card=>!card.hidden).length,1);
+ get('case').value=cards[1].dataset.interviewCase;get('case').dispatchEvent(new w.Event('change'));
+ assert.equal(cards[0].hidden,true);assert.equal(cards[1].hidden,false);
+ get('tab-pitch').click();assert.equal(get('pitch-panel').hidden,false);assert.equal(get('technical-panel').hidden,true);
+});

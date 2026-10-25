@@ -7,25 +7,18 @@ const fr = lang === "fr";
 ---
 <App lang={lang} title={fr ? "Mon suivi" : "My progress"} path="/progress/" section="progress">
   <section class="block">
-    <h1>{fr ? "Où en est ta candidature ?" : "Where does your application stand?"}</h1>
-    <p>{fr ? "Trois étapes concrètes. Aucun niveau, point ou classement." : "Three concrete steps. No levels, points or ranking."}</p>
-    <ol class="application-milestones">
-      {[fr ? "Profil prêt" : "Profile ready", fr ? "Offre analysée" : "Posting analysed", fr ? "Candidature relue" : "Application reviewed"].map((title,index) => <li><strong>{title}</strong><span data-step={index}>{fr ? "À faire" : "To do"}</span></li>)}
-    </ol>
-    <p id="application-progress-note" role="status"></p>
-    <a class="btn btn-primary" href={href(`/${lang}/apply/`)}>{fr ? "Ouvrir mon dossier" : "Open my application"}</a>
-    <a class="btn btn-secondary" href={href(`/${lang}/prepare/`)}>{fr ? "Préparer mon entretien" : "Prepare for my interview"}</a>
-    <p>{fr ? "Le suivi concerne le dernier dossier dans ce navigateur. « Relue » signifie que tu as confirmé la relecture, pas que la candidature a été envoyée ou acceptée." : "Progress refers to the latest application in this browser. Reviewed means you confirmed your review, not that the application was sent or accepted."}</p>
+    <h1>{fr ? "Ta recherche, en un coup d’œil." : "Your search at a glance."}</h1>
+    <div class="tracking-stats">
+      {[["profile",fr?"Profil prêt":"Profile ready"],["analysed",fr?"Offres analysées":"Openings assessed"],["sent",fr?"Candidatures envoyées":"Applications sent"],["interviews",fr?"Entretiens en cours":"Current interviews"]].map(([id,label])=><article class="panel"><strong id={`tracking-${id}`}>0</strong><span>{label}</span></article>)}
+    </div>
+    <p id="tracking-next"></p>
+    <div class="tracking-actions"><a class="btn btn-primary" href={href(`/${lang}/apply/?step=posting`)}>{fr ? "Chercher une opportunité" : "Find an opportunity"}</a><a class="btn btn-secondary" href={href(`/${lang}/apply/?step=profile`)}>{fr ? "Modifier mon profil" : "Edit my profile"}</a></div>
+    <h2>{fr ? "Mes candidatures" : "My applications"}</h2>
+    <p>{fr ? "Indique les envois et les réponses reçues pour suivre tes prochaines actions." : "Record submissions and replies to track your next actions."}</p>
+    <div id="tracking-list"></div><p id="tracking-status" role="status"></p>
+    <div class="tracking-actions"><button type="button" class="btn btn-secondary" id="tracking-previous">{fr ? "Précédent" : "Previous"}</button><span id="tracking-page"></span><button type="button" class="btn btn-secondary" id="tracking-next-page">{fr ? "Suivant" : "Next"}</button></div>
+    <p>{fr ? "Ce suivi reste sur cet appareil. Un export de CV ne marque jamais une candidature comme envoyée." : "This tracker stays on this device. Exporting a CV never marks an application as sent."}</p>
   </section>
-  <script>
-    import { readApplicationState, applicationSteps } from "../../lib/application-state";
-    let state = null;
-    try { state = readApplicationState(sessionStorage, localStorage); } catch {}
-    const fr = document.documentElement.lang === "fr";
-    const steps = applicationSteps(state);
-    document.querySelectorAll<HTMLElement>("[data-step]").forEach((node, index) => { node.textContent = steps[index] ? (fr ? "Fait" : "Done") : (fr ? "À faire" : "To do"); });
-    const note = document.getElementById("application-progress-note");
-    if (note) note.textContent = state?.result?.role_title ?? (fr ? "Commence par importer ton CV ou compléter ton profil." : "Start by importing your CV or completing your profile.");
-  </script>
-  <style>.application-milestones { list-style: none; padding: 0; display: grid; gap: 16px; margin: 28px 0; }.application-milestones li { display: flex; justify-content: space-between; gap: 20px; padding: 24px; border: 1px solid var(--line); border-radius: var(--radius-m); background: var(--panel); }</style>
+  <script>import "../../scripts/progress";</script>
+  <style>.tracking-stats {display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}.tracking-stats article {padding:20px;display:grid;gap:8px}.tracking-stats strong {font-size:2rem}.tracking-actions {display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:18px 0}#tracking-list :global(details) {border:1px solid var(--line);padding:18px;margin:12px 0}#tracking-list :global(summary) {font-weight:700;cursor:pointer}#tracking-list :global(label) {display:block;margin-top:16px}#tracking-list :global(input),#tracking-list :global(textarea),#tracking-list :global(select) {width:100%;padding:12px;font:inherit;box-sizing:border-box}@media(max-width:700px){.tracking-stats{grid-template-columns:repeat(2,1fr)}}</style>
 </App>

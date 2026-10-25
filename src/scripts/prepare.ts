@@ -116,3 +116,13 @@ draft.addEventListener('click',()=>{
 function cleanup(){epoch++;active?.abort();active=null;finish();release();recording=false;lastFeedback=null;clearAudio();}
 el('clear').addEventListener('click',()=>{cleanup();field.value='';el('feedback').replaceChildren();el('timer').textContent='';persist();controls();note(say('Entraînement effacé. Ton dossier reste intact.','Rehearsal cleared. Your application is unchanged.'));});
 window.addEventListener('pagehide',cleanup);
+
+function interviewTab(technical:boolean){
+ if(recording||pending)cleanup();
+ el('pitch-panel').hidden=technical;el('technical-panel').hidden=!technical;
+ el('tab-pitch').setAttribute('aria-pressed',String(!technical));el('tab-technical').setAttribute('aria-pressed',String(technical));
+ const url=new URL(location.href);url.searchParams.set('tab',technical?'technical':'pitch');history.replaceState(null,'',url);
+}
+el('tab-pitch').addEventListener('click',()=>interviewTab(false));el('tab-technical').addEventListener('click',()=>interviewTab(true));
+function selectCase(){for(const card of document.querySelectorAll<HTMLElement>('[data-interview-case]'))card.hidden=card.dataset.interviewCase!==el<HTMLSelectElement>('case').value;}
+el('case').addEventListener('change',selectCase);selectCase();interviewTab(new URL(location.href).searchParams.get('tab')==='technical');
