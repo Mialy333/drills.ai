@@ -51,7 +51,7 @@ function resetResults(): void {
   printButton.disabled = download.disabled = true;
   cv.value = pitch.value = "";
   inputSnapshot = null;
-  for (const id of ["application-evidence", "application-draft-sources", "application-interview", "application-print-text"]) element(id).replaceChildren();
+  for (const id of ["application-evidence", "application-draft-sources", "application-print-text"]) element(id).replaceChildren();
 }
 function busy(value: boolean): void { fields.disabled = value; cancel.hidden = !value; form.setAttribute("aria-busy", String(value)); }
 function text(tag: string, value: string): HTMLElement {
@@ -117,13 +117,17 @@ function render(result: ApplicationResult): void {
   const evidence = element("application-evidence");
   evidence.replaceChildren(...result.requirements.map((item) => {
     const card = document.createElement("article");
+    card.dataset.evidence = item.status;
     const state = { documented: say("Documenté", "Documented"), partial: say("Partiel", "Partial"), not_documented: say("Non documenté", "Not documented") }[item.status];
     const priority = { core: say("Essentielle", "Core"), important: say("Importante", "Important"), supporting: say("Complémentaire", "Supporting") }[item.priority];
-    card.append(text("h3", `${item.name} · ${state}`), text("small", `${item.kind === "eligibility" ? say("Condition à vérifier", "Condition to review") : say("Compétence", "Skill")} · ${priority}`), text("p", item.explanation));
+    const badge = text("span", state); badge.className = "evidence-badge";
+    const meaning = { documented: say("Une preuve figure dans ton profil. Prépare un exemple pour l’entretien.", "Your profile contains evidence. Prepare an example for the interview."), partial: say("Ton profil couvre une partie du besoin. Précise ta contribution ou ajoute une preuve.", "Your profile covers part of this requirement. Clarify your contribution or add evidence."), not_documented: say("Aucune preuve suffisante dans les éléments fournis : cela ne signifie pas que tu ne sais pas le faire.", "No sufficient evidence in the supplied information: this does not mean you cannot do it.") }[item.status];
+    card.append(badge, text("h3", item.name), text("p", meaning), text("small", `${item.kind === "eligibility" ? say("Condition à vérifier", "Condition to review") : say("Compétence", "Skill")} · ${priority}`), text("p", item.explanation));
     const quotes = document.createElement("details");
     quotes.append(text("summary", say("Voir les preuves citées", "View quoted evidence")), text("p", say("Dans l’annonce", "In the posting")), text("blockquote", item.posting_quote));
     quotes.append(text("p", say("Dans ton parcours", "In your experience")), text("blockquote", item.candidate_quote ?? say("Aucune preuve citée. Ajoute un exemple si tu en as un.", "No evidence cited. Add an example if you have one.")));
-    card.append(quotes, text("p", `${say("Prochaine action", "Next action")} : ${item.next_action}`));
+    const action = text("p", `${say("Prochaine action", "Next action")} : ${item.next_action}`); action.className = "evidence-action";
+    card.append(quotes, action);
     return card;
   }));
   cv.value = applicationCv(result);
@@ -132,11 +136,6 @@ function render(result: ApplicationResult): void {
     const node = document.createElement("section");
     node.append(text("h3", section.heading), ...section.source_quotes.map((quote) => text("blockquote", quote)));
     return node;
-  }));
-  element("application-interview").replaceChildren(...result.interview_questions.map((question) => {
-    const item = document.createElement("li");
-    item.append(text("strong", question.question), text("p", question.looking_for));
-    return item;
   }));
   reviewed.checked = false;
   printButton.disabled = download.disabled = true;

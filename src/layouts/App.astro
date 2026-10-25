@@ -31,10 +31,11 @@ const links = [
     </nav>
     <div class="bar-tools"><a class="tool" href={href(`/${other}${path}`)} hreflang={other}>{other.toUpperCase()}</a><button class="tool" id="theme-toggle" type="button">{fr ? "Clair / sombre" : "Light / dark"}</button></div>
   </header>
-  <div class="shell"><main id="main" class="main"><slot /><footer class="foot">{fr ? "DRILLS.ai · Ta prochaine opportunité, à partir de ton parcours." : "DRILLS.ai · Your next opportunity, built on your experience."}</footer></main></div>
+  <div class="shell"><main id="main" class="main" tabindex="-1"><slot /><footer class="foot">{fr ? "DRILLS.ai · Ta prochaine opportunité, à partir de ton parcours." : "DRILLS.ai · Your next opportunity, built on your experience."}</footer></main></div>
   <nav class="tabbar" aria-label={fr ? "Navigation mobile" : "Mobile navigation"}>
     {links.map(link => <a href={href(`/${lang}${link.path}`)} aria-current={section === link.section ? "page" : undefined}><span>{link.title}</span></a>)}
   </nav>
+  <a class="back-to-top" href="#main">{fr ? "↑ Revenir en haut" : "↑ Back to top"}</a>
   <script>
     document.getElementById("theme-toggle")?.addEventListener("click", () => {
       const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";

@@ -3105,3 +3105,16 @@ p { text-wrap: pretty; }
 
 /* Hidden states must win over button/card display rules. */
 [hidden] { display: none !important; }
+
+/* Candidate workflow: readable body text while retaining the retro headings. */
+html { font-size: 18px; }
+body { font-size: 1rem; line-height: 1.7; }
+.main h2 { font-size: 1.5rem; line-height: 1.35; }
+.main h3 { font-size: 1.25rem; line-height: 1.4; }
+.main small, .application-note { font-size: .94rem; }
+.btn { font-size: 1rem; }
+.back-to-top { position: fixed; right: 18px; bottom: 24px; z-index: 40; padding: 10px 16px; background: var(--panel); color: var(--ink); border: 2px solid var(--outline); border-radius: 8px; box-shadow: 3px 3px 0 var(--shadow-hard); font: 600 .94rem/1.5 var(--font-body); text-decoration: none; }
+.main { padding-bottom: 100px; }
+:where([id]) { scroll-margin-top: 90px; }
+@media (max-width: 760px) { .back-to-top { bottom: 88px; right: 12px; } }
+@media print { .back-to-top { display: none !important; } }

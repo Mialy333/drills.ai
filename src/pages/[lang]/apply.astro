@@ -81,12 +81,16 @@ const fr = lang === "fr";
       <section class="application-card">
         <h2>{fr ? "Tes textes, à relire et à personnaliser" : "Your drafts, ready for your review"}</h2>
         <p>{fr ? "Les citations ont été retrouvées dans tes sources. Cela ne garantit pas que chaque reformulation soit exacte. Vérifie les faits, les dates et le niveau de maîtrise ; aucun résultat de recrutement ou de filtrage ATS n’est garanti." : "Quotes were found in your sources. This does not guarantee that every rephrased statement is accurate. Check facts, dates and proficiency; no hiring or ATS outcome is guaranteed."}</p>
+        <details class="draft-editor" open><summary>{fr ? "Mon CV ciblé" : "My targeted CV"}</summary><p>{fr ? "Garde les contributions concrètes, les dates et les projets que tu peux expliquer. Ajuste les formulations pour qu’elles te ressemblent." : "Keep concrete contributions, dates and projects you can explain. Adjust the wording to sound like you."}</p>
         <label for="application-contact">{fr ? "Nom et coordonnées pour le CV (facultatif, reste dans ton navigateur)" : "Name and contact details for the CV (optional, stays in your browser)"}</label>
         <textarea id="application-contact" rows="2" maxlength="500" autocomplete="off"></textarea>
         <label for="application-cv">{fr ? "CV ciblé — texte modifiable" : "Targeted CV — editable text"}</label>
-        <textarea id="application-cv" rows="18" maxlength="20000" autocomplete="off"></textarea>
+        <textarea id="application-cv" rows="14" maxlength="20000" autocomplete="off"></textarea>
+        </details>
+        <details class="draft-editor"><summary>{fr ? "Mon pitch, à dire à voix haute" : "My pitch, to say out loud"}</summary><p>{fr ? "Lis-le comme si tu répondais à « Parlez-moi de vous ». Remplace les mots que tu n’emploierais pas et garde un exemple précis de ton parcours." : "Read it as your answer to ‘Tell me about yourself’. Replace words you would not use and keep one specific example from your experience."}</p>
         <label for="application-pitch">{fr ? "Pitch de présentation — texte modifiable" : "Introduction pitch — editable text"}</label>
-        <textarea id="application-pitch" rows="6" maxlength="4000" autocomplete="off"></textarea>
+        <textarea id="application-pitch" rows="8" maxlength="4000" autocomplete="off"></textarea>
+        </details>
         <details><summary>{fr ? "Sources utilisées pour les brouillons" : "Sources used for the drafts"}</summary><div id="application-draft-sources"></div></details>
         <label class="application-check"><input id="application-reviewed" type="checkbox" /><span>{fr ? "J’ai relu et vérifié les textes avant export." : "I have reviewed and verified the text before export."}</span></label>
         <div class="application-actions">
@@ -94,10 +98,7 @@ const fr = lang === "fr";
           <button type="button" class="btn btn-secondary" id="application-download" disabled>{fr ? "Télécharger CV et pitch (.txt)" : "Download CV and pitch (.txt)"}</button>
         </div>
       </section>
-      <section class="application-card"><h2>{fr ? "Prépare ton entretien" : "Prepare for your interview"}</h2>
-        <p>{fr ? "Cas rédigés et grilles fixes, classés selon les thèmes de l’annonce. Aucun exercice n’est généré. Ce ne sont pas les questions confirmées de l’employeur." : "Authored cases and fixed rubrics, ordered by posting topics. No exercises are generated. These are not confirmed employer questions."}</p>
-        <ol id="application-interview"></ol><a class="btn btn-secondary" href={href(`/${lang}/prepare/`)}>{fr ? "Travailler les cas et consulter leurs références" : "Practise the cases and view references"}</a>
-      </section>
+      <div class="application-actions application-next"><a class="btn btn-primary" href={href(`/${lang}/prepare/`)}>{fr ? "Étape suivante : préparer mon entretien →" : "Next step: prepare for my interview →"}</a></div>
       <section id="application-print" hidden><pre id="application-print-text"></pre></section>
     </section>
   </section>
@@ -114,7 +115,7 @@ const fr = lang === "fr";
     .application-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .application-single-step .application-grid { grid-template-columns: 1fr; }
     .application-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 24px; margin-bottom: 20px; min-width: 0; }
-    .application-card h2 { font-size: 1.2rem; margin-top: 0; }
+    .application-card h2 { font-size: 1.5rem; margin-top: 0; }
     .application-card p { line-height: 1.65; }
     .application-page label:not(.application-check) { display: block; font-weight: 600; margin: 16px 0 8px; }
     .application-page textarea { width: 100%; box-sizing: border-box; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: 1rem/1.6 var(--font-body, sans-serif); resize: vertical; }
@@ -128,10 +129,18 @@ const fr = lang === "fr";
     .application-page summary { cursor: pointer; padding: 12px 0; }
     .application-score { color: var(--accent); font-size: 1.5rem; font-weight: 700; }
     .application-evidence article { border-top: 1px solid var(--line); padding: 18px 0; }
-    .application-evidence h3 { margin: 0 0 8px; font-size: 1.05rem; }
+    .application-evidence h3 { margin: 14px 0 8px; font: 700 1.25rem/1.4 var(--font-body); }
     .application-evidence blockquote, #application-draft-sources blockquote { border-left: 3px solid var(--accent); margin: 10px 0; padding: 8px 14px; overflow-wrap: anywhere; }
     #application-status { min-height: 1.6em; }
-    #application-interview li { padding: 12px 0; }
+    .application-evidence article { margin: 20px 0; padding: 22px; border: 1px solid var(--line); border-left: 6px solid var(--evidence-color); border-radius: 12px; background: var(--panel); }
+    .application-evidence [data-evidence="documented"] { --evidence-color: #237752; --evidence-tint: #e6f5ec; --evidence-ink: #155137; }
+    .application-evidence [data-evidence="partial"] { --evidence-color: #a76b14; --evidence-tint: #fff2d6; --evidence-ink: #694007; }
+    .application-evidence [data-evidence="not_documented"] { --evidence-color: #466ba6; --evidence-tint: #e8efff; --evidence-ink: #234572; }
+    .evidence-badge { display: inline-block; padding: 5px 12px; border-radius: 30px; background: var(--evidence-tint); color: var(--evidence-ink); font: 700 .95rem/1.5 var(--font-body); }
+    .application-evidence .evidence-action { padding: 16px; background: var(--evidence-tint); color: var(--evidence-ink); border-radius: 8px; font-weight: 600; }
+    .draft-editor { border-top: 1px solid var(--line); padding: 12px 0; }
+    .draft-editor > summary { font: 700 1.2rem/1.5 var(--font-body); }
+    .application-next { justify-content: flex-end; margin: 28px 0; }
     @media (max-width: 760px) { .application-grid { grid-template-columns: 1fr; gap: 0; } .application-card { padding: 18px; } }
     @media print {
       body.application-print { background: white !important; color: black !important; }
