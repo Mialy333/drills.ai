@@ -126,6 +126,12 @@ function render(result: ApplicationResult): void {
     : result.decision === "strengthen"
       ? say("Renforce ou précise les points ci-dessous. Tu peux quand même préparer ta candidature : ce bilan ne décide pas à ta place.", "Strengthen or clarify the points below. You can still prepare your application: this assessment does not decide for you.")
       : say("Vérifie le niveau et les missions : cette annonce n’est pas clairement dans le périmètre premier poste Agent Engineer.", "Review the level and duties: this posting is not clearly within the first Agent Engineer role scope.");
+  const skills=result.requirements.filter(item=>item.kind==='skill');
+  const weights={core:3,important:2,supporting:1};const coverage={documented:1,partial:0.5,not_documented:0};
+  const total=skills.reduce((sum,item)=>sum+weights[item.priority],0);
+  const covered=skills.reduce((sum,item)=>sum+weights[item.priority]*coverage[item.status],0);
+  const method=element('application-score-method');
+  if(method) method.textContent=say(`Compétence essentielle : poids 3 ; importante : 2 ; complémentaire : 1. Preuve documentée : 100 % du poids ; partielle : 50 % ; non documentée : 0 %. Ici : ${covered} / ${total} points pondérés. Les conditions d’éligibilité restent séparées. Le score est masqué si le poste est hors périmètre ou incertain.`, `Core skill: weight 3; important: 2; supporting: 1. Documented evidence: full weight; partial: half; undocumented: zero. Here: ${covered} / ${total} weighted points. Eligibility is assessed separately. The score is hidden for uncertain or out-of-scope roles.`);
   const evidence = element("application-evidence");
   evidence.replaceChildren(...result.requirements.map((item) => {
     const card = document.createElement("article");
@@ -371,7 +377,10 @@ element('jobs-load').addEventListener('click',async()=>{
     message.textContent=(data.jobs.length?say('Offres à examiner. Vérifie la source avant de candidater.','Openings to review. Check the source before applying.'):say('Aucune offre correspondant au filtre dans les sources disponibles. Tu peux toujours coller ton annonce.','No openings match the filter in available sources. You can still paste your posting.'))+
       (data.unavailable_sources.length?' '+say('Sources indisponibles : ','Unavailable sources: ')+data.unavailable_sources.join(', '):'')+
       ' '+say('Consultation : ','Checked: ')+new Date(data.checked_at).toLocaleString();
-    for(const job of data.jobs) {
+    const locationFilter=element<HTMLInputElement>('jobs-location').value.trim().toLocaleLowerCase();
+    const visibleJobs=data.jobs.filter((job:any)=>!locationFilter||String(job.location).toLocaleLowerCase().includes(locationFilter));
+    if(!visibleJobs.length && data.jobs.length) message.textContent=say('Aucune offre pour ce lieu. Essaie un autre lieu ou colle ton annonce.','No openings for this location. Try another location or paste your posting.');
+    for(const job of visibleJobs) {
       if(typeof job.description!=='string'||job.description.length>20000)continue;
       const url=new URL(job.url);if(url.protocol!=='https:')continue;
       const card=document.createElement('article');card.className='application-card';

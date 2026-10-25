@@ -3,6 +3,7 @@
 The API keeps the OpenAI key server-side. The Astro frontend remains a static
 GitHub Pages site and calls this service using its configured public API origin.
 """
+from contextlib import asynccontextmanager
 import asyncio
 import logging
 import os
@@ -41,11 +42,28 @@ ALLOWED_ORIGINS = [
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["30/minute"])
 
+# MCP is opt-in to keep existing deployments working without its optional SDK.
+mcp_app = None
+if os.getenv("DRILLS_ENABLE_MCP", "").lower() == "true":
+    from api.mcp_app import mcp_app
+
+@asynccontextmanager
+async def lifespan(app):
+    if mcp_app is not None:
+        async with mcp_app.router.lifespan_context(mcp_app):
+            yield
+    else:
+        yield
+
 app = FastAPI(
+    lifespan=lifespan,
     title="DRILLS.ai API",
     description="Server-side API for generating job-grounded Python drills with specialist agents.",
     version="0.1.0",
 )
+
+if mcp_app is not None:
+    app.mount("/mcp", mcp_app)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -67,7 +85,7 @@ application_slots = asyncio.Semaphore(2)
 async def private_application_responses(request: Request, call_next):
     started = perf_counter()
     response = await call_next(request)
-    if request.url.path in {"/api/application", "/api/profile-import", "/api/interview/transcribe", "/api/interview/feedback"}:
+    if request.url.path in {"/api/application", "/api/profile-import", "/api/interview/transcribe", "/api/interview/feedback"} or request.url.path.startswith("/mcp/"):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Server-Timing"] = f"application;dur={(perf_counter()-started)*1000:.0f}"
     return response

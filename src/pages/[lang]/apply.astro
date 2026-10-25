@@ -55,8 +55,9 @@ const fr = lang === "fr";
             <p>{fr ? "Stage, alternance ou premier emploi : colle l’annonce complète, avec les missions, compétences et conditions. Un lien seul ne suffit pas." : "Internship, apprenticeship or first job: paste the full posting, including duties, skills and conditions. A link alone is not enough."}</p>
             <p>{fr ? "Ton profil est repris automatiquement : aucune expérience à ressaisir ici." : "Your profile is reused automatically: no experience to enter again here."}</p>
             <p id="application-saved-profile" hidden>{fr ? "Ton profil enregistré sera utilisé." : "Your saved profile will be used."} <a href={href(`/${lang}/apply/?step=profile`)}>{fr ? "Consulter ou modifier mon profil" : "View or edit my profile"}</a></p>
-            <details class="application-import"><summary>{fr ? "Découvrir des annonces via Greenhouse" : "Discover jobs through Greenhouse"}</summary>
-              <p>{fr ? "Sources : Anthropic, Databricks et Scale AI. Filtre stages, alternance et junior avec mention d’agents IA. Les missions, la localisation et l’éligibilité restent à vérifier. Ce n’est pas un classement selon ton profil." : "Sources: Anthropic, Databricks and Scale AI. Filtered for internships, apprenticeships and junior roles mentioning agents. Review duties, location and eligibility. These are not ranked against your profile."}</p>
+            <details class="application-import"><summary>{fr ? "Découvrir des annonces" : "Discover job openings"}</summary>
+              <p>{fr ? "Sources : Greenhouse et Ashby — Anthropic, Databricks, Scale AI, Mistral AI et Dust. Filtre stages, alternance et junior avec mention d’agents IA. Les missions, la localisation et l’éligibilité restent à vérifier. Ce n’est pas un classement selon ton profil." : "Sources: Greenhouse and Ashby — Anthropic, Databricks, Scale AI, Mistral AI and Dust. Filtered for internships, apprenticeships and junior roles mentioning agents. Review duties, location and eligibility. These are not ranked against your profile."}</p>
+              <label for="jobs-location">{fr ? "Lieu (facultatif, par exemple Paris ou France)" : "Location (optional, for example Paris or France)"}</label><input id="jobs-location" type="text" maxlength="100" />
               <button id="jobs-load" type="button" class="btn btn-secondary">{fr ? "Consulter les offres actuelles" : "Check current openings"}</button>
               <p id="jobs-status" role="status"></p><div id="jobs-results"></div>
             </details>
@@ -92,6 +93,7 @@ const fr = lang === "fr";
         <p id="application-scope"></p>
         <p class="application-score" id="application-score"></p>
         <p id="application-decision"></p>
+        <details><summary>{fr ? "Comment ce matching est calculé" : "How this match is calculated"}</summary><p id="application-score-method"></p></details>
         <details><summary>{fr ? "Comment lire ce bilan ?" : "How should I read this assessment?"}</summary>
           <p>{fr ? "Couverture des compétences extraites : essentielle ×3, importante ×2, complémentaire ×1 ; preuve documentée = 1, partielle = 0,5, non documentée = 0. Les conditions de candidature ne sont pas incluses dans ce pourcentage. Le choix des exigences et leur interprétation restent proposés par l’IA : vérifie-les. Un score de 60 % n’est ni une validation professionnelle ni une garantie d’entretien." : "Coverage of extracted skills: core ×3, important ×2, supporting ×1; documented evidence = 1, partial = 0.5, undocumented = 0. Application conditions are excluded from this percentage. Requirement selection and interpretation are AI suggestions: review them. A 60% score is neither professional validation nor an interview guarantee."}</p>
         </details>

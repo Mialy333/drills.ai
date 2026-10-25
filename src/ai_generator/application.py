@@ -154,10 +154,9 @@ def _quote_exists(quote: str | None, source: str) -> bool:
     return bool(quote and len(quote.strip()) >= 8 and _normalized(quote) in _normalized(source))
 
 
-def validate_analysis(analysis: ApplicationAnalysis, payload: ApplicationRequest) -> ApplicationResult:
-    """Reject fabricated citations. Textual support is not proof of factual truth."""
+def validate_requirements(requirements: list[Requirement], payload: ApplicationRequest) -> None:
     seen: set[str] = set()
-    for index, requirement in enumerate(analysis.requirements):
+    for index, requirement in enumerate(requirements):
         identity = _normalized(requirement.name)
         if identity in seen:
             raise EvidenceError(f"duplicate_requirement:{index}")
@@ -169,22 +168,32 @@ def validate_analysis(analysis: ApplicationAnalysis, payload: ApplicationRequest
                 raise EvidenceError(f"undocumented_with_quote:{index}")
         elif not _quote_exists(requirement.candidate_quote, payload.candidate_text):
             raise EvidenceError(f"candidate_quote:{index}")
-    for index, section in enumerate([*analysis.cv_sections, analysis.pitch]):
-        if not all(_quote_exists(quote, payload.candidate_text) for quote in section.source_quotes):
-            raise EvidenceError(f"draft_quote:{index}")
 
-    skills = [item for item in analysis.requirements if item.kind == "skill"]
+
+def calculate_match(requirements: list[Requirement], scope: str) -> tuple[int | None, str]:
+    skills = [item for item in requirements if item.kind == "skill"]
     weights = {"core": 3, "important": 2, "supporting": 1}
     coverage = {"documented": 1, "partial": 0.5, "not_documented": 0}
     total = sum(weights[item.priority] for item in skills)
     score = round(100 * sum(weights[item.priority] * coverage[item.status] for item in skills) / total) if total else None
-    if analysis.scope != "in_scope":
+    if scope != "in_scope":
         score = None
     unresolved_core = any(item.priority == "core" and item.status != "documented" for item in skills)
-    unresolved_eligibility = any(item.kind == "eligibility" and item.status != "documented" for item in analysis.requirements)
+    unresolved_eligibility = any(item.kind == "eligibility" and item.status != "documented" for item in requirements)
     decision = "review_scope" if score is None else (
         "prepare" if score >= 60 and not unresolved_core and not unresolved_eligibility else "strengthen"
     )
+    return score, decision
+
+
+def validate_analysis(analysis: ApplicationAnalysis, payload: ApplicationRequest) -> ApplicationResult:
+    """Reject fabricated citations. Textual support is not proof of factual truth."""
+    validate_requirements(analysis.requirements, payload)
+    for index, section in enumerate([*analysis.cv_sections, analysis.pitch]):
+        if not all(_quote_exists(quote, payload.candidate_text) for quote in section.source_quotes):
+            raise EvidenceError(f"draft_quote:{index}")
+
+    score, decision = calculate_match(analysis.requirements, analysis.scope)
     return ApplicationResult(**analysis.model_dump(), score=score, decision=decision, output_language=payload.output_language,
                              interview_questions=select_interview_cases(payload.job_description, payload.output_language))
 

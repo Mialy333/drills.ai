@@ -38,7 +38,7 @@ def test_partial_provider_failure_is_reported(monkeypatch):
     monkeypatch.setattr(jobs, '_cache', None)
     monkeypatch.setattr(jobs.httpx, 'AsyncClient', lambda **kwargs: real_client(transport=httpx.MockTransport(handler), trust_env=False, **kwargs))
     result = asyncio.run(jobs.load_jobs())
-    assert len(result['jobs']) == 2
+    assert len(result['jobs']) == 1  # identical source URLs are deduplicated
     assert result['unavailable_sources'] == ['Databricks']
     assert jobs._cache is None
 
@@ -52,3 +52,18 @@ def test_jobs_endpoint_does_not_require_openai_key(monkeypatch):
     response = TestClient(app).get('/api/jobs')
     assert response.status_code == 200
     assert response.json()['jobs'] == []
+
+
+def test_ashby_unlisted_and_senior_jobs_are_excluded(monkeypatch):
+    real_client = httpx.AsyncClient
+    row = {'title':'AI Agent Engineer Intern','descriptionPlain':'Build AI agents with tools and run automated evaluations.', 'jobUrl':'https://jobs.ashbyhq.com/example/1','location':'Paris','isListed':True}
+    def handler(request):
+        if 'ashbyhq' in str(request.url):
+            return httpx.Response(200,json={'jobs':[row, row|{'jobUrl':'https://example.com/private','isListed':False},row|{'title':'Senior AI Agent Engineer','jobUrl':'https://example.com/senior'}]})
+        return httpx.Response(200,json={'jobs':[]})
+    monkeypatch.setattr(jobs,'_cache',None)
+    monkeypatch.setattr(jobs.httpx,'AsyncClient',lambda **kwargs:real_client(transport=httpx.MockTransport(handler),trust_env=False,**kwargs))
+    result=asyncio.run(jobs.load_jobs())
+    assert len(result['jobs'])==1
+    assert result['jobs'][0]['location']=='Paris'
+    assert not result['unavailable_sources']

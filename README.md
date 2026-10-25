@@ -120,3 +120,29 @@ Pitch feedback requests concise observations/actions with an 1,800-token budget 
 Recording now prefers supported MP4, uses a continuous 128 kbps recording rather than one-second chunks, requests disabled automatic noise/gain processing, and normally releases microphone tracks after the final recorder event. Browser settings may override capture constraints. These mitigations need a real-device Safari audio check; tests cannot establish sound quality.
 
 MCP assessment: direct GitHub/Greenhouse reads remain appropriate for the deterministic MVP. A later DRILLS MCP server could expose narrow, authenticated tools such as search_jobs, get_job and get_interview_rubric to ChatGPT. MCP is an interface, not a job database or a replacement for provider APIs; no MCP deployment or ChatGPT connection has been added by this change.
+
+### Live MVP architecture and MCP access
+
+The original `DrillOrchestrator` coordinates AnalystAgent, CoachAgent, DrillCreatorAgent and ValidatorAgent for the former exercise product. `/api/drills` returns 410: that four-agent path is not the live MVP. The live candidate journey uses `ApplicationAgent` for profile/posting analysis and drafts, plus the pitch-review workflow. Exact-quote checks and the weighted coverage score are deterministic Python guardrails. Do not describe the current diagnosis as four autonomous agents collaborating.
+
+The job feed now reads Greenhouse plus Ashby boards `mistral.ai` and `dust`, includes only publicly listed jobs, deduplicates source URLs and offers a location-text filter. These additional boards may have zero positions passing the strict junior/agent filter. No alternate senior roles or fictional listings are substituted.
+
+An optional real MCP server exposes four tools:
+
+- `search_jobs`: public listings and source health, optionally filtered by location.
+- `get_job`: one full posting from the returned IDs, never an arbitrary URL fetch.
+- `get_interview_rubric`: the fixed authored cases in FR or EN.
+- `score_documented_match`: with explicit consent, validate caller-supplied exact CV/posting citations and calculate the same coverage rules as the web app. The caller/model selects requirements and assesses relevance; the server does not independently verify those semantic judgments or claim a hiring probability.
+
+No MCP tool reads browser dossiers, writes external data, submits applications or triggers a paid OpenAI call. Scoring receives caller-supplied text transiently; it is not saved. Public tools do not access authenticated user accounts. If account-backed storage is added, implement OAuth and per-user authorization before exposing it.
+
+Local launch (the existing virtualenv already includes MCP through requirements-devday):
+
+```sh
+python -m pip install -r requirements-mcp.txt
+DRILLS_ENABLE_MCP=true python -m uvicorn api.main:app --reload --port 8000
+```
+
+MCP URL locally: `http://localhost:8000/mcp/`. ChatGPT needs a reachable deployed HTTPS endpoint, not this localhost URL. The Render blueprint now targets `feat/hackathon-mvp`, installs `requirements-mcp.txt` and enables MCP. Its public hostname is automatically allowed by the MCP transport; other hosting requires `DRILLS_MCP_HOSTS`. After deploying, configure the ChatGPT connection with `https://YOUR-API-HOST/mcp/` and verify tool discovery. This repository change does not itself create the hosting account, deploy the service, configure its OpenAI key, or connect ChatGPT.
+
+The existing GitHub Pages workflow can be dispatched on the MVP branch once repository variable `DRILLS_API_URL` points to the deployed backend. No merge into main is required for that manual workflow. Validate both /health and MCP initialization before recording the demo.
