@@ -1,7 +1,7 @@
 const configuredApiBase = (import.meta.env.PUBLIC_DRILLS_API_URL ?? "").trim().replace(/\/+$/, "");
 
 /** Resolve the app endpoint without asking learners to configure the service. */
-export function apiEndpoint(path: "/api/jobs" | "/api/coach" | "/api/drills" | "/api/application" | "/api/profile-import"): string | null {
+export function apiEndpoint(path: "/api/interview/transcribe" | "/api/interview/feedback" | "/api/jobs" | "/api/coach" | "/api/drills" | "/api/application" | "/api/profile-import"): string | null {
   if (import.meta.env.DEV) {
     return `http://127.0.0.1:8000${path}`;
   }

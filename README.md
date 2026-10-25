@@ -102,3 +102,11 @@ From the profile step, add a public `https://github.com/owner/repository` URL. T
 Successful lists are cached for five minutes in the API process. Each source has a 12-second timeout; unavailable sources are reported separately from zero matches. The CV/pasted-posting workflow remains available if sources fail. No applications are submitted. Expired or filled roles can remain in the provider feed until the employer removes them; users should check the original listing.
 
 Legacy plain CV drafts now receive section and bullet formatting on restore. The “Format this CV into sections” button reapplies layout to edited drafts, preserving their text but resetting custom inline formatting (Undo restores it).
+
+### Oral pitch rehearsal — OpenAI audio + Responses
+
+The interview page now offers a 90-second local microphone recording, playback, explicit transcription, editable transcript and a separate feedback request. Text input and the prepared pitch remain available when recording is unsupported or permission is denied. Supported browser containers: WebM/Opus and MP4 (Safari); max 8 MiB. Tracks are stopped on stop/clear/page exit. Audio stays in memory until explicit consent and Transcribe; it is not saved in the dossier. Provider retention rules still apply after upload.
+
+`POST /api/interview/transcribe` uses the server's existing `OPENAI_API_KEY` and `OPENAI_TRANSCRIPTION_MODEL` (default `gpt-transcribe`). Availability depends on the API project. `POST /api/interview/feedback` uses `OPENAI_APPLICATION_MODEL` with structured Responses and `store=False`. It reviews text against a fixed clarity/evidence/relevance rubric and returns one follow-up question, not a voice/accent score or a hiring prediction. Feedback is AI-generated and should be reviewed. The authored technical cases remain unchanged.
+
+The edited rehearsal text is saved with an existing candidate dossier and survives interface language changes; recording and feedback are not persisted. Both endpoints use the same bounded concurrency and timeouts as application preparation, with rate limits and no-store response headers. Tests cover consent, audio validation, API failure, microphone release and text fallback using mocked provider/browser APIs. Real Safari microphone capture and the user's transcription-model access must be checked on the user's device.

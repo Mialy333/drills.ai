@@ -38,7 +38,7 @@ function persist(): boolean {
   profileSummary();
   try {
     const saved = saveApplicationState({version: 1, expiresAt: Date.now() + (remember.checked ? 30 : 1) * 86400000,
-      contact: contact.value, profile: profile.value, posting: posting.value, result: currentResult, cv: cv.value, cv_html: cvEditor.html(), pitch: pitch.value,
+      practice_text: readApplicationState(sessionStorage,localStorage)?.practice_text, contact: contact.value, profile: profile.value, posting: posting.value, result: currentResult, cv: cv.value, cv_html: cvEditor.html(), pitch: pitch.value,
       reviewed: reviewed.checked, remember: remember.checked}, sessionStorage, localStorage);
     if (!saved) status(say("Le stockage est indisponible. Garde cet onglet ouvert et exporte tes textes avant de quitter.", "Storage is unavailable. Keep this tab open and export your text before leaving."));
     return saved;

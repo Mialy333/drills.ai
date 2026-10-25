@@ -66,7 +66,7 @@ application_slots = asyncio.Semaphore(2)
 @app.middleware("http")
 async def private_application_responses(request: Request, call_next):
     response = await call_next(request)
-    if request.url.path in {"/api/application", "/api/profile-import"}:
+    if request.url.path in {"/api/application", "/api/profile-import", "/api/interview/transcribe", "/api/interview/feedback"}:
         response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -235,3 +235,18 @@ async def coach(request: Request, payload: CompanionRequest) -> dict[str, str]:
 async def discover_jobs(request: Request):
     from src.integrations.jobs import load_jobs
     return await load_jobs()
+
+
+from src.ai_generator.interview import AudioRequest, Transcript, PitchRequest, PitchFeedback, transcribe_audio, review_pitch
+
+
+@app.post("/api/interview/transcribe", response_model=Transcript)
+@limiter.limit("3/minute;10/hour")
+async def transcribe_pitch(request: Request, payload: AudioRequest):
+    return await run_application_operation(lambda: transcribe_audio(payload))
+
+
+@app.post("/api/interview/feedback", response_model=PitchFeedback)
+@limiter.limit("3/minute;20/hour")
+async def pitch_feedback(request: Request, payload: PitchRequest):
+    return await run_application_operation(lambda: review_pitch(payload))

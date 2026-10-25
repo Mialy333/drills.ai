@@ -11,6 +11,21 @@ const fr = lang === "fr";
     <p class="section-eyebrow">{fr ? "CAS RÉDIGÉS · GRILLES FIXES · VERSION 1" : "AUTHORED CASES · FIXED RUBRICS · VERSION 1"}</p>
     <h1>{fr ? "Explique tes choix d’Agent Engineer." : "Explain your Agent Engineering decisions."}</h1>
     <p>{fr ? "Trois mises en situation pour un premier poste, sans code à exécuter. Prépare ta réponse, puis compare-la à la grille. Ce ne sont pas les questions confirmées d’un employeur." : "Three first-role scenarios, with no code to run. Prepare your answer, then compare it to the rubric. These are not confirmed employer questions."}</p>
+    <section class="panel pitch-practice" aria-labelledby="practice-title">
+      <h2 id="practice-title">{fr ? "Répète ton pitch en 90 secondes" : "Rehearse your 90-second pitch"}</h2>
+      <p>{fr ? "Ton parcours → une contribution concrète → pourquoi ce poste. Enregistre-toi ou écris ta réponse, puis demande un retour sur le contenu." : "Your journey → a concrete contribution → why this role. Record or write your answer, then get feedback on the content."}</p>
+      <p id="practice-context"></p>
+      <label class="practice-consent"><input id="practice-consent" type="checkbox" />{fr ? "J’accepte d’envoyer l’enregistrement pour transcription, ou mon texte et mon dossier pour feedback, au serveur DRILLS et à OpenAI en cliquant sur le bouton correspondant." : "I agree to send the recording for transcription, or my text and application for feedback, to DRILLS and OpenAI when I click the corresponding button."}</label>
+      <div class="practice-actions"><button type="button" class="btn btn-secondary" id="practice-record">{fr ? "Enregistrer mon pitch" : "Record my pitch"}</button><button type="button" class="btn btn-secondary" id="practice-stop" hidden>{fr ? "Arrêter" : "Stop"}</button><span id="practice-timer" role="timer"></span></div>
+      <audio id="practice-audio" controls hidden></audio>
+      <button type="button" class="btn btn-secondary" id="practice-transcribe" disabled>{fr ? "Transcrire avec OpenAI" : "Transcribe with OpenAI"}</button>
+      <p>{fr ? "L’enregistrement reste dans cette page jusqu’à ton clic sur Transcrire. Relis la transcription avant le feedback. L’audio n’est pas enregistré dans ton dossier ; les règles de conservation du fournisseur s’appliquent après l’envoi." : "The recording stays in this page until you click Transcribe. Review the transcript before requesting feedback. Audio is not saved in your application; provider retention policies apply after upload."}</p>
+      <label for="practice-text">{fr ? "Ton pitch — texte ou transcription à corriger" : "Your pitch — text or transcript to review"}</label>
+      <textarea id="practice-text" rows="7" maxlength="6000"></textarea>
+      <div class="practice-actions"><button type="button" class="btn btn-secondary" id="practice-use-draft">{fr ? "Reprendre mon pitch préparé" : "Use my prepared pitch"}</button><button type="button" class="btn btn-primary" id="practice-review">{fr ? "Obtenir mon retour" : "Get feedback"}</button><button type="button" class="text-button" id="practice-clear">{fr ? "Effacer cet entraînement" : "Clear rehearsal"}</button></div>
+      <p id="practice-status" role="status" aria-live="polite"></p><div id="practice-feedback"></div>
+      <p>{fr ? "Grille fixe : clarté, preuves concrètes et lien avec l’annonce. Le retour est généré par l’IA ; il n’évalue ni ta voix, ni ton accent, ni tes chances d’embauche." : "Fixed rubric: clarity, concrete evidence and relevance to the posting. Feedback is AI-generated; it does not rate your voice, accent or hiring chances."}</p>
+    </section>
     <div class="interview-cases">
       {catalog.cases.map(item => <article class="panel" id={item.id}>
         <h2>{item[lang].title}</h2><p>{item[lang].scenario}</p>
@@ -22,5 +37,6 @@ const fr = lang === "fr";
     </div>
     <a class="btn btn-primary" href={href(`/${lang}/apply/`)}>{fr ? "Revenir à ma candidature" : "Back to my application"}</a>
   </section>
-  <style>.interview-cases { display: grid; gap: 24px; margin: 28px 0; }.interview-cases article { padding: 24px; }.interview-cases p, .interview-cases li { line-height: 1.7; }.interview-cases textarea { width: 100%; margin: 12px 0; padding: 14px; font: inherit; }.interview-cases label { display: block; }.interview-cases summary { cursor: pointer; padding: 16px 0; }</style>
+  <script>import "../../scripts/prepare";</script>
+  <style>.pitch-practice { padding: 28px; margin: 28px 0; }.pitch-practice textarea { width: 100%; padding: 16px; font: inherit; box-sizing: border-box; }.pitch-practice p { line-height: 1.7; }.practice-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 18px 0; }.practice-consent { display: flex; gap: 12px; align-items: flex-start; }.practice-consent input { width: 22px; height: 22px; flex-shrink: 0; }.pitch-practice audio { width: 100%; margin: 12px 0; }.interview-cases { display: grid; gap: 24px; margin: 28px 0; }.interview-cases article { padding: 24px; }.interview-cases p, .interview-cases li { line-height: 1.7; }.interview-cases textarea { width: 100%; margin: 12px 0; padding: 14px; font: inherit; }.interview-cases label { display: block; }.interview-cases summary { cursor: pointer; padding: 16px 0; }</style>
 </App>
