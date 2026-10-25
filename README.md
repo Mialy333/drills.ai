@@ -74,6 +74,8 @@ Old `/generate/`, `/assess/`, and `/journal/` links redirect to the candidate wo
 
 ## Deployment
 
+The former offline service worker is retired. An inline startup repair unregisters the DRILLS worker and deletes only `drills-` asset caches, then reloads once if needed. Profile and application storage is preserved. A retirement worker is still served at the old URL for existing installations.
+
 The Astro base path is `/drills.ai/`. GitHub Pages deployment uses `main`; this feature branch does not publish the site. The API is a separate service described in `render.yaml`. Set its secret `OPENAI_API_KEY` server-side and the frontend build variable `PUBLIC_DRILLS_API_URL` to its HTTPS origin (the deploy workflow reads repository variable `DRILLS_API_URL`). The public origin is not an API key.
 
 ## Relevant code

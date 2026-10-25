@@ -17,6 +17,34 @@ const links = [
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script is:inline define:vars={{ appBase: href("/") }}>
+    // Inline deliberately: a cached module must not prevent its own repair.
+    (async () => {
+      if (!("serviceWorker" in navigator)) return;
+      const base = new URL(appBase, location.origin).href;
+      const isOurs = registration => registration.scope === base ||
+        [registration.active, registration.waiting, registration.installing].some(worker => worker?.scriptURL === `${base}sw.js`);
+      const controller = navigator.serviceWorker.controller;
+      const controlled = controller?.scriptURL === `${base}sw.js`;
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      const ours = registrations.filter(isOurs);
+      await Promise.all(ours.map(registration => registration.unregister()));
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.filter(key => key.startsWith("drills-")).map(key => caches.delete(key)));
+      }
+      // Unregister does not detach a worker from the current document. Reload
+      // once to release it, keeping session/local profile storage untouched.
+      if (controlled) {
+        const key = "drills.worker-repair.v1";
+        try {
+          if (sessionStorage.getItem(key)) return;
+          sessionStorage.setItem(key, "done");
+        } catch { return; }
+        location.reload();
+      }
+    })().catch(() => {});
+  </script>
   <title>{title} | DRILLS.ai</title>
   <meta name="description" content={fr ? "Prépare ta candidature à un premier poste d’Agent Engineer à partir de ton parcours et de preuves concrètes." : "Prepare your first Agent Engineer application from your experience and concrete evidence."} />
   <link rel="icon" href={href("/icons/icon.svg")} type="image/svg+xml" />
@@ -42,17 +70,7 @@ const links = [
       document.documentElement.dataset.theme = theme;
       try { localStorage.setItem("drills.theme", theme); } catch {}
     });
-    if ("serviceWorker" in navigator) {
-      if (import.meta.env.DEV) {
-        // Do not let a previous production worker serve the old generator in dev.
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-          const base = new URL(document.body.dataset.base ?? "/", location.origin).href;
-          for (const registration of registrations) if (registration.scope === base) void registration.unregister();
-        });
-      } else {
-        void navigator.serviceWorker.register(`${document.body.dataset.base}sw.js`).catch(() => {});
-      }
-    }
+
   </script>
 </body>
 </html>

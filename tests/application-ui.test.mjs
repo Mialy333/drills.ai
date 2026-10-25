@@ -64,3 +64,29 @@ test('a saved profile is reused for another posting without uploading a CV',asyn
  submit(w,get);await done(get);
  assert.equal(calls.length,1);assert.equal(calls[0].body.candidate_text,profileText);assert.equal(get('results').hidden,false);
 });
+
+test('inline startup retires stale DRILLS assets without deleting profiles or unrelated caches', async t => {
+ const dom = new JSDOM(html,{url:'http://localhost:4321/drills.ai/en/apply/',runScripts:'outside-only'});
+ t.after(()=>dom.window.close());
+ const w=dom.window, deleted=[], unregistered=[];
+ const base='http://localhost:4321/drills.ai/';
+ Object.defineProperty(w.navigator,'serviceWorker',{value:{
+  controller:{scriptURL:base+'sw.js'},
+  getRegistrations:async()=>[
+   {scope:base,active:{scriptURL:base+'sw.js'},unregister:async()=>unregistered.push('drills')},
+   {scope:'http://localhost:4321/other/',active:{scriptURL:'http://localhost:4321/other/sw.js'},unregister:async()=>unregistered.push('other')},
+  ],
+ }});
+ w.caches={keys:async()=>['drills-old-assets','other-app-assets'],delete:async key=>deleted.push(key)};
+ w.localStorage.setItem('drills.application.v1','saved-profile');
+ w.sessionStorage.setItem('drills.application.v1','tab-profile');
+ let reloads=0;w.__reload=()=>reloads++;
+ const script=[...w.document.querySelectorAll('script')].find(node=>node.textContent.includes('drills.worker-repair.v1'));
+ assert.ok(script,'repair must be inline, outside any potentially stale module');
+ const code=script.textContent.replace('location.reload()','window.__reload()');
+ w.eval(code);await tick();await tick();
+ assert.deepEqual(unregistered,['drills']);assert.deepEqual(deleted,['drills-old-assets']);
+ assert.equal(reloads,1);assert.equal(w.localStorage.getItem('drills.application.v1'),'saved-profile');
+ assert.equal(w.sessionStorage.getItem('drills.application.v1'),'tab-profile');
+ w.eval(code);await tick();await tick();assert.equal(reloads,1,'no reload loop');
+});
