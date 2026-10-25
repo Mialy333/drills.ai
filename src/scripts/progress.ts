@@ -1,3 +1,4 @@
+import { applicationUrl } from '../lib/application-context';
 import { readApplicationState, saveApplicationState } from '../lib/application-state';
 import { recordAnalysis } from '../lib/application-history';
 import { locale, translator } from '../lib/locale';
@@ -17,6 +18,7 @@ function render(){
  const list=el('list');list.replaceChildren();
  for(const row of rows.slice(page*6,page*6+6)){
   const card=document.createElement('details');card.append(text('summary',`${row.role}${row.company?' · '+row.company:''} — ${labels[row.status]}`));
+  const url=applicationUrl(row.posting_url??'');if(url){const link=text('a',say('Ouvrir la candidature ↗','Open application ↗')) as HTMLAnchorElement;link.href=url;link.target='_blank';link.rel='noopener noreferrer';card.append(link);}
   card.append(text('p',row.eligibility_pending?say(`${row.eligibility_pending} condition(s) à confirmer`,`${row.eligibility_pending} condition(s) to confirm`):row.score===null?say('Périmètre à vérifier','Scope to review'):`${row.score} % · ${say('compétences documentées','documented skills')}`));
   card.append(text('p',row.analysed_at?say('Dernière analyse : ','Last assessed: ')+new Date(row.analysed_at).toLocaleDateString(language):say('Analyse antérieure importée','Earlier assessment imported')));
   if(row.sent_at)card.append(text('p',say('Envoi déclaré : ','Submission recorded: ')+new Date(row.sent_at).toLocaleDateString(language)));

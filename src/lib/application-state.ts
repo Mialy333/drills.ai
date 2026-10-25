@@ -4,6 +4,9 @@ import { ApplicationResultSchema } from "./application.ts";
 
 export const APPLICATION_KEY = "drills.application.v1";
 export const ApplicationStateSchema = z.object({
+  posting_url: z.string().max(2000).optional(),
+  residence: z.string().max(100).optional(), work_country: z.string().max(100).optional(),
+  work_authorization: z.enum(['unknown','yes','restricted','sponsorship']).optional(),
   history: z.array(HistoryEntrySchema).max(100).optional(),
   version: z.literal(1), expiresAt: z.number(),
   profile: z.string().max(16000), posting: z.string().max(20000),

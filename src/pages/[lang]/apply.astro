@@ -45,6 +45,18 @@ const fr = lang === "fr";
                 <button id="github-add" type="button" class="btn btn-secondary">{fr ? "Ajouter à mon profil" : "Add to my profile"}</button>
               </div>
             </details>
+            <details class="application-import"><summary>{fr ? "Lieu de résidence et droit de travailler" : "Residence and right to work"}</summary>
+              <label for="application-residence">{fr ? "Lieu de résidence (facultatif)" : "Residence (optional)"}</label><input id="application-residence" type="text" maxlength="100" placeholder="Paris, France" />
+              <label for="application-work-country">{fr ? "Pays concerné par ton droit de travailler" : "Country covered by your right to work"}</label><input id="application-work-country" type="text" maxlength="100" placeholder="France" />
+              <label for="application-work-authorization">{fr ? "Ta situation déclarée" : "Your declared situation"}</label>
+              <select id="application-work-authorization">
+                <option value="unknown">{fr ? "À préciser / je ne sais pas" : "Not specified / unsure"}</option>
+                <option value="yes">{fr ? "J’ai le droit d’y travailler sans parrainage de l’employeur" : "I have the right to work there without employer sponsorship"}</option>
+                <option value="restricted">{fr ? "Mon droit de travailler comporte des restrictions" : "My right to work has restrictions"}</option>
+                <option value="sponsorship">{fr ? "J’ai besoin d’une autorisation ou du parrainage de l’employeur" : "I need authorization or employer sponsorship"}</option>
+              </select>
+              <p>{fr ? "Ces informations seront prises en compte au prochain diagnostic. Une déclaration ne constitue pas une vérification administrative. La résidence seule ne permet pas de conclure au droit de travailler." : "These details will inform your next assessment. A declaration is not administrative verification. Residence alone does not establish a right to work."}</p>
+            </details>
             <p id="application-profile-summary" role="status"></p>
             <details id="application-profile-editor"><summary>{fr ? "Écrire, consulter ou modifier mon profil" : "Write, view or edit my profile"}</summary>
             <label for="application-profile">{fr ? "Parcours et preuves" : "Experience and evidence"}</label>
@@ -65,6 +77,8 @@ const fr = lang === "fr";
               <div class="application-actions"><button type="button" id="jobs-previous" class="btn btn-secondary">{fr ? "Précédent" : "Previous"}</button><span id="jobs-page"></span><button type="button" id="jobs-next" class="btn btn-secondary">{fr ? "Suivant" : "Next"}</button></div>
             </section>
             <section id="jobs-posting-editor">
+            <label for="application-posting-url">{fr ? "Lien de l’annonce ou du formulaire de candidature (facultatif)" : "Posting or application form URL (optional)"}</label>
+            <input id="application-posting-url" type="url" maxlength="2000" placeholder="https://…" />
             <label for="application-posting">{fr ? "Texte de l’annonce" : "Job posting text"}</label>
             <textarea id="application-posting" required minlength="50" maxlength="20000" rows="7" autocomplete="off" placeholder={fr ? "Intitulé · missions · compétences · contrat · localisation…" : "Title · duties · skills · contract · location…"}></textarea>
             </section>
@@ -137,6 +151,7 @@ const fr = lang === "fr";
         </div>
       </section>
       <div class="application-actions application-next" id="application-interview-next"><a class="btn btn-primary" href={href(`/${lang}/prepare/`)}>{fr ? "Étape suivante : préparer mon entretien →" : "Next step: prepare for my interview →"}</a></div>
+      <div class="application-card"><a id="application-apply-link" class="btn btn-primary" target="_blank" rel="noopener noreferrer" hidden>{fr ? "Postuler sur le site de l’entreprise ↗" : "Apply on the company’s website ↗"}</a><p id="application-apply-note"></p><p>{fr ? "Après l’envoi, indique « Envoyée » dans Mon suivi. Ouvrir l’annonce ne compte pas comme une candidature envoyée." : "After submitting, mark it Sent in My progress. Opening a posting does not count as an application sent."}</p></div>
       <section id="application-print" hidden><div id="application-print-text"></div></section>
     </section>
   </section>

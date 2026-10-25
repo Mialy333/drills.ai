@@ -265,3 +265,24 @@ test('opportunities paginate four at a time and selection opens the posting edit
  assert.equal(el('results').children.length,4);assert.match(el('results').textContent,/Agent Intern 4/);el('next').click();assert.equal(el('results').children.length,1);
  el('results').querySelector('button').click();assert.equal(el('browser').hidden,true);assert.equal(el('posting-editor').hidden,false);
 });
+
+
+test('selected job preserves an application link in diagnosis and history without recording a send',async t=>{
+ const {w,get}=setup(t);get('profile').value=profileText;
+ const description='AI Agent Engineer internship building tools and evaluating API workflows.';
+ w.fetch=async(url)=>url.endsWith('/api/jobs')?{ok:true,json:async()=>({jobs:[{title:'Agent intern',company:'Example',location:'Paris',description,url:'https://example.com/apply/123'}],unavailable_sources:[]})}:{ok:true,json:async()=>fixture};
+ w.document.getElementById('jobs-load').click();await tick();w.document.querySelector('#jobs-results button').click();
+ assert.equal(get('posting-url').value,'https://example.com/apply/123');get('consent').checked=true;submit(w,get);await done(get);
+ assert.equal(get('apply-link').href,'https://example.com/apply/123');assert.equal(get('apply-link').hidden,false);
+ get('apply-link').addEventListener('click',event=>event.preventDefault());get('apply-link').click();
+ const saved=JSON.parse(w.sessionStorage.getItem('drills.application.v1'));assert.equal(saved.history[0].posting_url,'https://example.com/apply/123');assert.equal(saved.history[0].sent_at,null);
+ get('posting').value='A different role';get('posting').dispatchEvent(new w.Event('input'));assert.equal(get('posting-url').value,'');assert.equal(get('apply-link').hidden,true);
+});
+test('work rights are explicit country-scoped declarations and changes invalidate diagnosis',async t=>{
+ const {w,get,calls}=setup(t);get('profile').value=profileText;get('posting').value='AI Agent Engineer internship building tools and evaluating API workflows.';
+ get('residence').value='Paris, France';get('work-country').value='France';get('work-authorization').value='yes';get('consent').checked=true;
+ submit(w,get);await done(get);assert.match(calls[0].body.candidate_text,/Candidate-declared work country: France/);assert.match(calls[0].body.candidate_text,/without employer sponsorship/);
+ const saved=JSON.parse(w.sessionStorage.getItem('drills.application.v1'));assert.equal(saved.work_authorization,'yes');assert.equal(saved.profile,profileText);
+ get('work-authorization').value='unknown';get('work-authorization').dispatchEvent(new w.Event('input'));assert.equal(get('results').hidden,true);
+ get('posting-url').value='javascript:alert(1)';get('posting-url').dispatchEvent(new w.Event('input'));assert.equal(get('apply-link').hasAttribute('href'),false);
+});

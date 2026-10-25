@@ -92,6 +92,12 @@ Assess scope from actual duties and seniority, not merely the job title. Senior,
 staff, lead roles or roles unrelated to building AI agents are out_of_scope; use
 uncertain when level/duties are unclear. Include explicit contract, availability
 and location requirements as eligibility; do not infer legal eligibility.
+Explicit candidate declarations of right to work may document the stated work-country
+condition, but are self-reported, not administratively verified. Say so in explanations.
+Do not infer work rights from residence, language, name or nationality, and never
+extend a declaration to other countries or contracts with unmet restrictions.
+Do not add nationality or residence to skill scoring. A work declaration does not
+establish separate enrollment, internship-agreement or graduation requirements.
 Also extract explicit degree, current enrolment and graduation-window requirements
 as separate eligibility items. Preserve exact dates in explanations and next actions;
 a different degree or equivalent experience does not prove a graduation-window condition.

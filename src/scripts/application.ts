@@ -1,3 +1,4 @@
+import { applicationUrl, profileWithEligibility } from '../lib/application-context';
 import { recordAnalysis, type HistoryEntry } from "../lib/application-history";
 import { locale, translator, cvHeading } from "../lib/locale";
 import { fetchGithubProject } from "../lib/github-project";
@@ -18,6 +19,17 @@ let historyRows: HistoryEntry[] = [];
 const fields = element<HTMLFieldSetElement>("application-inputs");
 const profile = element<HTMLTextAreaElement>("application-profile");
 const posting = element<HTMLTextAreaElement>("application-posting");
+const postingUrl=element<HTMLInputElement>('application-posting-url');
+let linkedPosting='';
+const residence=element<HTMLInputElement>('application-residence');
+const workCountry=element<HTMLInputElement>('application-work-country');
+const workAuthorization=element<HTMLSelectElement>('application-work-authorization');
+const candidateProfile=()=>profileWithEligibility(profile.value,residence.value,workCountry.value,workAuthorization.value);
+function renderApplyLink(){
+ const url=applicationUrl(postingUrl.value);const link=element<HTMLAnchorElement>('application-apply-link');link.hidden=!url;
+ if(url)link.href=url;else link.removeAttribute('href');
+ element('application-apply-note').textContent=url?say('Destination : ','Destination: ')+new URL(url).hostname:say('Ajoute le lien de candidature dans Opportunités pour retrouver le site où postuler.','Add the application link in Opportunities to return to the application website.');
+}
 const consent = element<HTMLInputElement>("application-consent");
 const pdf = element<HTMLInputElement>("application-pdf");
 const results = element<HTMLElement>("application-results");
@@ -42,7 +54,7 @@ function profileSummary(): void {
 function persist(): boolean {
   profileSummary();
   try {
-    const saved = saveApplicationState({history:historyRows, version: 1, expiresAt: Date.now() + (remember.checked ? 30 : 1) * 86400000,
+    const saved = saveApplicationState({posting_url:postingUrl.value,residence:residence.value,work_country:workCountry.value,work_authorization:workAuthorization.value as "unknown"|"yes"|"restricted"|"sponsorship",history:historyRows, version: 1, expiresAt: Date.now() + (remember.checked ? 30 : 1) * 86400000,
       practice_text: readApplicationState(sessionStorage,localStorage)?.practice_text, contact: contact.value, profile: profile.value, posting: posting.value, result: currentResult, cv: cv.value, cv_html: cvEditor.html(), pitch: pitch.value,
       reviewed: reviewed.checked, remember: remember.checked}, sessionStorage, localStorage);
     if (!saved) status(say("Le stockage est indisponible. Garde cet onglet ouvert et exporte tes textes avant de quitter.", "Storage is unavailable. Keep this tab open and export your text before leaving."));
@@ -118,7 +130,7 @@ async function perform(task: (signal: AbortSignal) => Promise<void>, message: st
 }
 
 function render(result: ApplicationResult): void {
-  currentResult = result;
+  currentResult = result; renderApplyLink();
   element("application-result-title").textContent = result.role_title;
   element("application-scope").textContent = result.scope_reason;
   const conditions=result.requirements.filter(item=>item.kind==='eligibility'&&item.status!=='documented');
@@ -136,7 +148,7 @@ function render(result: ApplicationResult): void {
   evidence.replaceChildren(...[...result.requirements].sort((a,b)=>Number(b.kind==='eligibility')-Number(a.kind==='eligibility')).map((item) => {
     const card = document.createElement("details"); card.className="evidence-card";
     card.dataset.evidence = item.status;
-    const state = { documented: say("Documenté", "Documented"), partial: say("Partiel", "Partial"), not_documented: say("Non documenté", "Not documented") }[item.status];
+    const state = { documented: item.kind==='eligibility'?say("Déclaré dans ton profil", "Declared in your profile"):say("Documenté", "Documented"), partial: say("Partiel", "Partial"), not_documented: say("Non documenté", "Not documented") }[item.status];
     const priority = { core: say("Essentielle", "Core"), important: say("Importante", "Important"), supporting: say("Complémentaire", "Supporting") }[item.priority];
     const badge = text("span", state); badge.className = "evidence-badge";
     const meaning = { documented: say("Une preuve figure dans ton profil. Prépare un exemple pour l’entretien.", "Your profile contains evidence. Prepare an example for the interview."), partial: say("Ton profil couvre une partie du besoin. Précise ta contribution ou ajoute une preuve.", "Your profile covers part of this requirement. Clarify your contribution or add evidence."), not_documented: say("Aucune preuve suffisante dans les éléments fournis : cela ne signifie pas que tu ne sais pas le faire.", "No sufficient evidence in the supplied information: this does not mean you cannot do it.") }[item.status];
@@ -186,6 +198,8 @@ async function extractProfile(file: File, signal: AbortSignal): Promise<void> {
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   if (controller) return;
+  if(workAuthorization.value!=='unknown'&&!workCountry.value.trim()){setStep('profile');workCountry.closest('details')!.open=true;status(say('Précise le pays concerné par ton droit de travailler.','Specify the country covered by your right to work.'));workCountry.focus();return;}
+  if(postingUrl.value.trim()&&!applicationUrl(postingUrl.value)){status(say('Le lien doit être une adresse HTTPS valide.','Enter a valid HTTPS link.'));return;}
   if (profileMode && !pdf.files?.length && profile.value.trim().length>=50) { if(persist()) setStep('posting'); return; }
   if (!consent.checked) { consent.reportValidity(); status(say("Confirme l’envoi à l’IA avant de continuer.", "Confirm sharing with AI before continuing.")); return; }
   const file = pdf.files?.[0];
@@ -203,7 +217,8 @@ form.addEventListener("submit", (event) => {
       if (!persist()) return;
       setStep('posting'); status(say('Profil prêt. Choisis ou colle une annonce.', 'Profile ready. Choose or paste a posting.')); return;
     }
-    const candidate = profile.value.trim();
+    const candidate = candidateProfile();
+    if(candidate.length>16000){status(say('Raccourcis ton profil pour inclure tes conditions de candidature (16 000 caractères au total).','Shorten your profile to include eligibility details (16,000 characters total).'));return;}
     resetResults(); persist();
     status(say("Étape 2/2 · Comparaison de ton profil avec l’annonce et préparation de ta candidature…", "Step 2/2 · Comparing your profile with the posting and preparing your application…"));
     const raw = await post("/api/application", { candidate_text: candidate, job_description: job, output_language: fr ? "fr" : "en", consent: true }, signal);
@@ -211,7 +226,7 @@ form.addEventListener("submit", (event) => {
     const result = ApplicationResultSchema.parse(raw);
     if (result.output_language !== (fr ? "fr" : "en")) throw new Error("language");
     inputSnapshot = { profile: candidate, posting: job };
-    historyRows=recordAnalysis(historyRows,job,result);
+    historyRows=recordAnalysis(historyRows,job,result,undefined,applicationUrl(postingUrl.value)??undefined);
     render(result); persist();
     status(say("Diagnostic prêt. Vérifie les preuves et les textes proposés, notamment les informations extraites du CV.", "Assessment ready. Review the evidence and drafts, including the information extracted from your CV."));
     element("application-page").scrollIntoView?.({behavior:"smooth",block:"start"});
@@ -243,8 +258,9 @@ element("application-example").addEventListener("click", () => {
   status(say("Exemple fictif chargé. Une analyse réelle via OpenAI sera effectuée après ton accord.", "Fictional example loaded. A real OpenAI analysis will run after your consent."));
 });
 
-for (const input of [profile, posting]) input.addEventListener("input", () => {
-  if (inputSnapshot && applicationDraftChanged(inputSnapshot.profile, inputSnapshot.posting, profile.value, posting.value)) {
+for (const input of [profile, posting, residence, workCountry, workAuthorization]) input.addEventListener("input", () => {
+  if(input===posting&&linkedPosting&&linkedPosting!==posting.value.trim()){postingUrl.value='';linkedPosting='';renderApplyLink();}
+  if (inputSnapshot && applicationDraftChanged(inputSnapshot.profile, inputSnapshot.posting, candidateProfile(), posting.value)) {
     resetResults(); status(say("Les données ont changé. Relance la préparation pour un bilan à jour.", "Inputs changed. Run preparation again for an updated assessment."));
   }
   persist();
@@ -277,7 +293,7 @@ download.addEventListener("click", () => {
 cancel.addEventListener("click", () => controller?.abort());
 element("application-clear").addEventListener("click", () => {
   controller?.abort(); controller = null; busy(false);
-  form.reset(); resetResults(); historyRows=[]; setStep("profile"); contact.value = ""; element("cv-contact-preview").textContent="";
+  form.reset(); linkedPosting='';resetResults(); historyRows=[]; setStep("profile"); contact.value = ""; element("cv-contact-preview").textContent="";
   try { clearApplicationState(sessionStorage, localStorage); } catch {}
   deleteCandidateProfile();
   profileSummary();
@@ -291,11 +307,12 @@ try {
   const saved = readApplicationState(sessionStorage, localStorage);
   if (saved) {
     historyRows=saved.history ?? (saved.result ? recordAnalysis([],saved.posting,saved.result,null) : []);
+    postingUrl.value=saved.posting_url??'';linkedPosting=postingUrl.value?saved.posting.trim():'';residence.value=saved.residence??'';workCountry.value=saved.work_country??'';workAuthorization.value=saved.work_authorization??'unknown';
     contact.value = saved.contact ?? ""; element("cv-contact-preview").textContent=contact.value;
     profile.value = saved.profile; posting.value = saved.posting; remember.checked = saved.remember;
     editor.open = false;
     if (saved.result) {
-      inputSnapshot = {profile: saved.profile, posting: saved.posting};
+      inputSnapshot = {profile: candidateProfile(), posting: saved.posting};
       render(saved.result); if (saved.cv_html) cvEditor.setHtml(saved.cv_html, saved.result.cv_sections.map(section=>section.heading)); else { cvEditor.setText(saved.cv); cvEditor.reformat(saved.result.cv_sections.map(section=>section.heading), false); } pitch.value = saved.pitch;
       reviewed.checked = saved.reviewed; printButton.disabled = download.disabled = !saved.reviewed;
       if (saved.result.output_language !== (fr ? "fr" : "en")) status(say("Ton dossier et tes modifications sont conservés. Les textes restent dans leur langue d’origine ; changer la langue de l’interface ne les traduit pas.", "Your application and edits are preserved. Drafts remain in their original language; changing the interface language does not translate them."));
@@ -404,7 +421,7 @@ function renderJobs():void{
   const choose=text('button',say('Choisir cette offre →','Choose this opening →')) as HTMLButtonElement;choose.type='button';choose.className='btn btn-secondary';
   choose.addEventListener('click',()=>{
    if(posting.value.trim()&&posting.value!==job.description&&!window.confirm(say('Remplacer l’annonce actuelle ?','Replace the current posting?')))return;
-   posting.value=job.description;posting.dispatchEvent(new Event('input',{bubbles:true}));showPosting(true);
+   posting.value=job.description;posting.dispatchEvent(new Event('input',{bubbles:true}));postingUrl.value=url.href;linkedPosting=posting.value.trim();persist();renderApplyLink();showPosting(true);
    element('application-heading-title').scrollIntoView?.({block:'start'});posting.focus();
    status(say('Offre sélectionnée. Vérifie le texte et lance ton diagnostic.','Opening selected. Review the text and start your assessment.'));
   });
@@ -431,4 +448,10 @@ element('jobs-load').addEventListener('click',async()=>{
   renderJobs();
  }catch{message.textContent=say('Recherche indisponible. Ton dossier est conservé ; colle une annonce pour continuer.','Search unavailable. Your application is preserved; paste a posting to continue.');}
  finally{window.clearTimeout(timer);button.disabled=false;}
+});
+
+postingUrl.addEventListener('input',()=>{
+ linkedPosting=posting.value.trim();renderApplyLink();
+ historyRows=historyRows.map(row=>row.posting.trim()===posting.value.trim()?{...row,posting_url:applicationUrl(postingUrl.value)??''}:row);
+ persist();
 });
