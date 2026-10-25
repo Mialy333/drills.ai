@@ -59,6 +59,8 @@ class DrillContent(StrictSchema):
 class DynamicDrillSchema(RoleAnalysis, LearningRoadmap, DrillContent):
     """Canonical payload expected by the existing browser generator."""
 
+    output_language: Literal["fr", "en"] = "en"
+
 
 class ValidationReport(StrictSchema):
     passed: bool
