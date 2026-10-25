@@ -2,7 +2,8 @@
 // Old URLs (/fr/drills/d1/) from the first version: send them to the Python track.
 import { drills, href, LANGS, type Lang } from "../../../lib/drills";
 
-export function getStaticPaths() {
+export function getStaticPaths() { return []; }
+function archivedStaticPaths() {
   return import.meta.env.DEV
     ? LANGS.flatMap((lang) => drills("python", lang).map((d) => ({ params: { lang, id: d.id } })))
     : [];

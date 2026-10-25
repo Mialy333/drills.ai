@@ -31,7 +31,7 @@ def result():
 
 @pytest.fixture
 def analysis(result):
-    return ApplicationAnalysis.model_validate(result.model_dump(exclude={"score", "decision", "output_language"}))
+    return ApplicationAnalysis.model_validate(result.model_dump(exclude={"score", "decision", "output_language", "interview_questions"}))
 
 
 def test_score_is_calculated_from_evidence_and_weights(analysis, payload):
@@ -171,3 +171,15 @@ def test_application_rate_limit_blocks_fourth_call(client, payload, result, monk
         assert codes == [200, 200, 200, 429]
     finally:
         api_main.limiter.reset()
+
+
+def test_interview_cases_are_fixed_bilingual_catalog_not_model_output():
+    from src.ai_generator.application import select_interview_cases
+    assert "interview_questions" not in ApplicationAnalysis.model_fields
+    api_cases = select_interview_cases("API tool workflow retry MCP", "en")
+    eval_cases = select_interview_cases("evaluation test quality monitor", "en")
+    assert api_cases[0].question == "A tool fails: what should your agent do?"
+    assert eval_cases[0].question == "How would you demonstrate that your agent improved?"
+    assert {case.question for case in api_cases} == {case.question for case in eval_cases}
+    assert len(select_interview_cases("sécurité RAG", "fr")) == 3
+    assert "frontières de confiance" in select_interview_cases("sécurité RAG", "fr")[0].looking_for

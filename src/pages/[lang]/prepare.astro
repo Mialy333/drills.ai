@@ -1,0 +1,25 @@
+---
+import App from "../../layouts/App.astro";
+import { LANGS, href, type Lang } from "../../lib/drills";
+import catalog from "../../lib/interview-cases.json";
+export function getStaticPaths() { return LANGS.map(lang => ({ params: { lang } })); }
+const lang = Astro.params.lang as Lang;
+const fr = lang === "fr";
+---
+<App lang={lang} title={fr ? "Préparer mon entretien" : "Prepare for my interview"} path="/prepare/" section="prepare">
+  <section class="block">
+    <p class="section-eyebrow">{fr ? "CAS RÉDIGÉS · GRILLES FIXES · VERSION 1" : "AUTHORED CASES · FIXED RUBRICS · VERSION 1"}</p>
+    <h1>{fr ? "Explique tes choix d’Agent Engineer." : "Explain your Agent Engineering decisions."}</h1>
+    <p>{fr ? "Trois mises en situation pour un premier poste, sans code à exécuter. Prépare ta réponse, puis compare-la à la grille. Ce ne sont pas les questions confirmées d’un employeur." : "Three first-role scenarios, with no code to run. Prepare your answer, then compare it to the rubric. These are not confirmed employer questions."}</p>
+    <div class="interview-cases">
+      {catalog.cases.map(item => <article class="panel" id={item.id}>
+        <h2>{item[lang].title}</h2><p>{item[lang].scenario}</p>
+        <label for={`answer-${item.id}`}>{fr ? "Ta réponse (brouillon non enregistré)" : "Your answer (unsaved draft)"}</label>
+        <textarea id={`answer-${item.id}`} rows="5" maxlength="5000"></textarea>
+        <details><summary>{fr ? "Comparer avec les critères de correction" : "Compare with the review criteria"}</summary><ul>{item[lang].criteria.map(criterion => <li>{criterion}</li>)}</ul><p>{fr ? "Références de la grille" : "Rubric references"}</p><ul>{item.references.map(source => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label}</a></li>)}</ul></details>
+      </article>)}
+    </div>
+    <a class="btn btn-primary" href={href(`/${lang}/apply/`)}>{fr ? "Revenir à ma candidature" : "Back to my application"}</a>
+  </section>
+  <style>.interview-cases { display: grid; gap: 24px; margin: 28px 0; }.interview-cases article { padding: 24px; }.interview-cases p, .interview-cases li { line-height: 1.7; }.interview-cases textarea { width: 100%; margin: 12px 0; padding: 14px; font: inherit; }.interview-cases label { display: block; }.interview-cases summary { cursor: pointer; padding: 16px 0; }</style>
+</App>

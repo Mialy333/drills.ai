@@ -4,7 +4,8 @@ import CompanionPanel from "../../../components/CompanionPanel.astro";
 import { drills, href, LANGS, neighbours, READY_TRACKS, type Drill, type Lang, type Track } from "../../../lib/drills";
 import { ui } from "../../../lib/i18n";
 
-export function getStaticPaths() {
+export function getStaticPaths() { return []; }
+function archivedStaticPaths() {
   const drillPaths = import.meta.env.DEV ? LANGS.flatMap((lang) =>
     READY_TRACKS.flatMap((track) =>
       drills(track, lang).map((d) => ({ params: { lang, track, id: d.id }, props: { d } })),

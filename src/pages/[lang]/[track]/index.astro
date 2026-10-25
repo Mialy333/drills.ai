@@ -3,7 +3,8 @@ import App from "../../../layouts/App.astro";
 import { href, LANGS, READY_TRACKS, type Lang, type Track } from "../../../lib/drills";
 import { ui } from "../../../lib/i18n";
 
-export function getStaticPaths() {
+export function getStaticPaths() { return []; }
+function archivedStaticPaths() {
   return LANGS.flatMap((lang) => READY_TRACKS.map((track) => ({ params: { lang, track } })));
 }
 

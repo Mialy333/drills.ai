@@ -1,6 +1,7 @@
 import { apiEndpoint } from "../lib/api-client";
 import { applicationCv, applicationDraftChanged, ApplicationResultSchema, type ApplicationResult } from "../lib/application";
-import { readCandidateProfile } from "../lib/candidate-profile";
+import { readApplicationState, saveApplicationState, clearApplicationState } from "../lib/application-state";
+import { readCandidateProfile, deleteCandidateProfile } from "../lib/candidate-profile";
 
 const fr = document.documentElement.lang === "fr";
 const say = (french: string, english: string): string => fr ? french : english;
@@ -19,12 +20,31 @@ const reviewed = element<HTMLInputElement>("application-reviewed");
 const cancel = element<HTMLButtonElement>("application-cancel");
 const printButton = element<HTMLButtonElement>("application-print-button");
 const download = element<HTMLButtonElement>("application-download");
+const remember = element<HTMLInputElement>("application-remember");
+const editor = element<HTMLDetailsElement>("application-profile-editor");
+let currentResult: ApplicationResult | null = null;
 let controller: AbortController | null = null;
+
+function profileSummary(): void {
+  element("application-profile-summary").textContent = profile.value.trim().length >= 50
+    ? say("Profil prêt : il sera réutilisé pour cette annonce. Tu peux le consulter ou le corriger ci-dessous.", "Profile ready: it will be reused for this posting. You can view or edit it below.")
+    : say("Importe ton CV ou ouvre la saisie manuelle. Aucun texte supplémentaire n’est demandé après l’import.", "Import your CV or open manual entry. No additional text is required after import.");
+}
+function persist(): void {
+  profileSummary();
+  try {
+    const saved = saveApplicationState({version: 1, expiresAt: Date.now() + (remember.checked ? 30 : 1) * 86400000,
+      profile: profile.value, posting: posting.value, result: currentResult, cv: cv.value, pitch: pitch.value,
+      reviewed: reviewed.checked, remember: remember.checked}, sessionStorage, localStorage);
+    if (!saved) status(say("Le stockage est indisponible. Garde cet onglet ouvert et exporte tes textes avant de quitter.", "Storage is unavailable. Keep this tab open and export your text before leaving."));
+  } catch { status(say("Le stockage est indisponible : ce dossier restera uniquement dans la page ouverte.", "Storage is unavailable: this application will remain only in the open page.")); }
+}
 let inputSnapshot: { profile: string; posting: string } | null = null;
 
 function status(message: string): void { element("application-status").textContent = message; }
 function resetResults(): void {
   results.hidden = true;
+  currentResult = null;
   reviewed.checked = false;
   printButton.disabled = download.disabled = true;
   cv.value = pitch.value = "";
@@ -47,11 +67,15 @@ async function post(path: "/api/application" | "/api/profile-import", body: unkn
   });
   if (response.status === 429) throw new Error("limited");
   if (response.status === 503) throw new Error("unavailable");
+  if (response.status === 422) throw new Error("invalid-input");
+  if (response.status === 502) throw new Error("validation");
   if (!response.ok) throw new Error("failed");
   return response.json();
 }
 
 function errorMessage(error: unknown): string {
+  if (error instanceof TypeError) return say("Impossible de joindre le service. Vérifie que le serveur DRILLS est démarré, puis réessaie. Ton profil est conservé.", "Cannot reach the service. Check that the DRILLS server is running, then try again. Your profile is preserved.");
+  if (error instanceof Error && error.message === "invalid-input") return say("Le document ou le texte envoyé n’est pas valide. Vérifie le PDF et colle l’annonce complète.", "The document or text is invalid. Check the PDF and paste the full posting.");
   if (error instanceof DOMException && error.name === "AbortError") return say("Préparation annulée ou délai dépassé. Tes champs sont conservés.", "Preparation cancelled or timed out. Your fields are preserved.");
   if (error instanceof Error && error.message === "limited") return say("Le service a atteint sa limite temporaire. Réessaie plus tard ; tes champs sont conservés.", "The service reached its temporary limit. Try later; your fields are preserved.");
   if (error instanceof Error && error.message === "unavailable") return say("La préparation IA n’est pas disponible pour le moment. Tes champs sont conservés.", "AI preparation is currently unavailable. Your fields are preserved.");
@@ -74,6 +98,7 @@ async function perform(task: (signal: AbortSignal) => Promise<void>, message: st
 }
 
 function render(result: ApplicationResult): void {
+  currentResult = result;
   element("application-result-title").textContent = result.role_title;
   element("application-scope").textContent = result.scope_reason;
   element("application-score").textContent = result.score === null
@@ -116,10 +141,13 @@ function render(result: ApplicationResult): void {
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (!form.reportValidity() || !consent.checked) return;
+  if (!consent.checked) { consent.reportValidity(); status(say("Confirme l’envoi à l’IA avant de continuer.", "Confirm sharing with AI before continuing.")); return; }
+  if (profile.value.trim().length < 50 && pdf.files?.length) { element("application-import").click(); return; }
+  if (!form.reportValidity()) return;
   const candidate = profile.value.trim();
   const job = posting.value.trim();
   if (candidate.length < 50 || job.length < 50) {
+    editor.open = true;
     status(say("Décris ton parcours et colle une annonce complète (50 caractères minimum chacun).", "Describe your experience and paste a full posting (at least 50 characters each)."));
     return;
   }
@@ -131,6 +159,7 @@ form.addEventListener("submit", (event) => {
     if (result.output_language !== (fr ? "fr" : "en")) throw new Error("language");
     inputSnapshot = { profile: candidate, posting: job };
     render(result);
+    persist();
     status(say("Bilan prêt. Relis les preuves, puis personnalise tes textes avant export.", "Assessment ready. Review the evidence, then personalise your drafts before export."));
   }, say("Analyse de l’annonce, rapprochement des preuves et préparation des textes…", "Analysing the posting, matching evidence and preparing drafts…"));
 });
@@ -154,17 +183,11 @@ element("application-import").addEventListener("click", () => {
     if (!raw || typeof raw !== "object" || !("candidate_text" in raw) || typeof raw.candidate_text !== "string" || !raw.candidate_text.trim() || raw.candidate_text.length > 16000) throw new Error("invalid");
     resetResults();
     profile.value = raw.candidate_text;
+    editor.open = true;
+    persist();
     pdf.value = "";
     status(say("Texte extrait. Relis-le et corrige-le avant de préparer ta candidature.", "Text extracted. Review and correct it before preparing your application."));
   }, say("Extraction du CV en cours…", "Extracting CV text…"));
-});
-
-element("application-reuse").addEventListener("click", () => {
-  const saved = readCandidateProfile();
-  if (!saved) { status(say("Aucun profil enregistré. Colle ton parcours ou importe ton CV.", "No saved profile. Paste your experience or import your CV.")); return; }
-  resetResults();
-  profile.value = [saved.experiences.map((item) => `${item.role} · ${item.company} · ${item.period}\n${item.summary}`).join("\n\n"), saved.schools.join("\n")].filter(Boolean).join("\n\n");
-  status(say("Profil repris localement. Vérifie-le avant l’envoi.", "Profile loaded locally. Review it before sending."));
 });
 
 element("application-example").addEventListener("click", () => {
@@ -176,6 +199,8 @@ element("application-example").addEventListener("click", () => {
     ? "ANNONCE FICTIVE — EXEMPLE DE DÉMONSTRATION\nStage AI Agent Engineer à Paris. Missions : construire un agent qui classe les demandes et appelle une API métier, tester les erreurs et documenter le workflow. Python et API REST indispensables ; tests automatisés importants. LangGraph est un plus. Stage de six mois, disponibilité à confirmer."
     : "FICTIONAL POSTING — DEMONSTRATION EXAMPLE\nAI Agent Engineer internship in Paris. Build an agent that classifies requests and calls a business API, test failure cases and document the workflow. Python and REST APIs are essential; automated tests are important. LangGraph is a bonus. Six-month internship; availability to be confirmed.";
   consent.checked = false;
+  editor.open = true;
+  persist();
   status(say("Exemple fictif chargé. Une analyse réelle via OpenAI sera effectuée après ton accord.", "Fictional example loaded. A real OpenAI analysis will run after your consent."));
 });
 
@@ -183,11 +208,14 @@ for (const input of [profile, posting]) input.addEventListener("input", () => {
   if (inputSnapshot && applicationDraftChanged(inputSnapshot.profile, inputSnapshot.posting, profile.value, posting.value)) {
     resetResults(); status(say("Les données ont changé. Relance la préparation pour un bilan à jour.", "Inputs changed. Run preparation again for an updated assessment."));
   }
+  persist();
 });
 for (const input of [cv, pitch, contact]) input.addEventListener("input", () => {
   reviewed.checked = false; printButton.disabled = download.disabled = true;
+  persist();
 });
-reviewed.addEventListener("change", () => { printButton.disabled = download.disabled = !reviewed.checked; });
+reviewed.addEventListener("change", () => { printButton.disabled = download.disabled = !reviewed.checked; persist(); });
+remember.addEventListener("change", persist);
 const cvText = (): string => [contact.value.trim(), cv.value.trim()].filter(Boolean).join("\n\n");
 printButton.addEventListener("click", () => {
   if (!reviewed.checked || results.hidden) return;
@@ -206,5 +234,33 @@ cancel.addEventListener("click", () => controller?.abort());
 element("application-clear").addEventListener("click", () => {
   controller?.abort(); controller = null; busy(false);
   form.reset(); resetResults(); contact.value = "";
-  status(say("Dossier effacé de cette page. Les profils enregistrés ailleurs restent inchangés.", "Application cleared from this page. Profiles saved elsewhere are unchanged."));
+  try { clearApplicationState(sessionStorage, localStorage); } catch {}
+  deleteCandidateProfile();
+  profileSummary();
+  status(say("Dossier et profil candidat effacés de ce navigateur. Les fichiers exportés restent sur ton appareil.", "Application and candidate profile deleted from this browser. Exported files remain on your device."));
+});
+
+// One profile shared by the application and progress pages, with opt-in durable storage.
+try {
+  const saved = readApplicationState(sessionStorage, localStorage);
+  if (saved) {
+    profile.value = saved.profile; posting.value = saved.posting; remember.checked = saved.remember;
+    editor.open = false;
+    if (saved.result && saved.result.output_language === (fr ? "fr" : "en")) {
+      inputSnapshot = {profile: saved.profile, posting: saved.posting};
+      render(saved.result); cv.value = saved.cv; pitch.value = saved.pitch;
+      reviewed.checked = saved.reviewed; printButton.disabled = download.disabled = !saved.reviewed;
+    }
+  } else {
+    const legacy = readCandidateProfile();
+    if (legacy) { profile.value = [legacy.experiences.map(item => `${item.role} · ${item.company} · ${item.period}\n${item.summary}`).join("\n\n"), legacy.schools.join("\n")].join("\n\n"); persist(); }
+  }
+} catch { /* Manual input and import remain available without storage. */ }
+profileSummary();
+pdf.addEventListener("change", () => {
+  if (pdf.files?.length && consent.checked) element("application-import").click();
+  else if (pdf.files?.length) status(say("CV sélectionné. Confirme l’envoi à l’IA ci-dessous : l’extraction démarrera automatiquement.", "CV selected. Confirm sharing with AI below: extraction will start automatically."));
+});
+consent.addEventListener("change", () => {
+  if (consent.checked && pdf.files?.length) element("application-import").click();
 });

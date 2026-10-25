@@ -1,6 +1,6 @@
 ---
 import App from "../../layouts/App.astro";
-import { LANGS, type Lang } from "../../lib/drills";
+import { LANGS, href, type Lang } from "../../lib/drills";
 export function getStaticPaths() { return LANGS.map((lang) => ({ params: { lang } })); }
 const lang = Astro.params.lang as Lang;
 const fr = lang === "fr";
@@ -19,23 +19,27 @@ const fr = lang === "fr";
       <fieldset id="application-inputs" class="application-inputs">
         <legend class="sr-only">{fr ? "Préparer une candidature" : "Prepare an application"}</legend>
         <div class="application-grid">
-          <section class="application-card">
+          <section class="application-card" id="application-profile-card">
             <h2>{fr ? "01 · Ton parcours, avec tes mots" : "01 · Your experience, in your words"}</h2>
-            <p>{fr ? "Colle le texte de ton CV ou décris tes expériences, projets et formations. Garde les dates et distingue ce que tu as réalisé de ce que tu apprends." : "Paste your CV text or describe your experience, projects and education. Keep dates and distinguish completed work from what you are learning."}</p>
-            <label for="application-profile">{fr ? "Parcours et preuves" : "Experience and evidence"}</label>
-            <textarea id="application-profile" required minlength="50" maxlength="16000" rows="13" autocomplete="off" placeholder={fr ? "Expériences · contributions concrètes · projets · formations…" : "Experience · concrete contributions · projects · education…"}></textarea>
-            <button type="button" class="btn btn-secondary" id="application-reuse">{fr ? "Reprendre mon profil enregistré" : "Use my saved profile"}</button>
-            <details class="application-import">
-              <summary>{fr ? "Ou importer un CV PDF (4 Mio max.)" : "Or import a PDF CV (4 MiB max.)"}</summary>
-              <p>{fr ? "L’import remplace le texte ci-dessus. Relis et corrige l’extraction avant l’analyse. Le fichier sera transmis à OpenAI après ton accord ci-dessous." : "Import replaces the text above. Review and correct the extraction before analysis. The file is sent to OpenAI after you agree below."}</p>
+            <p>{fr ? "Importe ton CV : ton parcours sera rempli automatiquement. Tu peux aussi saisir un profil une fois, puis le réutiliser pour tes annonces." : "Import your CV to fill your experience automatically. You can also enter a profile once and reuse it for your postings."}</p>
+            <div class="application-import">
+              <h3>{fr ? "Importer mon CV PDF (4 Mio max.)" : "Import my PDF CV (4 MiB max.)"}</h3>
+              <p>{fr ? "L’import remplace le profil actuel, sans ressaisie. Relis et corrige l’extraction avant l’analyse. Le fichier sera transmis à OpenAI après ton accord ci-dessous." : "Import replaces the current profile, without retyping. Review and correct the extraction before analysis. The file is sent to OpenAI after you agree below."}</p>
               <label for="application-pdf">{fr ? "CV au format PDF" : "PDF CV"}</label>
               <input id="application-pdf" type="file" accept="application/pdf,.pdf" />
               <button type="button" class="btn btn-secondary" id="application-import">{fr ? "Extraire le texte du CV" : "Extract CV text"}</button>
+            </div>
+            <p id="application-profile-summary" role="status"></p>
+            <details id="application-profile-editor"><summary>{fr ? "Écrire, consulter ou modifier mon profil" : "Write, view or edit my profile"}</summary>
+            <label for="application-profile">{fr ? "Parcours et preuves" : "Experience and evidence"}</label>
+            <textarea id="application-profile" maxlength="16000" rows="13" autocomplete="off" placeholder={fr ? "Expériences · contributions concrètes · projets · formations…" : "Experience · concrete contributions · projects · education…"}></textarea>
             </details>
+
           </section>
           <section class="application-card">
             <h2>{fr ? "02 · L’opportunité que tu vises" : "02 · The opportunity you want"}</h2>
             <p>{fr ? "Stage, alternance ou premier emploi : colle l’annonce complète, avec les missions, compétences et conditions. Un lien seul ne suffit pas." : "Internship, apprenticeship or first job: paste the full posting, including duties, skills and conditions. A link alone is not enough."}</p>
+            <p>{fr ? "Ton profil est repris automatiquement : aucune expérience à ressaisir ici." : "Your profile is reused automatically: no experience to enter again here."}</p>
             <label for="application-posting">{fr ? "Texte de l’annonce" : "Job posting text"}</label>
             <textarea id="application-posting" required minlength="50" maxlength="20000" rows="13" autocomplete="off" placeholder={fr ? "Intitulé · missions · compétences · contrat · localisation…" : "Title · duties · skills · contract · location…"}></textarea>
             <p class="application-note">{fr ? "Les conditions de candidature sont séparées des compétences. Le bilan ne prédit pas tes chances de recrutement." : "Application conditions are separate from skills. The assessment does not predict hiring chances."}</p>
@@ -45,7 +49,8 @@ const fr = lang === "fr";
           <label class="application-check"><input id="application-consent" type="checkbox" required />
             <span>{fr ? "J’accepte l’envoi des données saisies (et du PDF si je l’importe) au serveur DRILLS et à OpenAI pour cette préparation. Je retire les informations sensibles inutiles." : "I agree to send the entered data (and the PDF if imported) to the DRILLS server and OpenAI for this preparation. I remove unnecessary sensitive information."}</span>
           </label>
-          <p class="application-note">{fr ? "Ce dossier reste dans la page : DRILLS ne le sauvegarde pas automatiquement. La conservation des réponses est désactivée dans l’appel OpenAI ; les règles de traitement du fournisseur restent applicables. Exporte tes textes avant de quitter." : "This application stays in the page: DRILLS does not automatically save it. Response storage is disabled in the OpenAI call; provider data handling policies still apply. Export your text before leaving."}</p>
+          <p class="application-note">{fr ? "Ton dossier est conservé dans cet onglet. Active l’option ci-dessous pour le retrouver sur cet appareil pendant 30 jours. La conservation des réponses est désactivée dans l’appel OpenAI ; les règles du fournisseur restent applicables." : "Your application is kept in this tab. Enable the option below to remember it on this device for 30 days. Response storage is disabled in the OpenAI call; provider data handling policies still apply."}</p>
+          <label class="application-check"><input id="application-remember" type="checkbox" /><span>{fr ? "Conserver mon dossier sur cet appareil pendant 30 jours (éviter sur un appareil partagé)." : "Keep my application on this device for 30 days (avoid on shared devices)."}</span></label>
           <div class="application-actions">
             <button class="btn btn-primary" type="submit" id="application-submit">{fr ? "Préparer ma candidature" : "Prepare my application"}</button>
             <button class="btn btn-secondary" type="button" id="application-example">{fr ? "Remplir un exemple fictif" : "Fill a fictional example"}</button>
@@ -55,7 +60,7 @@ const fr = lang === "fr";
     </form>
     <div class="application-actions">
       <button type="button" class="btn btn-secondary" id="application-cancel" hidden>{fr ? "Annuler" : "Cancel"}</button>
-      <button type="button" class="text-button" id="application-clear">{fr ? "Effacer ce dossier de la page" : "Clear this application from the page"}</button>
+      <button type="button" class="text-button" id="application-clear">{fr ? "Effacer mon dossier et son profil enregistré" : "Delete this application and its saved profile"}</button>
     </div>
     <p id="application-status" role="status" aria-live="polite"></p>
 
@@ -88,8 +93,8 @@ const fr = lang === "fr";
         </div>
       </section>
       <section class="application-card"><h2>{fr ? "Prépare ton entretien" : "Prepare for your interview"}</h2>
-        <p>{fr ? "Trois questions d’entraînement adaptées à l’annonce. Ce ne sont pas les questions confirmées de l’employeur." : "Three practice questions tailored to the posting. These are not confirmed employer questions."}</p>
-        <ol id="application-interview"></ol>
+        <p>{fr ? "Cas rédigés et grilles fixes, classés selon les thèmes de l’annonce. Aucun exercice n’est généré. Ce ne sont pas les questions confirmées de l’employeur." : "Authored cases and fixed rubrics, ordered by posting topics. No exercises are generated. These are not confirmed employer questions."}</p>
+        <ol id="application-interview"></ol><a class="btn btn-secondary" href={href(`/${lang}/prepare/`)}>{fr ? "Travailler les cas et consulter leurs références" : "Practise the cases and view references"}</a>
       </section>
       <section id="application-print" hidden><pre id="application-print-text"></pre></section>
     </section>

@@ -1,147 +1,31 @@
 ---
 import App from "../../layouts/App.astro";
-import { drills, href, LANGS, READY_TRACKS, TRACKS, type Lang } from "../../lib/drills";
-import { BADGES } from "../../lib/game";
-import { ui } from "../../lib/i18n";
-
-export function getStaticPaths() {
-  return LANGS.map((lang) => ({ params: { lang } }));
-}
+import { href, LANGS, type Lang } from "../../lib/drills";
+export function getStaticPaths() { return LANGS.map(lang => ({ params: { lang } })); }
 const lang = Astro.params.lang as Lang;
-const t = ui[lang];
-const strings = {
-  xpTo: t.xpTo(1000, 3000, "{name}").replace("1000", "{xp}").replace("2000", "{left}"),
-  xpMax: t.xpMax(999).replace("999", "{xp}"),
-  days: [t.days(1), t.days(2).replace("2", "{n}")],
-  neverTried: t.neverTried,
-  bestOf: t.bestOf(9).replace("9", "{n}"),
-  badgesLead: t.badgesLead(98, 99).replace("98", "{n}").replace("99", "{t}"),
-  axis: t.chartAxis,
-  acquired: t.chartAcquired,
-  tried: t.chartTried,
-  attempt: t.attemptN(999).replace("999", "{n}"),
-};
-const titles = Object.fromEntries(
-  [
-    ...(import.meta.env.DEV ? READY_TRACKS.flatMap((track) => drills(track, lang).map((d) => [`${track}:${d.id}`, d.title])) : []),
-    ["python:dynamic-job", lang === "fr" ? "Exercice ciblé" : "Tailored job drill"],
-  ],
-);
-const dynamicDrillTitle = lang === "fr" ? "Exercice ciblé" : "Tailored job drill";
+const fr = lang === "fr";
 ---
-
-<App lang={lang} title={t.progressTitle} path="/progress/" section="progress">
-  <section class="block progress" id="progress" data-strings={JSON.stringify(strings)} data-titles={JSON.stringify(titles)} data-track="python">
-    <h1>{t.progressTitle}</h1>
-    <p class="lead">{t.progressLead}</p>
-
-    <div class="filters" role="group" aria-label={lang === "fr" ? "Choisir le langage" : "Pick the language"}>
-      {TRACKS.map((track, i) => (
-        <button type="button" class="filter" data-progress-track={track} aria-pressed={String(i === 0)} disabled={!READY_TRACKS.includes(track)}>
-          {t.tracks[track].name}{!READY_TRACKS.includes(track) && ` · ${t.soon}`}
-        </button>
-      ))}
-    </div>
-
-    <article class="level-card">
-      <div class="level-badge" aria-hidden="true"><span data-level-n>1</span></div>
-      <div class="level-body">
-        <p class="section-eyebrow">{lang === "fr" ? "NIVEAU DE PRATIQUE · POINTS DU JEU" : "PRACTICE LEVEL · GAME POINTS"}</p>
-        <p class="level-name" data-level-name></p>
-        <div class="level-meter"><span data-level-bar></span></div>
-        <p class="level-xp" data-level-xp></p>
-        <p class="note">{lang === "fr" ? "Ce niveau suit les tentatives enregistrées ; il ne représente pas un niveau professionnel." : "This level tracks saved practice attempts; it is not a professional skill rating."}</p>
-      </div>
-    </article>
-
-    <dl class="kpis">
-      <div><dt>{t.kpis.acquired}</dt><dd data-kpi="acquired">0</dd></div>
-      <div><dt>{t.kpis.attempts}</dt><dd data-kpi="attempts">0</dd></div>
-      <div><dt>{t.kpis.time}</dt><dd data-kpi="time">0 min</dd></div>
-      <div><dt>{t.kpis.streak}</dt><dd data-kpi="streak">0</dd></div>
-      <div><dt>{t.kpis.bestStreak}</dt><dd data-kpi="bestStreak">0</dd></div>
-    </dl>
-
-    <section class="panel" aria-labelledby="chart-h">
-      <h2 id="chart-h">{t.chartTitle}</h2>
-      <p class="note">{t.chartLead}</p>
-      <ul class="chart-legend">
-        <li><i class="is-acquired"></i>{t.chartAcquired}</li>
-        <li><i></i>{t.chartTried}</li>
-      </ul>
-      <div class="chart" id="chart">
-        <p class="note" id="chart-empty">{t.chartEmpty}</p>
-        <div class="chart-tip" id="chart-tip" hidden></div>
-      </div>
-    </section>
-
-    <section class="panel" aria-labelledby="map-h">
-      <h2 id="map-h">{t.drillMap}</h2>
-      <p class="note">{t.drillMapLead}</p>
-      <ol class="drill-map">
-        {import.meta.env.DEV && drills("python", lang).map((d) => (
-          <li>
-            <a href={href(`/${lang}/python/${d.id}/`)} data-map={`python:${d.id}`} title={d.title}>
-              <span class="map-fill"></span>
-              <span class="map-id">{d.id.toUpperCase()}</span>
-            </a>
-          </li>
-        ))}
-        <li>
-          <a href={href(`/${lang}/python/dynamic-job/`)} data-map="python:dynamic-job" title={dynamicDrillTitle}>
-            <span class="map-fill"></span>
-            <span class="map-id">{lang === "fr" ? "OFFRE" : "JOB"}</span>
-          </a>
-        </li>
-      </ol>
-    </section>
-
-    <section class="panel" aria-labelledby="badges-h">
-      <h2 id="badges-h">{t.badgesTitle}</h2>
-      <p class="note" id="badges-lead"></p>
-      <ul class="badges">
-        {BADGES.map((b) => (
-          <li class={`badge tier-${b.tier}`} data-badge={b.id}>
-            <span class="badge-icon" aria-hidden="true">{b.icon}</span>
-            <span class="badge-name">{b.name[lang]}</span>
-            <span class="badge-how">{b.how[lang]}</span>
-            <span class="badge-lock">{t.locked}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-
-    <section class="panel" aria-labelledby="xp-h">
-      <h2 id="xp-h">{t.xpRules}</h2>
-      <ul>{t.xpRulesList.map((r) => <li>{r}</li>)}</ul>
-    </section>
-
-    <section class="panel course-progress-card" aria-labelledby="course-progress-title">
-      <p class="section-eyebrow">{lang === "fr" ? "APPRENTISSAGE GUIDÉ" : "GUIDED LEARNING"}</p>
-      <h2 id="course-progress-title">{lang === "fr" ? "Cours suivis" : "Course activity"}</h2>
-      <div id="course-progress-summary" data-lesson-progress data-lang={lang} data-href={href(`/${lang}/learn/mcp-python-server/`)}>
-        <p class="note" id="course-progress-empty">{lang === "fr" ? "Aucune leçon enregistrée pour le moment." : "No lesson activity saved yet."}</p>
-      </div>
-    </section>
+<App lang={lang} title={fr ? "Mon suivi" : "My progress"} path="/progress/" section="progress">
+  <section class="block">
+    <h1>{fr ? "Où en est ta candidature ?" : "Where does your application stand?"}</h1>
+    <p>{fr ? "Trois étapes concrètes. Aucun niveau, point ou classement." : "Three concrete steps. No levels, points or ranking."}</p>
+    <ol class="application-milestones">
+      {[fr ? "Profil prêt" : "Profile ready", fr ? "Offre analysée" : "Posting analysed", fr ? "Candidature relue" : "Application reviewed"].map((title,index) => <li><strong>{title}</strong><span data-step={index}>{fr ? "À faire" : "To do"}</span></li>)}
+    </ol>
+    <p id="application-progress-note" role="status"></p>
+    <a class="btn btn-primary" href={href(`/${lang}/apply/`)}>{fr ? "Ouvrir mon dossier" : "Open my application"}</a>
+    <a class="btn btn-secondary" href={href(`/${lang}/prepare/`)}>{fr ? "Préparer mon entretien" : "Prepare for my interview"}</a>
+    <p>{fr ? "Le suivi concerne le dernier dossier dans ce navigateur. « Relue » signifie que tu as confirmé la relecture, pas que la candidature a été envoyée ou acceptée." : "Progress refers to the latest application in this browser. Reviewed means you confirmed your review, not that the application was sent or accepted."}</p>
   </section>
   <script>
-    import { readLessonState } from "../../lib/lesson-progress";
-    const summary = document.querySelector<HTMLElement>("[data-lesson-progress]");
-    if (summary) {
-      let storage: Storage | null = null;
-      try { storage = window.localStorage; } catch { /* Progress remains available without course storage. */ }
-      const state = storage ? readLessonState(storage, "mcp-python-server") : null;
-      const lang = summary.dataset.lang === "fr" ? "fr" : "en";
-      if (state) {
-        const title = lang === "fr" ? "Construire ton premier serveur MCP en Python" : "Build your first MCP server in Python";
-        const status = state.passedBeforeSolution ? (lang === "fr" ? "Logique vérifiée avant la solution" : "Logic checked before solution") : state.attempts ? (lang === "fr" ? "Exercice tenté" : "Exercise attempted") : (lang === "fr" ? "Leçon consultée" : "Lesson viewed");
-        const link = document.createElement("a");
-        link.className = "course-activity-link";
-        link.href = summary.dataset.href ?? "#";
-        link.textContent = `${title} · ${status} · ${state.attempts} ${lang === "fr" ? "tentative(s)" : "attempt(s)"}`;
-        summary.querySelector("#course-progress-empty")?.remove();
-        summary.prepend(link);
-      }
-    }
+    import { readApplicationState, applicationSteps } from "../../lib/application-state";
+    let state = null;
+    try { state = readApplicationState(sessionStorage, localStorage); } catch {}
+    const fr = document.documentElement.lang === "fr";
+    const steps = applicationSteps(state);
+    document.querySelectorAll<HTMLElement>("[data-step]").forEach((node, index) => { node.textContent = steps[index] ? (fr ? "Fait" : "Done") : (fr ? "À faire" : "To do"); });
+    const note = document.getElementById("application-progress-note");
+    if (note) note.textContent = state?.result?.role_title ?? (fr ? "Commence par importer ton CV ou compléter ton profil." : "Start by importing your CV or completing your profile.");
   </script>
+  <style>.application-milestones { list-style: none; padding: 0; display: grid; gap: 16px; margin: 28px 0; }.application-milestones li { display: flex; justify-content: space-between; gap: 20px; padding: 24px; border: 1px solid var(--line); border-radius: var(--radius-m); background: var(--panel); }</style>
 </App>

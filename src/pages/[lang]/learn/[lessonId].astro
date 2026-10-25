@@ -9,7 +9,8 @@ import { MCP_PYTHON_LESSON, lessonText } from "../../../lib/lessons";
 import { ui } from "../../../lib/i18n";
 import SERVER_SOURCE from "../../../learning/mcp_calculator.py?raw";
 
-export function getStaticPaths() {
+export function getStaticPaths() { return []; }
+function archivedStaticPaths() {
   return LANGS.map((lang) => ({ params: { lang, lessonId: MCP_PYTHON_LESSON.id } }));
 }
 const lang = Astro.params.lang as Lang;

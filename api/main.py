@@ -197,38 +197,8 @@ async def health() -> dict[str, str | bool]:
 @app.post("/api/drills", response_model=DynamicDrillSchema)
 @limiter.limit("5/minute")
 async def generate_drill(request: Request, payload: DrillRequest) -> DynamicDrillSchema:
-    """Run the existing Analyst → Coach → Creator → Validator pipeline."""
-    if not os.getenv("OPENAI_API_KEY"):
-        raise HTTPException(
-            status_code=503,
-            detail="The generator is not configured. Set OPENAI_API_KEY on the API service.",
-        )
-
-    try:
-        # The orchestrator and OpenAI SDK are synchronous; run them off the
-        # event loop so other requests (including /health) remain responsive.
-        language_label = "French" if payload.output_language == "fr" else "English"
-        result = await asyncio.to_thread(
-            DrillOrchestrator().generate,
-            job_description=payload.job_description,
-            output_language=language_label,
-            learner_snapshot=payload.learner_snapshot,
-        )
-        return result.model_copy(update={"output_language": payload.output_language})
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except DrillPipelineError as exc:
-        logger.warning("Drill pipeline rejected generated content: %s", exc)
-        raise HTTPException(
-            status_code=502,
-            detail="The generated exercise did not pass validation. Please try again.",
-        ) from exc
-    except Exception as exc:
-        logger.exception("Drill generation failed")
-        raise HTTPException(
-            status_code=502,
-            detail="Drill generation failed. Check the API service logs and try again.",
-        ) from exc
+    """Retired: the candidate MVP uses authored interview cases, not generated code."""
+    raise HTTPException(status_code=410, detail="Generated drills are retired. Use the application and interview preparation pages.")
 
 
 @app.post("/api/coach")

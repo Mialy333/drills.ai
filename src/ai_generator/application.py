@@ -3,6 +3,7 @@ import base64
 import binascii
 import json
 import os
+from pathlib import Path
 from typing import Literal
 
 from openai import AsyncOpenAI
@@ -51,10 +52,10 @@ class ApplicationAnalysis(StrictModel):
     requirements: list[Requirement] = Field(min_length=1, max_length=12)
     cv_sections: list[DraftSection] = Field(min_length=1, max_length=8)
     pitch: DraftSection
-    interview_questions: list[InterviewQuestion] = Field(min_length=3, max_length=3)
 
 
 class ApplicationResult(ApplicationAnalysis):
+    interview_questions: list[InterviewQuestion] = Field(min_length=3, max_length=3)
     score: int | None = Field(ge=0, le=100)
     decision: Literal["prepare", "strengthen", "review_scope"]
     output_language: Literal["fr", "en"]
@@ -102,9 +103,7 @@ Never invent names, employers, dates, diplomas, metrics, skills, years of experi
 or proficiency. Omit unknown contact details. Show the target role as a goal, not a
 job already held. Avoid generic praise and keyword stuffing. Include relevant
 previous career experience, education and projects when available. These drafts
-are for human review, not guaranteed ATS success. Provide exactly three plausible
-interview practice questions and what a good answer would demonstrate, grounded
-in the posting. Never claim these are the employer's actual interview questions.
+are for human review, not guaranteed ATS success. Do not generate exercises or interview questions; the application selects authored cases separately.
 """
 
 
@@ -145,8 +144,17 @@ def validate_analysis(analysis: ApplicationAnalysis, payload: ApplicationRequest
     decision = "review_scope" if score is None else (
         "prepare" if score >= 60 and not unresolved_core and not unresolved_eligibility else "strengthen"
     )
-    return ApplicationResult(**analysis.model_dump(), score=score, decision=decision, output_language=payload.output_language)
+    return ApplicationResult(**analysis.model_dump(), score=score, decision=decision, output_language=payload.output_language,
+                             interview_questions=select_interview_cases(payload.job_description, payload.output_language))
 
+
+
+def select_interview_cases(posting: str, language: str) -> list[InterviewQuestion]:
+    catalog = json.loads((Path(__file__).parents[1] / "lib" / "interview-cases.json").read_text())
+    ordered = sorted(catalog["cases"], key=lambda case: -sum(word in posting.casefold() for word in case["keywords"]))
+    return [InterviewQuestion(question=case[language]["title"],
+                              looking_for=case[language]["scenario"] + " " + " ".join(case[language]["criteria"]))
+            for case in ordered]
 
 class ApplicationAgent:
     def __init__(self, client=None):

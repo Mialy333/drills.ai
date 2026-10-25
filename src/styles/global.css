@@ -2955,22 +2955,11 @@ p { text-wrap: pretty; }
   padding: clamp(22px, 5vw, 56px);
   border: 2px solid var(--outline);
   border-radius: 6px;
-  background: var(--retro-green);
+  background: var(--retro-soft-lavender);
   box-shadow: 8px 8px 0 var(--shadow-hard);
   color: var(--ink-black);
 }
-.welcome::after {
-  content: "DRILLS.ai  /  LEARNING OS";
-  position: absolute;
-  z-index: -1;
-  right: 18px;
-  bottom: 12px;
-  color: rgb(16 16 16 / 12%);
-  font: clamp(2rem, 7vw, 7rem)/.8 var(--font-display);
-  letter-spacing: .02em;
-  white-space: nowrap;
-  pointer-events: none;
-}
+.welcome::after { content: none; }
 .welcome-title, .generator-head h1 {
   max-width: 23ch;
   font-family: var(--font-display);
@@ -3113,3 +3102,6 @@ p { text-wrap: pretty; }
 @media (prefers-reduced-motion: reduce) {
   .btn:hover, .btn:active, .track:hover, .journey-card:hover, .drill-map a:hover { transform: none; }
 }
+
+/* Hidden states must win over button/card display rules. */
+[hidden] { display: none !important; }

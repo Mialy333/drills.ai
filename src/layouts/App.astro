@@ -1,172 +1,57 @@
 ---
 import "../styles/global.css";
-import { CATEGORIES, drills, href, READY_TRACKS, type Lang, type Track } from "../lib/drills";
-import { BADGES, LEVELS } from "../lib/game";
-import { otherLang, ui } from "../lib/i18n";
-
-interface Props {
-  lang: Lang;
-  title: string;
-  /** Path of this page without the language prefix, e.g. "/python/d1/". */
-  path: string;
-  track?: Track;
-  activeId?: string;
-  showCatalogSidebar?: boolean;
-  section: "home" | "drills" | "journal" | "progress" | "generate" | "assess" | "learn" | "apply";
-}
-const { lang, title, path, track, activeId, section, showCatalogSidebar = true } = Astro.props;
-const t = ui[lang];
-const list = track && showCatalogSidebar ? drills(track, lang) : [];
-const pageTitle = title === t.brand ? t.brand : `${title} | ${t.brand}`;
-const strings = {
-  acquired: t.status.acquired,
-  tried: t.status.tried,
-  toDark: t.theme.toDark,
-  toLight: t.theme.toLight,
-  hudLevel: t.hudLevel(999).replace("999", "{n}"),
-  hudStreak: t.hudStreak(999).replace("999", "{n}"),
-  xpGain: t.xpGain(999).replace("999", "{n}"),
-  levelUp: t.levelUp,
-  badgeUnlocked: t.badgeUnlocked,
-  close: t.close,
-  resumePractice: t.resumePractice("{title}"),
-};
-// What the browser needs to compute XP and badges on every page.
-const game = {
-  catalog: [
-    ...(import.meta.env.DEV
-      ? READY_TRACKS.flatMap((tr) => drills(tr, lang).map((d) => ({ id: d.id, cat: d.cat, minutes: d.minutes, track: tr })))
-      : []),
-    { id: "dynamic-job", cat: "debug", minutes: 15, track: "python" },
-  ],
-  badges: Object.fromEntries(BADGES.map((b) => [b.id, { icon: b.icon, tier: b.tier, name: b.name[lang], how: b.how[lang] }])),
-  levels: LEVELS.map((l) => l.name[lang]),
-};
+import { href, type Lang } from "../lib/drills";
+interface Props { lang: Lang; title: string; path: string; section: string; track?: string; activeId?: string; showCatalogSidebar?: boolean; }
+const { lang, title, path, section } = Astro.props;
+const fr = lang === "fr";
+const other = fr ? "en" : "fr";
+const links = [
+  { path: "/", section: "home", title: fr ? "Accueil" : "Home" },
+  { path: "/apply/", section: "apply", title: fr ? "Ma candidature" : "My application" },
+  { path: "/prepare/", section: "prepare", title: fr ? "Entretien" : "Interview" },
+  { path: "/progress/", section: "progress", title: fr ? "Mon suivi" : "My progress" },
+];
 ---
-
 <!doctype html>
-<html lang={t.htmlLang}>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>{pageTitle}</title>
-    <meta name="description" content={t.welcomeLead} />
-    <meta property="og:title" content={pageTitle} />
-    <meta property="og:description" content={t.welcomeLead} />
-    <meta property="og:image" content={new URL(href("/og.jpg"), Astro.site)} />
-    <link rel="icon" href={href("/icons/icon.svg")} type="image/svg+xml" />
-    <link rel="apple-touch-icon" href={href("/icons/icon-192.png")} />
-    <link rel="manifest" href={href("/manifest.webmanifest")} />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#fbfaf7" />
-    <link rel="alternate" hreflang={otherLang(lang)} href={href(`/${otherLang(lang)}${path}`)} />
-    <script is:inline>
-      // Set the theme before first paint, so the page never flashes the wrong colours.
-      (() => {
-        let theme = null;
-        try { theme = localStorage.getItem("drills.theme"); } catch {}
-        if (theme !== "light" && theme !== "dark") theme = "light";
-        document.documentElement.dataset.theme = theme;
-      })();
-    </script>
-  </head>
-  <body
-    data-lang={lang}
-    data-base={href("/")}
-    data-track={track}
-    data-strings={JSON.stringify(strings)}
-    class:list={[track && showCatalogSidebar && "has-side"]}
-  >
-    <a class="skip" href="#main">{lang === "fr" ? "Aller au contenu" : "Skip to content"}</a>
-    <header class="bar">
-      <a class="brand" href={href(`/${lang}/`)}>
-        <img src={href("/icons/icon.svg")} alt="" width="28" height="28" />
-        <span>{t.brand}</span>
-      </a>
-      <nav class="bar-nav" aria-label={lang === "fr" ? "Navigation principale" : "Main navigation"}>
-        <a href={href(`/${lang}/`)} aria-current={section === "home" ? "page" : undefined}>{lang === "fr" ? "Accueil" : "Home"}</a>
-        <a href={href(`/${lang}/apply/`)} aria-current={section === "apply" ? "page" : undefined}>{lang === "fr" ? "Ma candidature" : "My application"}</a>
-        <a href={href(`/${lang}/generate/`)} aria-current={section === "generate" ? "page" : undefined}>{lang === "fr" ? "Mon offre" : "My job posting"}</a>
-        <a href={href(`/${lang}/progress/`)} aria-current={section === "progress" ? "page" : undefined}>{t.nav.progress}</a>
-        <a href={href(`/${lang}/journal/`)} aria-current={section === "journal" ? "page" : undefined}>{t.nav.journal}</a>
-      </nav>
-      <a class="hud" id="hud" href={href(`/${lang}/progress/`)} aria-label={t.hudLabel} hidden>
-        <span class="hud-level" data-hud-level></span>
-        <span class="hud-xp"><span data-hud-bar></span></span>
-        <span class="hud-streak" data-hud-streak></span>
-      </a>
-      <div class="bar-tools">
-        <a class="tool" href={href(`/${otherLang(lang)}${path}`)} hreflang={otherLang(lang)} aria-label={t.switchLangLabel}>
-          <span class="tool-long">{t.switchLang}</span><span class="tool-short" aria-hidden="true">{otherLang(lang).toUpperCase()}</span>
-        </a>
-        <button class="tool" type="button" id="theme-toggle">
-          <span class="theme-icon" aria-hidden="true"></span>
-          <span class="theme-label">{t.theme.toDark}</span>
-        </button>
-      </div>
-    </header>
-
-    <div class="shell">
-      {track && showCatalogSidebar && list.length > 0 && (
-        <aside class="side" aria-label={lang === "fr" ? "Liste des drills" : "Drill list"}>
-          {CATEGORIES.map((cat) => (
-            <section class="side-group">
-              <h2>{t.cats[cat]}</h2>
-              <ul>
-                {list.filter((d) => d.cat === cat).map((d) => (
-                  <li>
-                    <a href={href(`/${lang}/${track}/${d.id}/`)} aria-current={d.id === activeId ? "page" : undefined}>
-                      <span class="side-id">{d.id.toUpperCase()}</span>
-                      <span class="side-title">{d.title}</span>
-                      <span class="side-status" data-status-for={`${track}:${d.id}`}></span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </aside>
-      )}
-
-      <main id="main" class="main">
-        <slot />
-        <footer class="foot">{t.footer}</footer>
-      </main>
-    </div>
-
-    <nav class="tabbar" aria-label={lang === "fr" ? "Navigation" : "Navigation"}>
-      <a href={href(`/${lang}/`)} aria-current={section === "home" ? "page" : undefined}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z" /></svg>
-        <span>{lang === "fr" ? "Accueil" : "Home"}</span>
-      </a>
-      <a href={href(`/${lang}/apply/`)} aria-current={section === "apply" ? "page" : undefined}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /></svg>
-        <span>{lang === "fr" ? "Candidature" : "Apply"}</span>
-      </a>
-      <a href={href(`/${lang}/progress/`)} aria-current={section === "progress" ? "page" : undefined}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>
-        <span class="tab-progress-label">{lang === "fr" ? "Progrès" : "Stats"}</span>
-      </a>
-      <a href={href(`/${lang}/journal/`)} aria-current={section === "journal" ? "page" : undefined}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l2 2v16H5zM9 8h6M9 12h6M9 16h4" /></svg>
-        <span>{t.nav.journal}</span>
-      </a>
+<html lang={lang}>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title} | DRILLS.ai</title>
+  <meta name="description" content={fr ? "Prépare ta candidature à un premier poste d’Agent Engineer à partir de ton parcours et de preuves concrètes." : "Prepare your first Agent Engineer application from your experience and concrete evidence."} />
+  <link rel="icon" href={href("/icons/icon.svg")} type="image/svg+xml" />
+  <script is:inline>try { document.documentElement.dataset.theme = localStorage.getItem("drills.theme") === "dark" ? "dark" : "light"; } catch { document.documentElement.dataset.theme = "light"; }</script>
+</head>
+<body data-lang={lang} data-base={href("/")}>
+  <a class="skip" href="#main">{fr ? "Aller au contenu" : "Skip to content"}</a>
+  <header class="bar">
+    <a class="brand" href={href(`/${lang}/`)}><img src={href("/icons/icon.svg")} alt="" width="28" height="28" /><span>DRILLS.ai</span></a>
+    <nav class="bar-nav" aria-label={fr ? "Navigation principale" : "Main navigation"}>
+      {links.map(link => <a href={href(`/${lang}${link.path}`)} aria-current={section === link.section ? "page" : undefined}>{link.title}</a>)}
     </nav>
-
-    <div class="toast" role="status" aria-live="polite" id="toast"></div>
-    <div class="unlock" id="unlock" role="dialog" aria-modal="false" aria-labelledby="unlock-kind" hidden>
-      <div class="unlock-card">
-        <p class="unlock-kind" id="unlock-kind"></p>
-        <p class="unlock-icon" aria-hidden="true"></p>
-        <p class="unlock-name"></p>
-        <p class="unlock-how"></p>
-        <button type="button" class="btn btn-primary unlock-close">{t.close}</button>
-      </div>
-    </div>
-    <div class="fx" id="fx" aria-hidden="true"></div>
-    <script type="application/json" id="game-data" set:html={JSON.stringify(game)} />
-    <script>
-      import "../scripts/app.ts";
-    </script>
-  </body>
+    <div class="bar-tools"><a class="tool" href={href(`/${other}${path}`)} hreflang={other}>{other.toUpperCase()}</a><button class="tool" id="theme-toggle" type="button">{fr ? "Clair / sombre" : "Light / dark"}</button></div>
+  </header>
+  <div class="shell"><main id="main" class="main"><slot /><footer class="foot">{fr ? "DRILLS.ai · Ta prochaine opportunité, à partir de ton parcours." : "DRILLS.ai · Your next opportunity, built on your experience."}</footer></main></div>
+  <nav class="tabbar" aria-label={fr ? "Navigation mobile" : "Mobile navigation"}>
+    {links.map(link => <a href={href(`/${lang}${link.path}`)} aria-current={section === link.section ? "page" : undefined}><span>{link.title}</span></a>)}
+  </nav>
+  <script>
+    document.getElementById("theme-toggle")?.addEventListener("click", () => {
+      const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = theme;
+      try { localStorage.setItem("drills.theme", theme); } catch {}
+    });
+    if ("serviceWorker" in navigator) {
+      if (import.meta.env.DEV) {
+        // Do not let a previous production worker serve the old generator in dev.
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          const base = new URL(document.body.dataset.base ?? "/", location.origin).href;
+          for (const registration of registrations) if (registration.scope === base) void registration.unregister();
+        });
+      } else {
+        void navigator.serviceWorker.register(`${document.body.dataset.base}sw.js`).catch(() => {});
+      }
+    }
+  </script>
+</body>
 </html>

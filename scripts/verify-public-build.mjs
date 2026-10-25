@@ -22,19 +22,11 @@ async function walk(directory) {
 
 await walk(root);
 
-const drillRouteFiles = publicFiles.filter((path) =>
-  /[/\\](?:en|fr)[/\\]python[/\\][^/\\]+[/\\]index\.html$/.test(path),
+const unexpectedRoutes = publicFiles.filter((path) =>
+  /[/\\](?:en|fr)[/\\](?:python|drills|learn)[/\\].*index\.html$/.test(path),
 );
-const unexpectedRoutes = drillRouteFiles.filter((path) =>
-  !/[/\\](?:en|fr)[/\\]python[/\\]dynamic-job[/\\]index\.html$/.test(path),
-);
-
-if (unexpectedRoutes.length > 0) {
-  throw new Error(
-    `Public build contains non-dynamic Python drill routes:\n${unexpectedRoutes
-      .map((path) => ` - ${relative(root, path)}`)
-      .join("\n")}`,
-  );
+if (unexpectedRoutes.length) {
+  throw new Error(`Archived exercise routes remain public: ${unexpectedRoutes.map(path => relative(root, path)).join(", ")}`);
 }
 
 for (const path of publicFiles) {

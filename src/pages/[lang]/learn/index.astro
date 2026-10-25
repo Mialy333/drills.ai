@@ -4,7 +4,8 @@ import { href, LANGS, type Lang } from "../../../lib/drills";
 import { MCP_PYTHON_LESSON, lessonText } from "../../../lib/lessons";
 import { ui } from "../../../lib/i18n";
 
-export function getStaticPaths() {
+export function getStaticPaths() { return []; }
+function archivedStaticPaths() {
   return LANGS.map((lang) => ({ params: { lang } }));
 }
 const lang = Astro.params.lang as Lang;
