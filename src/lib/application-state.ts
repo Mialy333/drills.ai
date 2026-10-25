@@ -6,7 +6,7 @@ export const ApplicationStateSchema = z.object({
   version: z.literal(1), expiresAt: z.number(),
   profile: z.string().max(16000), posting: z.string().max(20000),
   result: ApplicationResultSchema.nullable(),
-  cv: z.string().max(20000), cv_html: z.string().max(100000).optional(), pitch: z.string().max(4000),
+  contact: z.string().max(500).optional(), cv: z.string().max(20000), cv_html: z.string().max(100000).optional(), pitch: z.string().max(4000),
   reviewed: z.boolean(), remember: z.boolean(),
 }).strict();
 export type ApplicationState = z.infer<typeof ApplicationStateSchema>;

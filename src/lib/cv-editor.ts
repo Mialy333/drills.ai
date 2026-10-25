@@ -98,7 +98,7 @@ export function createCvEditor(element: HTMLElement, field: HTMLTextAreaElement,
     } else if (['left','center','right','justify'].includes(command)) chain.setTextAlign(command).run();
     else actions[command]?.();
     updateControls();
-    if(note) note.textContent=fr?'Modification appliquée. Annuler permet de revenir en arrière.':'Change applied. Use Undo to go back.';
+    if(note) note.textContent='';
   });
   toolbar.addEventListener('change',event=>{
     const input=event.target as HTMLInputElement;
@@ -110,11 +110,28 @@ export function createCvEditor(element: HTMLElement, field: HTMLTextAreaElement,
     updateControls();
   });
   return {
+    setSections(sections: {heading:string;text:string}[]) {
+      const container=document.createElement('div');
+      for(const section of sections) {
+        const heading=document.createElement('h3'); heading.textContent=section.heading; container.append(heading);
+        for(const line of section.text.split(/\n+/).filter(Boolean)) {
+          const paragraph=document.createElement('p'); paragraph.textContent=line; container.append(paragraph);
+        }
+      }
+      editor.commands.setContent(container.innerHTML,{emitUpdate:false}); field.value=editor.getText(); updateControls();
+    },
     setText(value:string) {
       const paragraphs=value.split('\n').map(line=>({type:'paragraph',content:line?[{type:'text',text:line}]:[]}));
       editor.commands.setContent({type:'doc',content:paragraphs},{emitUpdate:false}); field.value=value; updateControls();
     },
-    setHtml(value:string) { editor.commands.setContent(safeHtml(value),{emitUpdate:false});field.value=editor.getText();updateControls(); },
+    setHtml(value:string, headings:string[] = []) {
+      const container=document.createElement('div'); container.append(cleanCvHtml(value));
+      for(const node of container.querySelectorAll('p,div')) {
+        if(headings.includes(node.textContent?.trim() ?? '') && !node.querySelector('p,div')) {
+          const heading=document.createElement('h3'); heading.append(...node.childNodes); node.replaceWith(heading);
+        }
+      }
+      editor.commands.setContent(safeHtml(container.innerHTML),{emitUpdate:false});field.value=editor.getText();updateControls(); },
     html:()=>safeHtml(editor.getHTML()),
   };
 }

@@ -87,3 +87,9 @@ The Astro base path is `/drills.ai/`. GitHub Pages deployment uses `main`; this 
 - `src/lib/interview-cases.json`: versioned bilingual authored cases and criteria.
 - `src/ai_generator/application.py`: structured analysis, source checks, scoring and deterministic case selection.
 - `api/main.py`: bounded API endpoints and retired exercise endpoint.
+
+### CV layout and public GitHub project import
+
+The CV editor uses section headings, spaced paragraphs and a contact/target-role header, retained for printing. Contact details are stored with the dossier and survive language changes. Existing section labels are upgraded without replacing edited text.
+
+From the profile step, add a public `https://github.com/owner/repository` URL. The browser reads GitHub's public repository metadata without a token. A preview, explicit personal contribution and confirmation are required before adding it to the profile. The next diagnosis uses these supplied facts; metadata is not proof of authorship or skill. Private repositories, rate limits and unavailable GitHub responses show a message without replacing the profile. No README or source-code analysis is performed. Job-board ingestion remains a future integration.

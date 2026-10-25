@@ -29,6 +29,18 @@ const fr = lang === "fr";
               <input id="application-pdf" type="file" accept="application/pdf,.pdf" />
               <button type="button" class="btn btn-secondary" id="application-import">{fr ? "Extraire le texte du CV" : "Extract CV text"}</button>
             </div>
+            <details class="application-import"><summary>{fr ? "Ajouter un projet GitHub public" : "Add a public GitHub project"}</summary>
+              <p>{fr ? "Colle le lien d’un dépôt. Vérifie les informations et précise ta contribution avant de les ajouter à ton profil." : "Paste a repository URL. Review the information and describe your contribution before adding it to your profile."}</p>
+              <label for="github-url">{fr ? "Lien du dépôt public" : "Public repository URL"}</label>
+              <input id="github-url" type="text" placeholder="https://github.com/owner/project" />
+              <button id="github-load" type="button" class="btn btn-secondary">{fr ? "Lire le projet GitHub" : "Read GitHub project"}</button>
+              <p id="github-status" role="status"></p>
+              <div id="github-review" hidden>
+                <label for="github-preview">{fr ? "Informations à vérifier" : "Information to review"}</label><textarea id="github-preview" rows="6" maxlength="3000"></textarea>
+                <label for="github-contribution">{fr ? "Ce que tu as personnellement réalisé" : "What you personally built"}</label><textarea id="github-contribution" rows="3" maxlength="2000"></textarea>
+                <button id="github-add" type="button" class="btn btn-secondary">{fr ? "Ajouter à mon profil" : "Add to my profile"}</button>
+              </div>
+            </details>
             <p id="application-profile-summary" role="status"></p>
             <details id="application-profile-editor"><summary>{fr ? "Écrire, consulter ou modifier mon profil" : "Write, view or edit my profile"}</summary>
             <label for="application-profile">{fr ? "Parcours et preuves" : "Experience and evidence"}</label>
@@ -98,7 +110,7 @@ const fr = lang === "fr";
           </div></details>
         </div>
         <p id="cv-editor-note" role="status">{fr ? "Sélectionne le texte. Reclique sur un bouton actif pour retirer son effet. L’alignement concerne les paragraphes sélectionnés." : "Select text. Click an active button again to remove its effect. Alignment applies to selected paragraphs."}</p>
-        <div id="cv-rich-editor"></div>
+        <div class="cv-paper"><header id="cv-contact-preview" class="cv-contact-header"></header><h2 id="cv-role-title" class="cv-role-title"></h2><div id="cv-rich-editor"></div></div>
         <textarea id="application-cv" hidden aria-hidden="true" tabindex="-1"></textarea>
         </details>
         <details class="draft-editor"><summary>{fr ? "Mon pitch, à dire à voix haute" : "My pitch, to say out loud"}</summary><p>{fr ? "Lis-le comme si tu répondais à « Parlez-moi de vous ». Remplace les mots que tu n’emploierais pas et garde un exemple précis de ton parcours." : "Read it as your answer to ‘Tell me about yourself’. Replace words you would not use and keep one specific example from your experience."}</p>
@@ -163,10 +175,19 @@ const fr = lang === "fr";
     .cv-toolbar input[type="color"] { width: 44px; height: 44px; padding: 4px; }
     .cv-link-panel > div { padding: 12px; border: 1px solid var(--line); }
     #cv-rich-editor .tiptap { outline: none; min-height: 350px; font: 11pt/1.5 Arial, sans-serif; }
-    #cv-rich-editor .tiptap p, #application-print-text p { margin: 0 0 .35em; }
+    #cv-rich-editor .tiptap p, #application-print-text p { margin: 0 0 .85em; }
     #cv-rich-editor { white-space: pre-wrap; overflow-wrap: anywhere; min-height: 350px; padding: 20px; border: 1px solid var(--line); background: var(--bg); font: 1rem/1.7 var(--font-body); }
     #cv-rich-editor a { color: var(--accent); text-decoration: underline; }
     #application-print-text a { color: black; text-decoration: underline; }
+    .cv-paper { background: #fff; color: #202124; padding: clamp(18px, 4vw, 48px); border: 1px solid var(--line); margin-top: 18px; }
+    .cv-contact-header { white-space: pre-line; font: 11pt/1.6 Arial, sans-serif; padding-bottom: 12px; }
+    .cv-contact-header:empty { display: none; }
+    .cv-contact-header::first-line { font-size: 22pt; font-weight: 700; }
+    .cv-role-title { font: 700 16pt/1.4 Arial, sans-serif; margin: 0 0 24px; padding-bottom: 16px; border-bottom: 2px solid #303040; }
+    .cv-paper #cv-rich-editor { border: 0; background: white; color: #202124; padding: 0; }
+    #cv-rich-editor .tiptap h3, #application-print-text h3 { font: 700 12pt/1.5 Arial, sans-serif; margin: 1.6em 0 .7em; padding-bottom: .35em; border-bottom: 1px solid #bbb; break-after: avoid; }
+    #cv-rich-editor .tiptap ul, #cv-rich-editor .tiptap ol, #application-print-text ul, #application-print-text ol { padding-left: 1.4em; margin: .6em 0 1.2em; }
+    #application-print-text p { orphans: 3; widows: 3; }
     .draft-editor { border-top: 1px solid var(--line); padding: 12px 0; }
     .draft-editor > summary { font: 700 1.2rem/1.5 var(--font-body); }
     .application-next { justify-content: flex-end; margin: 28px 0; }

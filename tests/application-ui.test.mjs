@@ -163,3 +163,33 @@ test('switching EN to FR and back preserves reviewed result, edited CV, formatti
   const parsed=JSON.parse(state);parsed.reviewed=true;state=JSON.stringify(parsed);
  }
 });
+test('CV uses section headings, keeps contact across reloads and removes success chatter',async t=>{
+ const {w,get}=setup(t);get('profile').value=profileText;get('posting').value='AI Agent Engineer internship with API integration, tests and workflow design.';get('consent').checked=true;
+ submit(w,get);await done(get);
+ assert.equal(w.document.querySelectorAll('#cv-rich-editor h3').length,fixture.cv_sections.length);
+ get('contact').value='Jane Doe\njane@example.com';get('contact').dispatchEvent(new w.Event('input'));
+ assert.equal(JSON.parse(w.sessionStorage.getItem('drills.application.v1')).contact,get('contact').value);
+ assert.match(w.document.getElementById('cv-contact-preview').textContent,/Jane Doe/);
+ w.document.querySelector('[data-command="bold"]').click();
+ assert.equal(w.document.getElementById('cv-editor-note').textContent,'');
+});
+test('GitHub public project is previewed and only added after a personal contribution',async t=>{
+ const {w,get}=setup(t);get('profile').value=profileText;
+ const el=id=>w.document.getElementById(id);const requests=[];
+ w.fetch=async(url,options)=>{requests.push({url,options});return {ok:true,status:200,json:async()=>({private:false,full_name:'octocat/demo',description:'A public agent project',language:'Python',fork:true})};};
+ el('github-url').value='https://github.com/octocat/demo';el('github-load').click();await tick();
+ assert.equal(requests[0].url,'https://api.github.com/repos/octocat/demo');assert.equal(requests[0].options.credentials,'omit');
+ assert.equal(get('profile').value,profileText);assert.equal(el('github-review').hidden,false);
+ el('github-add').click();assert.equal(get('profile').value,profileText);
+ el('github-contribution').value='I added API validation and failure handling tests.';el('github-add').click();
+ assert.match(get('profile').value,/https:\/\/github.com\/octocat\/demo/);assert.match(get('profile').value,/Fork/);
+ assert.match(get('profile').value,/I added API validation/);
+ assert.equal(JSON.parse(w.sessionStorage.getItem('drills.application.v1')).profile,get('profile').value);
+});
+test('GitHub rejects arbitrary hosts and handles missing repositories without losing profile',async t=>{
+ const {w,get}=setup(t);get('profile').value=profileText;const el=id=>w.document.getElementById(id);let calls=0;
+ w.fetch=async()=>{calls++;return {ok:false,status:404};};
+ el('github-url').value='https://evil.example/octocat/demo';el('github-load').click();await tick();assert.equal(calls,0);
+ el('github-url').value='https://github.com/octocat/demo';el('github-load').click();await tick();assert.equal(calls,1);
+ assert.match(el('github-status').textContent,/not found/);assert.equal(get('profile').value,profileText);assert.equal(el('github-review').hidden,true);
+});

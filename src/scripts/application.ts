@@ -1,6 +1,7 @@
+import { fetchGithubProject } from "../lib/github-project";
 import { createCvEditor, cleanCvHtml } from "../lib/cv-editor";
 import { apiEndpoint } from "../lib/api-client";
-import { applicationCv, applicationDraftChanged, ApplicationResultSchema, type ApplicationResult } from "../lib/application";
+import { applicationDraftChanged, ApplicationResultSchema, type ApplicationResult } from "../lib/application";
 import { readApplicationState, saveApplicationState, clearApplicationState } from "../lib/application-state";
 import { readCandidateProfile, deleteCandidateProfile } from "../lib/candidate-profile";
 
@@ -37,7 +38,7 @@ function persist(): boolean {
   profileSummary();
   try {
     const saved = saveApplicationState({version: 1, expiresAt: Date.now() + (remember.checked ? 30 : 1) * 86400000,
-      profile: profile.value, posting: posting.value, result: currentResult, cv: cv.value, cv_html: cvEditor.html(), pitch: pitch.value,
+      contact: contact.value, profile: profile.value, posting: posting.value, result: currentResult, cv: cv.value, cv_html: cvEditor.html(), pitch: pitch.value,
       reviewed: reviewed.checked, remember: remember.checked}, sessionStorage, localStorage);
     if (!saved) status(say("Le stockage est indisponible. Garde cet onglet ouvert et exporte tes textes avant de quitter.", "Storage is unavailable. Keep this tab open and export your text before leaving."));
     return saved;
@@ -139,7 +140,8 @@ function render(result: ApplicationResult): void {
     card.append(quotes, action);
     return card;
   }));
-  cvEditor.setText(applicationCv(result));
+  cvEditor.setSections(result.cv_sections);
+  element("cv-role-title").textContent = result.role_title;
   pitch.value = result.pitch.text;
   element("application-draft-sources").replaceChildren(...[...result.cv_sections, result.pitch].map((section) => {
     const node = document.createElement("section");
@@ -237,6 +239,7 @@ for (const input of [profile, posting]) input.addEventListener("input", () => {
   }
   persist();
 });
+contact.addEventListener("input",()=>{element("cv-contact-preview").textContent=contact.value;});
 for (const input of [cv, pitch, contact]) input.addEventListener("input", () => {
   reviewed.checked = false; printButton.disabled = download.disabled = true;
   persist();
@@ -248,7 +251,8 @@ printButton.addEventListener("click", () => {
   if (!reviewed.checked || results.hidden) return;
   const print = element("application-print-text");
   print.replaceChildren();
-  if (contact.value.trim()) print.append(text("p", contact.value.trim()));
+  if (contact.value.trim()) { const header=text("header",contact.value.trim()); header.className="cv-contact-header"; print.append(header); }
+  if (currentResult) { const role=text("h2",currentResult.role_title); role.className="cv-role-title"; print.append(role); }
   print.append(cleanCvHtml(cvEditor.html()));
   document.body.classList.add("application-print");
   window.print();
@@ -263,7 +267,7 @@ download.addEventListener("click", () => {
 cancel.addEventListener("click", () => controller?.abort());
 element("application-clear").addEventListener("click", () => {
   controller?.abort(); controller = null; busy(false);
-  form.reset(); resetResults(); contact.value = "";
+  form.reset(); resetResults(); contact.value = ""; element("cv-contact-preview").textContent="";
   try { clearApplicationState(sessionStorage, localStorage); } catch {}
   deleteCandidateProfile();
   profileSummary();
@@ -276,11 +280,12 @@ element("application-clear").addEventListener("click", () => {
 try {
   const saved = readApplicationState(sessionStorage, localStorage);
   if (saved) {
+    contact.value = saved.contact ?? ""; element("cv-contact-preview").textContent=contact.value;
     profile.value = saved.profile; posting.value = saved.posting; remember.checked = saved.remember;
     editor.open = false;
     if (saved.result) {
       inputSnapshot = {profile: saved.profile, posting: saved.posting};
-      render(saved.result); if (saved.cv_html) cvEditor.setHtml(saved.cv_html); else cvEditor.setText(saved.cv); pitch.value = saved.pitch;
+      render(saved.result); if (saved.cv_html) cvEditor.setHtml(saved.cv_html, saved.result.cv_sections.map(section=>section.heading)); else cvEditor.setText(saved.cv); pitch.value = saved.pitch;
       reviewed.checked = saved.reviewed; printButton.disabled = download.disabled = !saved.reviewed;
       if (saved.result.output_language !== (fr ? "fr" : "en")) status(say("Ton dossier et tes modifications sont conservés. Les textes restent dans leur langue d’origine ; changer la langue de l’interface ne les traduit pas.", "Your application and edits are preserved. Drafts remain in their original language; changing the interface language does not translate them."));
     }
@@ -309,3 +314,39 @@ if (profileMode) {
   }
   posting.focus();
 }
+
+
+const githubStatus=element('github-status');
+const githubReview=element('github-review');
+const githubPreview=element<HTMLTextAreaElement>('github-preview');
+const githubContribution=element<HTMLTextAreaElement>('github-contribution');
+let githubController: AbortController | null = null;
+element('github-load').addEventListener('click',async()=>{
+  if(githubController) return;
+  const active=new AbortController(); githubController=active;
+  const timer=window.setTimeout(()=>active.abort(),12000);
+  const button=element<HTMLButtonElement>('github-load'); button.disabled=true; githubReview.hidden=true;
+  githubStatus.textContent=say('Lecture du dépôt public…','Reading public repository…');
+  try {
+    const project=await fetchGithubProject(element<HTMLInputElement>('github-url').value,active.signal);
+    if(active.signal.aborted) return;
+    githubPreview.value=project; githubContribution.value=''; githubReview.hidden=false;
+    githubStatus.textContent=say('Vérifie les informations puis décris ta contribution. Rien n’a encore été ajouté.','Review the information and describe your contribution. Nothing has been added yet.');
+  } catch(error) {
+    const code=error instanceof Error?error.message:'';
+    githubStatus.textContent=code==='github-url'?say('Utilise le lien https://github.com/propriétaire/dépôt.','Use https://github.com/owner/repository.'):
+      code==='github-limit'?say('Limite GitHub atteinte. Réessaie plus tard ou décris le projet manuellement.','GitHub rate limit reached. Try later or describe the project manually.'):
+      code==='github-missing'?say('Dépôt introuvable ou privé. Utilise un dépôt public.','Repository not found or private. Use a public repository.'):
+      say('GitHub ne répond pas. Ton profil est conservé ; tu peux ajouter le projet manuellement.','GitHub is unavailable. Your profile is preserved; you can add the project manually.');
+  } finally {window.clearTimeout(timer);githubController=null;button.disabled=false;}
+});
+element('github-add').addEventListener('click',()=>{
+  const contribution=githubContribution.value.trim();
+  if(contribution.length<20) {githubStatus.textContent=say('Décris ta contribution en au moins 20 caractères.','Describe your contribution in at least 20 characters.');return;}
+  const addition=githubPreview.value.trim()+'\n'+say('Ma contribution : ','My contribution: ')+contribution;
+  const combined=[profile.value.trim(),addition].filter(Boolean).join('\n\n');
+  if(combined.length>16000) {githubStatus.textContent=say('Le profil dépasse 16 000 caractères. Raccourcis le texte avant l’ajout.','Profile exceeds 16,000 characters. Shorten it before adding.');return;}
+  profile.value=combined;profile.dispatchEvent(new Event('input',{bubbles:true}));editor.open=true;githubReview.hidden=true;
+  githubStatus.textContent=say('Projet ajouté. Relance le diagnostic pour prendre en compte cette preuve.','Project added. Run the assessment again to include this evidence.');
+});
+element('application-clear').addEventListener('click',()=>{githubController?.abort();githubPreview.value='';githubContribution.value='';element<HTMLInputElement>('github-url').value='';githubReview.hidden=true;githubStatus.textContent='';});
