@@ -21,6 +21,8 @@ The home CTA opens this workflow. Home card 1 opens the profile step (`?step=pro
 - Both use `store=False`, an SDK timeout, a bounded output and no automatic SDK retries. Configure `OPENAI_APPLICATION_MODEL` to select a compatible model; the default is the existing `OPENAI_MODEL` from `src/ai_generator/config.py`. Model/tool access depends on the project's credentials.
 - The current agent/drill pipeline remains separate. This change does not claim to integrate Agents SDK, Realtime, Web Search or third-party job feeds.
 
+Citations tolerate Unicode composition, whitespace and typographic quotation marks, but not changed words or numbers. If evidence validation fails, the application makes at most one fresh correction request using the original inputs and a content-free error code. Both attempts share the endpoint’s 95-second deadline; a repair can increase API usage. Persistent failures return no score, preserve the browser profile and expose a safe error category. The browser allows up to 200 seconds for the combined PDF import and analysis, with cancellation available.
+
 Exact quote validation is **not** semantic verification: negations, relevance, skill levels and generated paraphrases can still be misinterpreted. Review every result. Coverage includes only extracted skills, with priority weights 3/2/1 and evidence credit 1/0.5/0. A 60% threshold is a product heuristic, not a calibrated recruitment metric. Missing core evidence or unresolved eligibility conditions prompt further review even above 60%. Uncertain/out-of-scope roles receive no numeric score. Age, gender and nationality must not be used as scoring factors.
 
 ### Data and deployment boundary

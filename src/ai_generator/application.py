@@ -3,6 +3,7 @@ import base64
 import binascii
 import json
 import os
+import unicodedata
 from pathlib import Path
 from typing import Literal
 
@@ -130,7 +131,20 @@ are for human review, not guaranteed ATS success. Do not generate exercises or i
 """
 
 
+class ApplicationOutputError(ValueError):
+    """Only fixed codes and numeric indexes: never candidate or model content."""
+    def __init__(self, code: str):
+        self.code = code
+        super().__init__(code)
+
+
+class EvidenceError(ApplicationOutputError):
+    pass
+
+
 def _normalized(value: str) -> str:
+    # Preserve words, negations, accents and numbers; only normalize typography.
+    value = unicodedata.normalize("NFC", value).translate(str.maketrans({"’": "'", "‘": "'", "“": '"', "”": '"', "\u00a0": " "}))
     return " ".join(value.split()).casefold()
 
 
@@ -141,19 +155,21 @@ def _quote_exists(quote: str | None, source: str) -> bool:
 def validate_analysis(analysis: ApplicationAnalysis, payload: ApplicationRequest) -> ApplicationResult:
     """Reject fabricated citations. Textual support is not proof of factual truth."""
     seen: set[str] = set()
-    for requirement in analysis.requirements:
+    for index, requirement in enumerate(analysis.requirements):
         identity = _normalized(requirement.name)
-        if identity in seen or not _quote_exists(requirement.posting_quote, payload.job_description):
-            raise ValueError("Invalid or duplicate requirement evidence")
+        if identity in seen:
+            raise EvidenceError(f"duplicate_requirement:{index}")
+        if not _quote_exists(requirement.posting_quote, payload.job_description):
+            raise EvidenceError(f"posting_quote:{index}")
         seen.add(identity)
         if requirement.status == "not_documented":
             if requirement.candidate_quote is not None:
-                raise ValueError("Undocumented requirements cannot claim evidence")
+                raise EvidenceError(f"undocumented_with_quote:{index}")
         elif not _quote_exists(requirement.candidate_quote, payload.candidate_text):
-            raise ValueError("Candidate evidence is not present in the supplied profile")
-    for section in [*analysis.cv_sections, analysis.pitch]:
+            raise EvidenceError(f"candidate_quote:{index}")
+    for index, section in enumerate([*analysis.cv_sections, analysis.pitch]):
         if not all(_quote_exists(quote, payload.candidate_text) for quote in section.source_quotes):
-            raise ValueError("Draft source is not present in the supplied profile")
+            raise EvidenceError(f"draft_quote:{index}")
 
     skills = [item for item in analysis.requirements if item.kind == "skill"]
     weights = {"core": 3, "important": 2, "supporting": 1}
@@ -193,16 +209,33 @@ class ApplicationAgent:
             async with AsyncOpenAI(timeout=90.0, max_retries=0) as client:
                 response = await client.responses.parse(**kwargs)
         if response.output_parsed is None:
-            raise ValueError("Model refused or returned an incomplete response")
+            raise ApplicationOutputError("model_incomplete" if getattr(response, "status", None) == "incomplete" else "model_unparsed")
         return response.output_parsed
 
     async def prepare(self, payload: ApplicationRequest) -> ApplicationResult:
-        analysis = await self._parse(ApplicationAnalysis, SYSTEM_PROMPT, json.dumps({
+        inputs = {
             "candidate_text": payload.candidate_text,
             "job_description": payload.job_description,
             "output_language": payload.output_language,
-        }, ensure_ascii=False))
-        return validate_analysis(analysis, payload)
+        }
+        # At most two calls, both inside the endpoint's existing 95-second deadline.
+        # Do not weaken validation or turn a failed analysis into a fabricated score.
+        for attempt in range(2):
+            instructions = SYSTEM_PROMPT
+            if attempt:
+                instructions += ("\nThe prior response failed evidence validation (" + issue +
+                    "). Produce a fresh response from the original sources. Copy short EXACT "
+                    "contiguous excerpts, never translate, paraphrase or combine fragments inside "
+                    "quotes. Use null candidate_quote for not_documented. Keep requirements unique. "
+                    "All CV and pitch source_quotes must come from candidate_text, not the posting.")
+            analysis = await self._parse(ApplicationAnalysis, instructions, json.dumps(inputs, ensure_ascii=False))
+            try:
+                return validate_analysis(analysis, payload)
+            except EvidenceError as exc:
+                if attempt:
+                    raise
+                issue = exc.code
+
 
     async def import_pdf(self, payload: ProfileImportRequest) -> ImportedProfile:
         return await self._parse(ImportedProfile,

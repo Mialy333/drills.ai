@@ -183,3 +183,42 @@ def test_interview_cases_are_fixed_bilingual_catalog_not_model_output():
     assert {case.question for case in api_cases} == {case.question for case in eval_cases}
     assert len(select_interview_cases("sécurité RAG", "fr")) == 3
     assert "frontières de confiance" in select_interview_cases("sécurité RAG", "fr")[0].looking_for
+
+
+def test_typographic_apostrophes_are_accepted_but_changed_facts_are_not():
+    from src.ai_generator.application import _quote_exists
+    assert _quote_exists("J'ai conçu une API", "J’ai conçu une API")
+    assert _quote_exists("évaluation des agents", "e\u0301valuation des agents")
+    assert not _quote_exists("10 years of experience", "2 years of experience")
+    assert not _quote_exists("I deployed a production agent", "I did not deploy any production agent")
+
+
+def test_invalid_quotes_get_one_repair_then_validate_original_sources(analysis, payload):
+    invalid = analysis.model_copy(deep=True)
+    invalid.pitch.source_quotes = ["A fabricated private achievement"]
+    parse = AsyncMock(side_effect=[SimpleNamespace(output_parsed=invalid), SimpleNamespace(output_parsed=analysis)])
+    result = asyncio.run(ApplicationAgent(SimpleNamespace(responses=SimpleNamespace(parse=parse))).prepare(payload))
+    assert result.score == 100
+    assert parse.await_count == 2
+    assert "draft_quote:" in parse.call_args.kwargs["instructions"]
+    assert "A fabricated private achievement" not in parse.call_args.kwargs["instructions"]
+    assert json.loads(parse.call_args.kwargs["input"])["candidate_text"] == PROFILE
+
+
+def test_persistent_invalid_quotes_never_create_a_score_or_retry_loop(analysis, payload):
+    from src.ai_generator.application import EvidenceError
+    analysis.requirements[0].candidate_quote = "Invented skill that is absent from the CV"
+    parse = AsyncMock(return_value=SimpleNamespace(output_parsed=analysis))
+    with pytest.raises(EvidenceError, match="candidate_quote:0"):
+        asyncio.run(ApplicationAgent(SimpleNamespace(responses=SimpleNamespace(parse=parse))).prepare(payload))
+    assert parse.await_count == 2
+
+
+def test_evidence_failure_has_safe_api_code(client, payload, monkeypatch, caplog):
+    from src.ai_generator.application import EvidenceError
+    monkeypatch.setattr(api_main.ApplicationAgent, "prepare", AsyncMock(side_effect=EvidenceError("draft_quote:2")))
+    response = client.post("/api/application", json=payload.model_dump())
+    assert response.status_code == 502
+    assert response.json()["detail"]["code"] == "evidence_validation"
+    assert "draft_quote:2" in caplog.text
+    assert PROFILE not in caplog.text + response.text

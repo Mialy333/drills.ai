@@ -71,12 +71,19 @@ async function post(path: "/api/application" | "/api/profile-import", body: unkn
   if (response.status === 503) throw new Error("unavailable");
   if (response.status === 422) throw new Error("invalid-input");
   if (response.status === 504) throw new DOMException("Timeout", "AbortError");
-  if (response.status === 502) throw new Error("validation");
+  if (response.status === 502) {
+    const failure = await response.json().catch(() => null);
+    const code = failure?.detail?.code;
+    if (["evidence_validation", "model_incomplete", "model_unparsed"].includes(code)) throw new Error(code);
+    throw new Error("validation");
+  }
   if (!response.ok) throw new Error("failed");
   return response.json();
 }
 
 function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message === "evidence_validation") return say("Le CV est conservé, mais les citations de l’analyse n’ont pas pu être validées après une tentative de correction. Aucun score n’a été affiché. Tu peux relancer le diagnostic sans réimporter ton CV.", "Your CV is preserved, but analysis citations could not be validated after one repair attempt. No score was shown. You can retry without importing your CV again.");
+  if (error instanceof Error && ["model_incomplete", "model_unparsed"].includes(error.message)) return say("L’IA n’a pas renvoyé une analyse complète exploitable. Ton profil et ton annonce sont conservés ; relance uniquement le diagnostic.", "AI did not return a complete usable analysis. Your profile and posting are preserved; retry the assessment only.");
   if (error instanceof Error && error.message === "invalid-pdf") return say("Choisis un PDF non vide de 4 Mio maximum.", "Choose a non-empty PDF of at most 4 MiB.");
   if (error instanceof Error && error.message === "unreadable-pdf") return say("Le texte du CV n’a pas pu être extrait correctement. Essaie un PDF avec du texte sélectionnable, ou utilise la saisie manuelle.", "CV text could not be extracted. Try a PDF with selectable text or use manual entry.");
   if (error instanceof TypeError) return say("Impossible de joindre le service. Vérifie que le serveur DRILLS est démarré, puis réessaie. Ton profil est conservé.", "Cannot reach the service. Check that the DRILLS server is running, then try again. Your profile is preserved.");
@@ -93,7 +100,7 @@ async function perform(task: (signal: AbortSignal) => Promise<void>, message: st
   controller = active;
   busy(true);
   status(message);
-  const timeout = window.setTimeout(() => active.abort(), 100_000);
+  const timeout = window.setTimeout(() => active.abort(), 200_000);
   try { await task(active.signal); }
   catch (error) { if (controller === active) status(errorMessage(error)); }
   finally {

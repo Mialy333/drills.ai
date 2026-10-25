@@ -90,3 +90,15 @@ test('inline startup retires stale DRILLS assets without deleting profiles or un
  assert.equal(w.sessionStorage.getItem('drills.application.v1'),'tab-profile');
  w.eval(code);await tick();await tick();assert.equal(reloads,1,'no reload loop');
 });
+
+test('evidence validation failure explains the problem and preserves the imported profile', async t => {
+ const {w,get}=setup(t);
+ get('profile').value=profileText;
+ get('posting').value='AI Agent Engineer internship with API integration, tests and workflow design.';
+ get('consent').checked=true;
+ w.fetch=async()=>({ok:false,status:502,json:async()=>({detail:{code:'evidence_validation'}})});
+ submit(w,get);await done(get);
+ assert.match(get('status').textContent,/citations could not be validated/);
+ assert.equal(get('profile').value,profileText);
+ assert.equal(get('results').hidden,true);
+});

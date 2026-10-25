@@ -20,7 +20,7 @@ from src.ai_generator.orchestrator import DrillOrchestrator, DrillPipelineError
 from src.ai_generator.pipeline_schemas import DynamicDrillSchema
 from src.ai_generator.application import (
     ApplicationAgent, ApplicationRequest, ApplicationResult,
-    ProfileImportRequest, ImportedProfile,
+    ProfileImportRequest, ImportedProfile, ApplicationOutputError, EvidenceError,
 )
 
 logger = logging.getLogger(__name__)
@@ -80,6 +80,10 @@ async def run_application_operation(operation):
             return await asyncio.wait_for(operation(), timeout=95)
         except (asyncio.TimeoutError, TimeoutError):
             raise HTTPException(status_code=504, detail="Preparation timed out. Your inputs have not been saved.") from None
+        except ApplicationOutputError as exc:
+            logger.warning("Application preparation rejected: %s", exc.code)
+            code = "evidence_validation" if isinstance(exc, EvidenceError) else exc.code
+            raise HTTPException(status_code=502, detail={"code": code}) from None
         except Exception as exc:
             # Never log a CV, prompt, provider response or exception message.
             logger.warning("Application preparation failed (%s)", type(exc).__name__)
