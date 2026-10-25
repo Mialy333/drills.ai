@@ -237,6 +237,9 @@ element("application-import").addEventListener("click", () => {
 });
 
 element("application-example").addEventListener("click", () => {
+  postingUrl.value = ""; linkedPosting = ""; renderApplyLink();
+  residence.value = ""; workCountry.value = ""; workAuthorization.value = "unknown";
+  contact.value = ""; element("cv-contact-preview").textContent = "";
   pdf.value = ""; element("application-file-name").textContent=say("Aucun fichier sélectionné", "No file selected");
   resetResults();
   profile.value = fr

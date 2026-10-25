@@ -295,3 +295,11 @@ test('opportunities start with only two choices and reveal controls only on requ
  w.document.querySelector('[data-application-step=profile]').click();assert.equal(get('profile-card').hidden,false);
  w.document.querySelector('[data-application-step=posting]').click();assert.equal(get('consent-panel').hidden,false);
 });
+
+ test('fictional example never reuses a real application link, contact or eligibility',t=>{
+ const {get}=setup(t,'?step=profile');
+ get('posting-url').value='https://example.com/real-job';get('residence').value='Paris';get('work-country').value='France';get('work-authorization').value='yes';get('contact').value='Private contact';
+ get('example').click();
+ for(const id of ['posting-url','residence','work-country','contact'])assert.equal(get(id).value,'');
+ assert.equal(get('work-authorization').value,'unknown');assert.equal(get('apply-link').hidden,true);assert.equal(get('consent').checked,false);
+ });

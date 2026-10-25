@@ -3,6 +3,7 @@ name: Full-stack validation
 on:
   push:
     branches:
+      - main
       - feat/fastapi-multi-agent-backend
       - feat/drills-ai-ux-refactor
       - feat/hackathon-mvp
