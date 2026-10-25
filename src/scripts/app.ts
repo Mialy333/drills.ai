@@ -556,14 +556,23 @@ function mountDynamicJob(article: HTMLElement): boolean {
   const fieldset = document.createElement("fieldset");
   fieldset.className = "options";
   fieldset.dataset.answerChoice = "";
-  fieldset.dataset.correct = String(data.multiple_choice.correct_answer_index);
-  data.multiple_choice.options.forEach((option, index) => {
+  const choiceOrder = data.multiple_choice.options.map((_, index) => index);
+  for (let index = choiceOrder.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [choiceOrder[index], choiceOrder[swapIndex]] = [choiceOrder[swapIndex], choiceOrder[index]];
+  }
+  if (choiceOrder[0] === data.multiple_choice.correct_answer_index && choiceOrder.length > 1) {
+    [choiceOrder[0], choiceOrder[1]] = [choiceOrder[1], choiceOrder[0]];
+  }
+  fieldset.dataset.correct = String(choiceOrder.indexOf(data.multiple_choice.correct_answer_index));
+  choiceOrder.forEach((originalIndex, displayIndex) => {
+    const option = data.multiple_choice.options[originalIndex];
     const label = document.createElement("label");
     label.className = "option";
     const radio = document.createElement("input");
     radio.type = "radio";
     radio.name = "a-q2";
-    radio.value = String(index);
+    radio.value = String(displayIndex);
     const span = document.createElement("span");
     span.textContent = option;
     label.append(radio, span);

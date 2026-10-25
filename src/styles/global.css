@@ -7,10 +7,19 @@
   --plastic-shade: #c9bfae;
   --screen: #0f241b;
   --font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --pixel: "VT323", ui-monospace, monospace;
+  --pixel: var(--font);
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --radius-s: 6px;
-  --radius-m: 12px;
+  --radius-s: 12px;
+  --radius-m: 20px;
+  --radius-card: 24px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --shadow-card: 0 12px 32px rgb(53 40 93 / 7%);
+  --shadow-focus: 0 0 0 4px rgb(118 100 232 / 18%);
   --bar-h: 56px;
   --tab-h: 64px;
   --side-w: 300px;
@@ -34,18 +43,18 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #f8f5ef;
-  --panel: #fffdfa;
-  --raise: #f5f0e9;
-  --ink: #252331;
-  --muted: #686675;
-  --line: #e7e0d8;
-  --accent: #292737;
+  --bg: #faf9ff;
+  --panel: #fffcfa;
+  --raise: #ede7ff;
+  --ink: #24213a;
+  --muted: #68657c;
+  --line: #ddd6ed;
+  --accent: #7664e8;
   --accent-ink: #ffffff;
-  --link: #66538f;
-  --code-bg: #f7f4ef;
-  --ok: #27735a;
-  --warn: #87511e;
+  --link: #5543bd;
+  --code-bg: #f4f1fb;
+  --ok: #177354;
+  --warn: #805216;
 }
 
 *,
@@ -74,8 +83,9 @@ a {
 }
 
 :focus-visible {
-  outline: 3px solid var(--sunset);
-  outline-offset: 2px;
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  box-shadow: var(--shadow-focus);
   border-radius: 3px;
 }
 
@@ -2557,6 +2567,51 @@ legend small {
 .companion-retry { justify-self: start; min-height: 42px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--raise); color: var(--ink); font: inherit; font-size: .9rem; font-weight: 700; cursor: pointer; }
 .companion-retry[hidden] { display: none; }
 .companion-form button:disabled, .profile-form button:disabled, .companion-retry:disabled { cursor: not-allowed; opacity: .6; }
+
+/* Shared calm learning palette and accessible recommendation cards. */
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn-primary:hover { background: color-mix(in srgb, var(--accent) 88%, var(--ink)); }
+.btn-secondary, .btn { border-radius: 999px; }
+.welcome, .learner-dashboard, .profile-card, .journey-card, .companion-panel,
+.diagnostic-card, .diagnostic-results, .panel, .generator-card, .roadmap-panel {
+  border-radius: var(--radius-card);
+}
+.learner-dashboard, .profile-card, .journey-card, .companion-panel, .diagnostic-card,
+.diagnostic-results, .panel, .generator-card, .roadmap-panel {
+  box-shadow: var(--shadow-card);
+}
+.diagnostic-page { max-width: 900px; }
+.diagnostic-card, .diagnostic-results { padding: clamp(18px, 4vw, 32px); background: var(--panel); }
+.diagnostic-results { display: grid; gap: 16px; margin-top: 20px; }
+.diagnostic-results[hidden] { display: none; }
+.diagnostic-results > h2 { margin: 0; font-size: clamp(1.55rem, 1.3rem + 1.5vw, 2.1rem); }
+.diagnostic-result-lead { max-width: 70ch; margin: 0; color: var(--muted); }
+.diagnostic-score-summary { width: fit-content; margin: 0; padding: 8px 14px; border-radius: 999px; background: var(--raise); color: var(--ink); font-weight: 700; }
+.diagnostic-observations { display: grid; gap: 14px; }
+.diagnostic-observations section, .diagnostic-roadmap li { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-m); background: var(--panel); }
+.diagnostic-observations h3, .diagnostic-roadmap-title { margin: 0; font-size: 1.05rem; }
+.diagnostic-observations ul { display: grid; gap: 8px; margin: 10px 0 0; padding-left: 1.25rem; }
+.diagnostic-observations li { padding-left: 4px; color: var(--muted); overflow-wrap: anywhere; }
+.diagnostic-roadmap { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: roadmap; }
+.diagnostic-roadmap li { position: relative; padding: 18px 18px 18px 58px; counter-increment: roadmap; }
+.diagnostic-roadmap li::before { content: counter(roadmap); position: absolute; top: 17px; left: 16px; display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: var(--raise); color: var(--link); font-weight: 700; }
+.diagnostic-roadmap h4 { margin: 0 0 8px; font-size: 1rem; }
+.diagnostic-roadmap p { margin: 6px 0 0; color: var(--muted); overflow-wrap: anywhere; }
+.diagnostic-roadmap p strong { color: var(--ink); }
+.diagnostic-save-status { margin: 0; color: var(--ok); }
+.diagnostic-save-status.is-error { color: var(--warn); }
+.diagnostic-launch[aria-disabled="true"] { opacity: .7; }
+.diagnostic-actions { align-items: center; }
+.diagnostic-actions .btn { min-height: 48px; }
+.companion-mark { background: var(--raise); color: var(--link); box-shadow: inset 0 0 0 1px var(--line); }
+.companion-mark svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+.companion-mark svg circle:last-child { fill: var(--accent); stroke: var(--accent); }
+.companion-transcript { background: color-mix(in srgb, var(--raise) 35%, var(--panel)); }
+.companion-message-user { background: var(--raise); }
+
+@media (min-width: 720px) {
+  .diagnostic-observations { grid-template-columns: 1fr 1fr; }
+}
 
 @media (max-width: 374px) {
   .bar { padding-inline: 10px; }

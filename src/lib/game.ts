@@ -45,13 +45,13 @@ export const BADGES: BadgeDef[] = [
 ];
 
 export const LEVELS: { xp: number; name: L }[] = [
-  { xp: 0, name: { fr: "Stagiaire", en: "Intern" } },
-  { xp: 150, name: { fr: "Junior", en: "Junior" } },
-  { xp: 500, name: { fr: "Confirmée", en: "Mid-level" } },
-  { xp: 1100, name: { fr: "Senior", en: "Senior" } },
-  { xp: 2000, name: { fr: "Lead", en: "Lead" } },
-  { xp: 3200, name: { fr: "Staff", en: "Staff" } },
-  { xp: 5000, name: { fr: "CTO", en: "CTO" } },
+  { xp: 0, name: { fr: "Premier pas", en: "First steps" } },
+  { xp: 150, name: { fr: "En pratique", en: "In practice" } },
+  { xp: 500, name: { fr: "Régularité", en: "Consistency" } },
+  { xp: 1100, name: { fr: "Curiosité", en: "Curiosity" } },
+  { xp: 2000, name: { fr: "Élan", en: "Momentum" } },
+  { xp: 3200, name: { fr: "Persévérance", en: "Persistence" } },
+  { xp: 5000, name: { fr: "Exploration", en: "Exploration" } },
 ];
 
 export const BADGE_XP = 50;

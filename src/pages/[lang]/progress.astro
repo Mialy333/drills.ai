@@ -46,9 +46,11 @@ const dynamicDrillTitle = lang === "fr" ? "Exercice ciblé" : "Tailored job dril
     <article class="level-card">
       <div class="level-badge" aria-hidden="true"><span data-level-n>1</span></div>
       <div class="level-body">
+        <p class="section-eyebrow">{lang === "fr" ? "NIVEAU DE PRATIQUE · POINTS DU JEU" : "PRACTICE LEVEL · GAME POINTS"}</p>
         <p class="level-name" data-level-name></p>
         <div class="level-meter"><span data-level-bar></span></div>
         <p class="level-xp" data-level-xp></p>
+        <p class="note">{lang === "fr" ? "Ce niveau suit les tentatives enregistrées ; il ne représente pas un niveau professionnel." : "This level tracks saved practice attempts; it is not a professional skill rating."}</p>
       </div>
     </article>
 

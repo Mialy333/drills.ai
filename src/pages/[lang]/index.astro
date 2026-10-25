@@ -166,11 +166,14 @@ const french = lang === "fr";
           resumeDetail: "Continue là où tu t’es arrêté·e.",
           diagnosticTitle: "Faire mon diagnostic technique",
           diagnosticDetail: "Commence par un repère fondé sur tes réponses au quiz.",
-          roleTitle: "Préparer une offre d’emploi",
-          roleDetail: "Relie les exigences d’un poste à un exercice Python ciblé.",
+          roleTitle: "Commencer l’exercice recommandé",
+          roleDetail: "Ton diagnostic a préparé un exercice à partir d’une réponse précise.",
+          roleFallbackTitle: "Préparer une offre d’emploi",
+          roleFallbackDetail: "Colle une annonce pour créer un exercice ciblé.",
+          roleFallbackButton: "Préparer une offre",
           resumeButton: "Reprendre l’exercice",
           diagnosticButton: "Faire le diagnostic",
-          roleButton: "Préparer une offre",
+          roleButton: "Commencer l’exercice",
         }
       : {
           goal: { "career-change": "career transition", "target-role": "target role", "skill-building": "skill building" },
@@ -182,11 +185,14 @@ const french = lang === "fr";
           resumeDetail: "Pick up where you left off.",
           diagnosticTitle: "Take my technical diagnostic",
           diagnosticDetail: "Start with a snapshot based on your quiz answers.",
-          roleTitle: "Prepare for a job posting",
-          roleDetail: "Connect a role’s requirements to a tailored Python exercise.",
+          roleTitle: "Start the recommended exercise",
+          roleDetail: "Your diagnostic prepared an exercise from one specific answer.",
+          roleFallbackTitle: "Prepare for a job posting",
+          roleFallbackDetail: "Paste a posting to create a focused exercise.",
+          roleFallbackButton: "Prepare for a role",
           resumeButton: "Continue the exercise",
           diagnosticButton: "Take the diagnostic",
-          roleButton: "Prepare for a role",
+          roleButton: "Start the exercise",
         };
 
     function showDashboard(): void {
@@ -226,12 +232,13 @@ const french = lang === "fr";
       const resume = latestAttempt?.track === "python" && (latestAttempt.id === "dynamic-job" || hasGeneratedDrill);
       const destination = resume
         ? `${base}${pageLang}/python/dynamic-job/`
-        : hasAssessment ? `${base}${pageLang}/generate/` : `${base}${pageLang}/assess/`;
-      if (nextTitle) nextTitle.textContent = resume ? profileCopy.resumeTitle : hasAssessment ? profileCopy.roleTitle : profileCopy.diagnosticTitle;
-      if (nextDetail) nextDetail.textContent = resume ? profileCopy.resumeDetail : hasAssessment ? profileCopy.roleDetail : profileCopy.diagnosticDetail;
+        : hasAssessment && hasGeneratedDrill ? `${base}${pageLang}/python/dynamic-job/`
+          : hasAssessment ? `${base}${pageLang}/generate/` : `${base}${pageLang}/assess/`;
+      if (nextTitle) nextTitle.textContent = resume ? profileCopy.resumeTitle : hasAssessment && hasGeneratedDrill ? profileCopy.roleTitle : hasAssessment ? profileCopy.roleFallbackTitle : profileCopy.diagnosticTitle;
+      if (nextDetail) nextDetail.textContent = resume ? profileCopy.resumeDetail : hasAssessment && hasGeneratedDrill ? profileCopy.roleDetail : hasAssessment ? profileCopy.roleFallbackDetail : profileCopy.diagnosticDetail;
       if (nextLink) {
         nextLink.href = destination;
-        nextLink.textContent = resume ? profileCopy.resumeButton : hasAssessment ? profileCopy.roleButton : profileCopy.diagnosticButton;
+        nextLink.textContent = resume ? profileCopy.resumeButton : hasAssessment && hasGeneratedDrill ? profileCopy.roleButton : hasAssessment ? profileCopy.roleFallbackButton : profileCopy.diagnosticButton;
       }
     }
 
