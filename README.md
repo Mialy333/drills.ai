@@ -1,73 +1,186 @@
 # DRILLS.ai
 
-**Décroche tes premiers entretiens d’Agent Engineer.**
+**Land your first Agent Engineer interviews.**
 
-Importe ton CV, choisis une offre et prépare une candidature qui met ton parcours en valeur. Pour un stage, une alternance ou un premier emploi.
+Upload your CV, choose an opening, and build an application that highlights your experience. For an internship, apprenticeship, or first job.
 
-[Essayer en français](https://mialy333.github.io/drills.ai/fr/) · [Try in English](https://mialy333.github.io/drills.ai/en/)
+[Try the app in English](https://mialy333.github.io/drills.ai/en/) · [Essayer en français](https://mialy333.github.io/drills.ai/fr/) · [100-second demo script (French)](docs/DEMO.md)
 
-Projet construit pendant le hackathon OpenAI Devday — **Impact → New Opportunities → Jobs**, en build in public.
+Built during the **OpenAI Devday hackathon · Impact → New Opportunities → Jobs**, with a build-in-public approach.
 
-## Pourquoi Drills ?
+![DRILLS.ai homepage: land your first Agent Engineer interviews](docs/images/home-en.jpg)
 
-Quand on se reconvertit, on peut avoir des années d’expérience, des formations et des projets, sans savoir comment les présenter pour un premier poste dans l’IA. Faut-il encore apprendre un outil, ou mieux expliquer ce que l’on sait déjà faire ?
+## Why Drills?
 
-Drills rapproche un parcours d’une offre précise : ce qui est étayé, ce qui manque et la prochaine action utile. L’objectif est d’aider à préparer puis envoyer une candidature crédible. Le produit ne garantit ni entretien ni emploi.
+Career changers often have years of professional experience, technical training, and personal projects—but still struggle to tell whether they are ready to apply. Should they learn another framework, or explain their existing work more clearly?
 
-## Le parcours actuel
+Drills connects a candidate's experience to a specific opening: what is supported by their profile, what needs clarification, and what to do next. It helps turn that assessment into an editable application and a concrete path to applying.
 
-1. **Profil** — importer un CV PDF ou saisir son parcours. Relire le texte extrait et ajouter, si utile, un dépôt GitHub public avec sa contribution personnelle. Le lieu de résidence et le droit de travailler sont des déclarations facultatives, distinctes.
-2. **Opportunités** — chercher des offres publiques ou coller une annonce. Le profil est réutilisé. Une offre sélectionnée conserve son lien de candidature.
-3. **Diagnostic** — examiner les compétences documentées, les points à clarifier et la prochaine action. Les conditions d’éligibilité sont séparées des compétences.
-4. **Candidature** — relire et modifier un CV structuré et une présentation de son parcours, exporter le CV en PDF depuis l’aperçu d’impression, puis ouvrir le site de l’annonce pour postuler.
+The target user is **a career changer with some development foundations and projects**, looking for a first Agent Engineer opportunity. The goal is to help them obtain an interview; the product does not promise interviews or employment.
 
-Le **suivi** conserve les offres analysées, les statuts renseignés par le candidat, les dates d’envoi et les notes. Ouvrir une annonce ou exporter un CV ne compte pas comme une candidature envoyée.
+## The candidate journey
 
-L’interface est disponible en français et en anglais. Changer de langue conserve le dossier ; cela ne traduit pas automatiquement les annonces, le CV ou les textes déjà rédigés.
+| Step | What the candidate does | What Drills provides |
+| --- | --- | --- |
+| **1 · Profile** | Import a PDF CV or enter experience; optionally add a public GitHub project | A reusable profile, with extracted text to review and an explicit description of personal project contributions |
+| **2 · Opportunities** | Browse openings or paste a full posting | Public listings, location filtering, and the original application link when available |
+| **3 · Assessment** | Compare the selected opening with the saved profile | Documented skills, evidence gaps, separate eligibility conditions, and next actions |
+| **4 · Documents** | Review and edit the application | A targeted CV editor, an introduction draft, PDF printing, and a link back to the application website |
+| **Progress** | Record what happened after applying | Analysed postings, manually updated statuses, sent dates, and notes |
 
-**Périmètre final du hackathon : décrocher un entretien.** La préparation aux entretiens, les cours et les exercices Python ont été retirés du parcours public. Leur ancien code reste dans l’historique et, pour certains modules, dans le dépôt ; ce ne sont pas des fonctionnalités actives du MVP.
+The profile is reused across postings. Switching between French and English preserves the dossier; it does not automatically translate existing drafts or source text. Exporting a CV or opening an application link never marks an application as sent.
 
-## OpenAI et les services connectés
+**The hackathon scope is now frozen around these core features.** Interview preparation, courses, and Python exercises are no longer part of the public journey. The next step is user testing, not adding another feature set.
 
-| Usage | Implémentation actuelle |
+## Inside the application
+
+These are screenshots of the deployed English interface, captured on October 25, 2026. The assessment uses the built-in **fictional candidate and fictional posting**, processed through a real OpenAI request. It is an illustrative result, not evidence of hiring outcomes. No real candidate CV is shown.
+
+### A profile entered once
+
+Import a CV, review the extracted experience, and optionally add a public GitHub project or country-specific work eligibility declarations.
+
+![Profile screen with PDF import and optional GitHub project input](docs/images/profile-en.jpg)
+
+### Two ways to find an opportunity
+
+Browse available openings or bring a posting you have already found. Search controls appear only when requested.
+
+![Opportunity screen with Browse openings and Paste a posting choices](docs/images/opportunities-en.jpg)
+
+### Evidence before confidence
+
+The assessment separates skills from application conditions. Unresolved eligibility remains visible even when the candidate documents many of the required skills.
+
+![Assessment of the fictional example showing an internship availability condition to confirm](docs/images/assessment-en.jpg)
+
+## Product architecture
+
+The frontend is a bilingual **Astro + TypeScript** application with a **Tiptap** CV editor. A **FastAPI** backend handles OpenAI requests, public job feeds, validation, and optional MCP access. The candidate dossier stays in browser storage; there is no account database in this MVP.
+
+```mermaid
+flowchart TD
+    UI["Candidate interface · Astro / TypeScript"]
+    Storage["Browser dossier · session / opt-in local storage"]
+    GitHub["Public GitHub repository metadata"]
+    API["FastAPI · consent, limits and timeouts"]
+    Agent["ApplicationAgent · PDF import and application preparation"]
+    OpenAI["OpenAI Responses API · Structured Outputs"]
+    Checks["Python · source checks and coverage calculation"]
+    Jobs["Job adapters · filtered public listings"]
+    Boards["Greenhouse and Ashby"]
+    MCP["Optional MCP endpoint · external client"]
+
+    UI <--> Storage
+    UI -->|"Project preview"| GitHub
+    UI -->|"Approved CV and posting"| API
+    API --> Agent
+    Agent <-->|"Typed requests and responses"| OpenAI
+    Agent --> Checks
+    Checks -->|"Validated assessment and drafts"| API
+    API -->|"Results for review"| UI
+    UI -->|"Search openings"| API
+    API --> Jobs
+    Jobs --> Boards
+    MCP --> Jobs
+    MCP -->|"Caller-supplied evidence"| Checks
+```
+
+Public GitHub metadata is read directly by the browser. Job discovery uses backend adapters. MCP clients can use the shared job tools and scoring rules, but cannot read a dossier stored in a user's browser.
+
+### The active agent and its boundaries
+
+`ApplicationAgent` is the model-facing component in the current candidate workflow. Its two entry points share the Responses API helper; PDF extraction is a separate operation from the profile/posting assessment.
+
+| Component | Responsibility | Implementation |
+| --- | --- | --- |
+| `ApplicationAgent.import_pdf()` | Extract factual CV text for the candidate to review | PDF input to OpenAI, parsed into `ImportedProfile` |
+| `ApplicationAgent.prepare()` | Identify role requirements, relate supplied experience to them, and draft application text | OpenAI Responses API with Pydantic Structured Outputs |
+| `source_excerpts()` / `resolve_selection()` | Assign source IDs and resolve model-selected IDs back to original text | Deterministic Python |
+| `validate_analysis()` / `calculate_match()` | Check references and consistency, then calculate documented skill coverage | Deterministic Python; not another LLM agent |
+| Job adapters | Read, filter, and deduplicate public openings | Greenhouse and Ashby APIs; no model-generated listings |
+| Browser editor and tracker | Keep the candidate in control of wording, export, and application status | Tiptap and validated browser state |
+
+```mermaid
+sequenceDiagram
+    participant UI as Candidate interface
+    participant API as FastAPI
+    participant Agent as ApplicationAgent
+    participant LLM as OpenAI Responses
+    participant Checks as Python validation
+
+    UI->>API: Profile + posting + language + consent
+    API->>Agent: Validated request
+    Agent->>Agent: Split inputs into numbered excerpts
+    Agent->>LLM: Constrained source IDs + output schema
+    LLM-->>Agent: Requirements, evidence selections and drafts
+    Agent->>Checks: Resolve IDs and validate analysis
+    alt Invalid evidence selection
+        Checks-->>Agent: Safe error code
+        Agent->>LLM: One correction attempt using original inputs
+        LLM-->>Agent: Revised structured response
+        Agent->>Checks: Validate again
+    end
+    Checks-->>Agent: Coverage and result, or validation failure
+    Agent-->>API: Validated result or safe error
+    API-->>UI: Assessment to review, or recoverable error
+```
+
+There is at most one correction attempt within the endpoint deadline. A persistent failure returns an error, not a fabricated score. These checks validate structure and source presence; they do not independently establish semantic correctness or candidate skill mastery.
+
+### The original multi-agent prototype
+
+The repository also preserves the earlier learning-product architecture:
+
+| Archived component | Original role |
 | --- | --- |
-| Lire un CV PDF | OpenAI Responses API, entrée PDF, extraction structurée ; fichier de 4 Mio maximum |
-| Analyser un profil et une annonce | `ApplicationAgent`, Responses API et Structured Outputs validés avec Pydantic |
-| Préparer les textes de candidature | Brouillons fondés sur le profil fourni, éditables avant export |
-| Vérifier la provenance et calculer la couverture | Code Python : références vers les extraits originaux, validation et calcul déterministe |
-| Trouver des offres | API publiques Greenhouse et Ashby, filtres junior/stage/alternance et localisation |
-| Ajouter un projet | Métadonnées publiques GitHub, sans token ; prévisualisation et contribution personnelle confirmée |
-| Exposer des outils | Serveur MCP optionnel : `search_jobs`, `get_job`, `score_documented_match` |
+| `AnalystAgent` | Extract skills from a job description |
+| `CoachAgent` | Build a learning roadmap |
+| `DrillCreatorAgent` | Draft a targeted Python exercise and test harness |
+| `ValidatorAgent` | Run static checks and model-assisted review |
+| `DrillOrchestrator` | Coordinate the four stages |
 
-Les connecteurs d’offres interrogent une sélection limitée de tableaux d’entreprises. Ils peuvent ne retourner aucune offre adaptée ; ce n’est pas un moteur exhaustif du marché. L’import GitHub ne lit pas le code et ne prouve pas la maîtrise technique.
+This pipeline explains the project's development history. **It is not the current candidate assessment pipeline.** `/api/drills` and the retired interview endpoints return HTTP 410. The current public workflow does not use Agents SDK, Realtime, or Web Search, and should not be described as four autonomous agents collaborating in production.
 
-Le produit appelle **l’API OpenAI**, pas une session ChatGPT. Le serveur MCP permet à un client compatible d’utiliser ses outils, mais une connexion effective à ChatGPT doit être configurée et testée séparément. MCP n’est pas une base d’annonces.
+## OpenAI and connected services
 
-L’ancien prototype coordonnait quatre agents pour produire des exercices. Le diagnostic actuel utilise `ApplicationAgent` et des vérifications déterministes ; il ne faut pas le présenter comme quatre agents autonomes collaborant en production. Agents SDK, Realtime et Web Search ne sont pas utilisés dans le parcours public actuel.
+| Integration | What is implemented |
+| --- | --- |
+| **OpenAI Responses API** | PDF CV extraction, profile/posting analysis, and editable application drafts |
+| **Structured Outputs + Pydantic** | Typed outputs and constrained evidence selections |
+| **Greenhouse + Ashby** | A limited selection of public company job boards, filtered for relevant junior/internship opportunities |
+| **GitHub public API** | Repository metadata preview with candidate-confirmed personal contribution; no code audit |
+| **MCP** | Optional `/mcp/` server exposing `search_jobs`, `get_job`, and `score_documented_match` |
 
-## Ce que signifie le diagnostic
+The product calls the **OpenAI API**, not a ChatGPT conversation. A compatible MCP client—including ChatGPT when configured appropriately—requires a separate connection and tool-discovery test. Exposing an endpoint does not mean that connection has been made.
 
-Le pourcentage décrit la **couverture documentée des compétences extraites de cette annonce**, jamais une probabilité d’embauche. Les compétences sont pondérées par priorité (3/2/1) et par preuve (documentée : 1 ; partielle : 0,5 ; absente : 0). Le seuil de 60 % est une règle produit, pas une mesure validée auprès de recruteurs.
+The MCP tools do not make paid model calls, access browser dossiers, write external data, or submit applications. `score_documented_match` validates and scores caller-supplied requirements and evidence; it does not independently choose or semantically verify those requirements.
 
-Les conditions d’éligibilité non résolues restent visibles même si la couverture des compétences est élevée. Une résidence en France ne prouve pas un droit de travailler ; une déclaration du candidat n’est pas une vérification juridique. Les rôles jugés hors périmètre n’obtiennent pas de score numérique.
+Job discovery is not an exhaustive market database or personalised ranking. Some searches may return no suitable openings. A GitHub repository's metadata is not proof of authorship or technical proficiency.
 
-Le modèle choisit des identifiants d’extraits originaux ; le serveur vérifie les références. Cela limite les citations inventées, mais ne garantit pas la pertinence de l’analyse ou la véracité du CV. Une seule tentative de correction est permise en cas de réponse invalide. Les textes doivent être relus avant envoi.
+## Understanding the assessment
 
-## Données et limites du MVP
+The percentage measures **documented coverage of the skills extracted from one posting**, not hiring probability. Priority weights are 3/2/1; evidence credit is 1 for documented, 0.5 for partial, and 0 for not documented. The 60% threshold is a product heuristic, not a recruiter-calibrated metric.
 
-- Un nouveau navigateur commence avec un dossier vide. Aucun CV réel de la créatrice n’est préchargé dans le site construit. L’exemple proposé est explicitement fictif et ne fabrique pas un diagnostic réussi.
-- Le dossier, les coordonnées saisies pour le CV et le suivi sont conservés dans le navigateur : session avec expiration d’un jour, ou stockage local pendant 30 jours après modification si l’utilisateur choisit de le mémoriser. Pas de compte, de base de profils ni de synchronisation entre appareils.
-- Avec son accord, le profil et l’annonce sont transmis au backend puis à OpenAI. Le PDF est traité en mémoire ; l’application ne l’enregistre pas sur disque. Les coordonnées ajoutées dans l’éditeur d’export ne sont pas envoyées séparément au modèle ; celles contenues dans le CV importé font partie de l’entrée.
-- Les appels Responses utilisent `store=False`. Cela ne supprime pas toute politique de traitement ou de rétention du fournisseur.
-- « Effacer mon dossier » supprime les données du dossier sur ce navigateur. Les fichiers téléchargés, les autres navigateurs et les traitements antérieurs du fournisseur ne sont pas effacés par ce bouton.
-- Les endpoints de candidature ont des délais, des limites de fréquence et de concurrence. Ces protections de démonstration ne remplacent pas l’authentification, un plafond de dépenses ni une validation de sécurité de production.
-- Aucun code candidat n’est exécuté et aucune candidature n’est envoyée automatiquement.
+Eligibility is assessed separately. A high skill score does not override unresolved enrolment, availability, or work-authorisation conditions. Residence alone does not establish a right to work, and a candidate declaration is not legal verification. Out-of-scope or uncertain roles receive no numeric score.
 
-Pour repartir à zéro avant une démonstration, ouvrir [l’accueil avec remise à zéro](https://mialy333.github.io/drills.ai/fr/?reset=1) dans **le navigateur concerné**. Le lien public ordinaire convient aux nouveaux utilisateurs.
+The model chooses original source IDs rather than rewriting quotations. This reduces invented citations, but source presence does not guarantee relevance, accurate interpretation, or a truthful CV. Candidates must review all generated text before submitting it.
 
-## Lancer le projet
+## Data and MVP boundaries
 
-Prérequis : Node.js 22, Python 3.12 et `uv` (ou un environnement Python équivalent).
+- **Empty by default:** a new browser starts with no candidate dossier. The built-in example is explicitly fictional and does not simulate a successful AI result.
+- **Browser storage:** profile, drafts, export contact details, and tracking are held in session storage with a one-day expiry, or optional local storage for 30 days after modification. There are no accounts or cross-device sync.
+- **Consent-based processing:** approved profile/posting inputs go to the backend and OpenAI. PDFs are processed in memory without application-level disk persistence. Contact details added separately in the export editor stay in the browser; details already inside an uploaded CV are part of the PDF input.
+- **Provider processing:** Responses calls use `store=False`; this does not remove all provider processing or retention policies.
+- **Deletion:** clearing the dossier removes it from that browser. It does not delete downloaded files, other browsers' data, or previous provider processing.
+- **Demo protections:** bounded requests, timeouts, rate limits, and concurrency limits are implemented. They are not authentication, a spending cap, or a production security certification.
+- **Candidate control:** no candidate code is executed and no application is submitted automatically.
+
+To reset a demo session, open [the reset link](https://mialy333.github.io/drills.ai/en/?reset=1) in the browser concerned. Share the ordinary app link with new users.
+
+## Run locally
+
+Requirements: **Node.js 22**, **Python 3.12**, and `uv` or an equivalent Python environment.
 
 ```bash
 git clone https://github.com/Mialy333/drills.ai.git
@@ -79,24 +192,30 @@ source .venv/bin/activate
 uv pip install -r requirements-devday.txt -r requirements-mcp.txt
 ```
 
-Configurer `OPENAI_API_KEY` dans un fichier `.env` ignoré par Git ou dans l’environnement du backend. Ne jamais placer cette clé dans une variable `PUBLIC_`. Le modèle est configurable avec `OPENAI_APPLICATION_MODEL` ; le défaut du code est `gpt-4o-2024-08-06`. L’accès au modèle dépend du projet OpenAI utilisé.
+Set `OPENAI_API_KEY` in an ignored `.env` file or the backend environment. Never put the key in a `PUBLIC_` variable. `OPENAI_APPLICATION_MODEL` overrides the code's default, `gpt-4o-2024-08-06`; model access depends on the OpenAI project.
 
-Terminal backend :
+Backend terminal:
 
 ```bash
 source .venv/bin/activate
 python -m uvicorn api.main:app --reload --port 8000
 ```
 
-Terminal frontend :
+Frontend terminal:
 
 ```bash
 npm run dev -- --port 4321 --strictPort
 ```
 
-Ouvrir <http://localhost:4321/drills.ai/fr/>. Pour activer MCP localement, ajouter `DRILLS_ENABLE_MCP=true` au lancement du backend ; son endpoint est `/mcp/`.
+Open <http://localhost:4321/drills.ai/en/>. To enable MCP locally:
 
-## Vérifier et déployer
+```bash
+DRILLS_ENABLE_MCP=true python -m uvicorn api.main:app --reload --port 8000
+```
+
+The MCP endpoint is `http://localhost:8000/mcp/`.
+
+## Test and deploy
 
 ```bash
 python -m pytest -q
@@ -105,31 +224,50 @@ npm run build
 npm run test:ui
 ```
 
-Le build contrôle notamment l’absence de routes de cours/exercices et de références connues aux données personnelles de démonstration. Les tests API utilisent des réponses OpenAI simulées : ils ne prouvent pas la qualité des réponses réelles, la disponibilité du modèle ou le rendu sur chaque navigateur.
+At the final MVP consolidation: **114 Python tests and 63 frontend tests passed**, together with the static build and public-content checks. API unit tests mock OpenAI. They do not establish live output quality or compatibility with every browser. The screenshot session additionally exercised one real fictional-profile assessment on the deployed app.
 
-- **Frontend : GitHub Pages**, base Astro `/drills.ai/`. Le workflow `Deploy to GitHub Pages` démarre sur un push de `main` ou manuellement. La variable GitHub Actions `DRILLS_API_URL` devient `PUBLIC_DRILLS_API_URL` au build. L’environnement `github-pages` doit autoriser la branche publiée.
-- **Backend : Render**, configuration dans `render.yaml`, secret `OPENAI_API_KEY` côté serveur. URL configurée : <https://drills-ai-api.onrender.com>. `/health` vérifie la disponibilité du service et la présence de configuration, pas une réponse réelle d’OpenAI.
-- **Transition des branches :** `main` est la référence du produit final. La branche `feat/hackathon-mvp` reste temporairement un miroir de compatibilité pour le service Render existant. Voir [la consolidation de l’historique](docs/BRANCHES.md) avant de changer ou supprimer une branche de déploiement.
+| Layer | Deployment |
+| --- | --- |
+| Frontend | GitHub Pages, Astro base path `/drills.ai/` |
+| API | Render, configured in `render.yaml` |
+| Frontend API origin | Repository Actions variable `DRILLS_API_URL`, passed as `PUBLIC_DRILLS_API_URL` during build |
+| OpenAI secret | `OPENAI_API_KEY` in the backend environment only |
 
-## Du prototype au produit
+`Deploy to GitHub Pages` runs on pushes to `main` or manual dispatch. The `github-pages` environment must allow the publishing branch. The configured API is <https://drills-ai-api.onrender.com>; `/health` checks service availability and configuration, not a complete OpenAI request.
 
-Le samedi 24 octobre 2026, le travail portait encore sur les exercices, les agents spécialisés, les contrôles et le service FastAPI. Le dimanche, le produit a pivoté vers un besoin plus précis : transformer un parcours existant en candidature crédible pour un premier poste d’Agent Engineer.
+**`main` is the product reference branch.** `feat/hackathon-mvp` remains a temporary compatibility mirror for the existing Render service. See [branch consolidation and deployment transition (French)](docs/BRANCHES.md) before removing deployment branches.
 
-Le week-end a ajouté l’import PDF, le diagnostic, les offres publiques, l’import GitHub, le CV éditable, les liens pour postuler et le suivi. Les retours d’usage ont conduit à simplifier le parcours, séparer éligibilité et compétences, puis retirer la préparation aux entretiens pour se concentrer sur l’obtention du premier entretien.
+## From Saturday's prototype to Sunday's MVP
 
-[Scénario de démo — 1 min 40](docs/DEMO.md)
+| Stage | Progress |
+| --- | --- |
+| **Saturday, October 24, 2026** | Exercise-oriented experience, specialised agents, validation work, and FastAPI integration |
+| **Sunday's pivot** | Focus on career changers applying for their first Agent Engineer opportunity |
+| **Building the journey** | PDF import, evidence-based assessment, job feeds, GitHub metadata, editable CV, application links, and tracking |
+| **Feedback and simplification** | Reused profiles, shared FR/EN state, clearer eligibility, distinct journey steps, and removal of interview preparation |
+| **Final scope** | Help candidates prepare and send a credible application; freeze features and move to user testing |
 
-## Ensuite
+ChatGPT/Codex assisted development and iteration during the hackathon. That development workflow is distinct from the OpenAI API calls made for candidates inside the product.
 
-La priorité est de tester le parcours avec des personnes en reconversion et de faire relire les diagnostics par des recruteurs ou des ingénieurs. Mesurer le temps gagné, les corrections nécessaires et les candidatures effectivement envoyées avant d’élargir le produit.
+## Next: real users
 
-Comptes sécurisés, davantage de sources d’offres, recherche de contacts et préparation aux entretiens sont des pistes, pas des fonctions livrées.
+The core features are in place. The next step is to test the existing journey with career changers like the creator, using their own profiles and target openings—with consent.
 
-## Repères dans le code
+The questions are practical: can users finish without help, understand the assessment, recognise their own voice in the edited application, and reach the point of applying? Track necessary corrections, time spent, and applications actually sent. Hiring impact has not yet been established.
 
-- `src/pages/[lang]/` : pages françaises et anglaises.
-- `src/scripts/application.ts` : parcours candidat et éditeur.
-- `src/lib/application-state.ts`, `application-history.ts` : stockage local et suivi.
-- `src/ai_generator/application.py` : analyse, validation et score.
-- `api/main.py` : API et endpoints retirés.
-- `tests/` : contrats, tests Python et parcours UI.
+No additional feature expansion is planned before this feedback round.
+
+## Code map
+
+| Path | Purpose |
+| --- | --- |
+| `src/pages/[lang]/` | English and French pages |
+| `src/scripts/application.ts` | Candidate journey and document editing |
+| `src/lib/application-state.ts` | Validated browser dossier and retention |
+| `src/lib/application-history.ts` | Application tracking |
+| `src/ai_generator/application.py` | Active agent, evidence validation, and scoring |
+| `src/ai_generator/orchestrator.py`, `agents/` | Original multi-agent learning prototype |
+| `src/integrations/jobs.py` | Public job-board adapters |
+| `api/main.py`, `api/mcp_app.py` | HTTP API and optional MCP server |
+| `tests/` | Python, contract, and UI checks |
+| `docs/images/` | Real application screenshots without personal candidate data |
