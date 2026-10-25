@@ -92,4 +92,13 @@ The Astro base path is `/drills.ai/`. GitHub Pages deployment uses `main`; this 
 
 The CV editor uses section headings, spaced paragraphs and a contact/target-role header, retained for printing. Contact details are stored with the dossier and survive language changes. Existing section labels are upgraded without replacing edited text.
 
-From the profile step, add a public `https://github.com/owner/repository` URL. The browser reads GitHub's public repository metadata without a token. A preview, explicit personal contribution and confirmation are required before adding it to the profile. The next diagnosis uses these supplied facts; metadata is not proof of authorship or skill. Private repositories, rate limits and unavailable GitHub responses show a message without replacing the profile. No README or source-code analysis is performed. Job-board ingestion remains a future integration.
+From the profile step, add a public `https://github.com/owner/repository` URL. The browser reads GitHub's public repository metadata without a token. A preview, explicit personal contribution and confirmation are required before adding it to the profile. The next diagnosis uses these supplied facts; metadata is not proof of authorship or skill. Private repositories, rate limits and unavailable GitHub responses show a message without replacing the profile. No README or source-code analysis is performed. Greenhouse discovery is now available in the posting step.
+
+
+### Live openings (Greenhouse)
+
+`GET /api/jobs` reads published jobs from Anthropic, Databricks and Scale AI; no key or candidate data is needed. The app filters explicit internship/apprenticeship/junior engineering titles mentioning agents and excludes senior titles. This is a keyword shortlist, not a guarantee of Agent Engineer duties, eligibility, location suitability or profile matching. Listings include the source link and retrieval time. A user selects an opening to copy its full text into the existing diagnosis workflow. Replacing an existing posting requires confirmation.
+
+Successful lists are cached for five minutes in the API process. Each source has a 12-second timeout; unavailable sources are reported separately from zero matches. The CV/pasted-posting workflow remains available if sources fail. No applications are submitted. Expired or filled roles can remain in the provider feed until the employer removes them; users should check the original listing.
+
+Legacy plain CV drafts now receive section and bullet formatting on restore. The “Format this CV into sections” button reapplies layout to edited drafts, preserving their text but resetting custom inline formatting (Undo restores it).

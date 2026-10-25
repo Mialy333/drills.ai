@@ -193,3 +193,24 @@ test('GitHub rejects arbitrary hosts and handles missing repositories without lo
  el('github-url').value='https://github.com/octocat/demo';el('github-load').click();await tick();assert.equal(calls,1);
  assert.match(el('github-status').textContent,/not found/);assert.equal(get('profile').value,profileText);assert.equal(el('github-review').hidden,true);
 });
+test('legacy CV in a single paragraph becomes real headings, emphasis and bullet lists',t=>{
+ const {w,get}=setup(t);
+ const result=structuredClone(fixture);result.cv_sections=[{heading:'Target Title',text:'***AI Agent Engineer Internship***',source_quotes:['I built a Python API with FastAPI']},{heading:'Projects',text:'Support agent - Validated six cases - Wrote tests',source_quotes:['I built a Python API with FastAPI']}];
+ const flat='Target Title ***AI Agent Engineer Internship*** Projects Support agent - Validated six cases - Wrote tests';
+ const state={version:1,expiresAt:Date.now()+86400000,profile:profileText,posting:'Full internship posting that calls for APIs and testing.',result,cv:flat,cv_html:'<p>'+flat+'</p>',pitch:result.pitch.text,reviewed:false,remember:false};
+ const dom=new JSDOM(html,{url:'http://localhost:4321/drills.ai/en/apply/',runScripts:'outside-only'});t.after(()=>dom.window.close());
+ dom.window.sessionStorage.setItem('drills.application.v1',JSON.stringify(state));dom.window.eval(bundle.outputFiles[0].text);
+ const root=dom.window.document.querySelector('#cv-rich-editor');
+ assert.equal(root.querySelectorAll('h3').length,2);assert.equal(root.querySelectorAll('li').length,2);
+ assert.equal(root.querySelector('strong').textContent,'AI Agent Engineer Internship');
+ assert.match(root.textContent,/Support agent/);
+});
+test('job selection fills the posting without sending the candidate profile to Greenhouse',async t=>{
+ const {w,get}=setup(t);get('profile').value=profileText;const requests=[];
+ const description='AI Agent Engineer Internship. Build agents and APIs with automated evaluation and tests.';
+ w.fetch=async(url,options)=>{requests.push({url,options});return {ok:true,json:async()=>({jobs:[{title:'Agent Engineer Intern',company:'Example',location:'Paris',url:'https://example.com/jobs/1',description}],unavailable_sources:[],checked_at:new Date().toISOString()})};};
+ w.document.getElementById('jobs-load').click();await tick();
+ assert.equal(requests[0].url,'http://127.0.0.1:8000/api/jobs');assert.equal(requests[0].options.body,undefined);
+ w.document.querySelector('#jobs-results button').click();assert.equal(get('posting').value,description);assert.equal(get('profile').value,profileText);
+ assert.equal(JSON.parse(w.sessionStorage.getItem('drills.application.v1')).posting,description);
+});

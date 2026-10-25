@@ -1,3 +1,4 @@
+import { cvLayout } from "./cv-layout";
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyleKit } from '@tiptap/extension-text-style';
@@ -112,13 +113,11 @@ export function createCvEditor(element: HTMLElement, field: HTMLTextAreaElement,
   return {
     setSections(sections: {heading:string;text:string}[]) {
       const container=document.createElement('div');
-      for(const section of sections) {
-        const heading=document.createElement('h3'); heading.textContent=section.heading; container.append(heading);
-        for(const line of section.text.split(/\n+/).filter(Boolean)) {
-          const paragraph=document.createElement('p'); paragraph.textContent=line; container.append(paragraph);
-        }
-      }
+      container.innerHTML=cvLayout(sections.map(section=>section.heading+'\n'+section.text).join('\n\n'),sections.map(section=>section.heading));
       editor.commands.setContent(container.innerHTML,{emitUpdate:false}); field.value=editor.getText(); updateControls();
+    },
+    reformat(headings:string[], emitUpdate=true) {
+      editor.commands.setContent(cvLayout(editor.getText(),headings),{emitUpdate}); updateControls();
     },
     setText(value:string) {
       const paragraphs=value.split('\n').map(line=>({type:'paragraph',content:line?[{type:'text',text:line}]:[]}));
@@ -126,6 +125,10 @@ export function createCvEditor(element: HTMLElement, field: HTMLTextAreaElement,
     },
     setHtml(value:string, headings:string[] = []) {
       const container=document.createElement('div'); container.append(cleanCvHtml(value));
+      if(!container.querySelector('h3,ul,ol,strong,b,em,i,a,u,s') && headings.length) {
+        const plain=Array.from(container.childNodes).map(node=>node.textContent ?? '').join('\n');
+        container.innerHTML=cvLayout(plain,headings);
+      }
       for(const node of container.querySelectorAll('p,div')) {
         if(headings.includes(node.textContent?.trim() ?? '') && !node.querySelector('p,div')) {
           const heading=document.createElement('h3'); heading.append(...node.childNodes); node.replaceWith(heading);

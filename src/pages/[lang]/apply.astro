@@ -53,6 +53,11 @@ const fr = lang === "fr";
             <p>{fr ? "Stage, alternance ou premier emploi : colle l’annonce complète, avec les missions, compétences et conditions. Un lien seul ne suffit pas." : "Internship, apprenticeship or first job: paste the full posting, including duties, skills and conditions. A link alone is not enough."}</p>
             <p>{fr ? "Ton profil est repris automatiquement : aucune expérience à ressaisir ici." : "Your profile is reused automatically: no experience to enter again here."}</p>
             <p id="application-saved-profile" hidden>{fr ? "Ton profil enregistré sera utilisé." : "Your saved profile will be used."} <a href={href(`/${lang}/apply/?step=profile`)}>{fr ? "Consulter ou modifier mon profil" : "View or edit my profile"}</a></p>
+            <details class="application-import"><summary>{fr ? "Découvrir des annonces via Greenhouse" : "Discover jobs through Greenhouse"}</summary>
+              <p>{fr ? "Sources : Anthropic, Databricks et Scale AI. Filtre stages, alternance et junior avec mention d’agents IA. Les missions, la localisation et l’éligibilité restent à vérifier. Ce n’est pas un classement selon ton profil." : "Sources: Anthropic, Databricks and Scale AI. Filtered for internships, apprenticeships and junior roles mentioning agents. Review duties, location and eligibility. These are not ranked against your profile."}</p>
+              <button id="jobs-load" type="button" class="btn btn-secondary">{fr ? "Consulter les offres actuelles" : "Check current openings"}</button>
+              <p id="jobs-status" role="status"></p><div id="jobs-results"></div>
+            </details>
             <label for="application-posting">{fr ? "Texte de l’annonce" : "Job posting text"}</label>
             <textarea id="application-posting" required minlength="50" maxlength="20000" rows="13" autocomplete="off" placeholder={fr ? "Intitulé · missions · compétences · contrat · localisation…" : "Title · duties · skills · contract · location…"}></textarea>
             <p class="application-note">{fr ? "Les conditions de candidature sont séparées des compétences. Le bilan ne prédit pas tes chances de recrutement." : "Application conditions are separate from skills. The assessment does not predict hiring chances."}</p>
@@ -110,6 +115,7 @@ const fr = lang === "fr";
           </div></details>
         </div>
         <p id="cv-editor-note" role="status">{fr ? "Sélectionne le texte. Reclique sur un bouton actif pour retirer son effet. L’alignement concerne les paragraphes sélectionnés." : "Select text. Click an active button again to remove its effect. Alignment applies to selected paragraphs."}</p>
+        <button id="cv-reformat" type="button" class="btn btn-secondary">{fr ? "Structurer ce CV en rubriques" : "Format this CV into sections"}</button>
         <div class="cv-paper"><header id="cv-contact-preview" class="cv-contact-header"></header><h2 id="cv-role-title" class="cv-role-title"></h2><div id="cv-rich-editor"></div></div>
         <textarea id="application-cv" hidden aria-hidden="true" tabindex="-1"></textarea>
         </details>
@@ -179,6 +185,11 @@ const fr = lang === "fr";
     #cv-rich-editor { white-space: pre-wrap; overflow-wrap: anywhere; min-height: 350px; padding: 20px; border: 1px solid var(--line); background: var(--bg); font: 1rem/1.7 var(--font-body); }
     #cv-rich-editor a { color: var(--accent); text-decoration: underline; }
     #application-print-text a { color: black; text-decoration: underline; }
+    #application-pdf { display: block; width: 100%; font-size: 1.05rem; padding: 12px 0; }
+    #application-pdf::file-selector-button { min-height: 52px; padding: 14px 22px; margin-right: 12px; font: 700 1.05rem var(--font-body); border: 2px solid var(--line); background: #e7dfff; color: #202124; cursor: pointer; border-radius: 6px; }
+    #github-url { width: 100%; min-height: 54px; font-size: 1.1rem; padding: 14px; box-sizing: border-box; }
+    #github-load, #github-add { min-height: 54px; padding: 14px 22px; font-size: 1.05rem; margin-top: 12px; }
+    .application-import > summary { padding: 16px 0; font-size: 1.15rem; font-weight: 700; cursor: pointer; }
     .cv-paper { background: #fff; color: #202124; padding: clamp(18px, 4vw, 48px); border: 1px solid var(--line); margin-top: 18px; }
     .cv-contact-header { white-space: pre-line; font: 11pt/1.6 Arial, sans-serif; padding-bottom: 12px; }
     .cv-contact-header:empty { display: none; }

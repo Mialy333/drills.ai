@@ -228,3 +228,10 @@ async def coach(request: Request, payload: CompanionRequest) -> dict[str, str]:
             status_code=502,
             detail="The learning companion could not respond. Please try again.",
         ) from exc
+
+
+@app.get("/api/jobs")
+@limiter.limit("10/minute")
+async def discover_jobs(request: Request):
+    from src.integrations.jobs import load_jobs
+    return await load_jobs()

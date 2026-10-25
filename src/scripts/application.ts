@@ -285,7 +285,7 @@ try {
     editor.open = false;
     if (saved.result) {
       inputSnapshot = {profile: saved.profile, posting: saved.posting};
-      render(saved.result); if (saved.cv_html) cvEditor.setHtml(saved.cv_html, saved.result.cv_sections.map(section=>section.heading)); else cvEditor.setText(saved.cv); pitch.value = saved.pitch;
+      render(saved.result); if (saved.cv_html) cvEditor.setHtml(saved.cv_html, saved.result.cv_sections.map(section=>section.heading)); else { cvEditor.setText(saved.cv); cvEditor.reformat(saved.result.cv_sections.map(section=>section.heading), false); } pitch.value = saved.pitch;
       reviewed.checked = saved.reviewed; printButton.disabled = download.disabled = !saved.reviewed;
       if (saved.result.output_language !== (fr ? "fr" : "en")) status(say("Ton dossier et tes modifications sont conservés. Les textes restent dans leur langue d’origine ; changer la langue de l’interface ne les traduit pas.", "Your application and edits are preserved. Drafts remain in their original language; changing the interface language does not translate them."));
     }
@@ -350,3 +350,36 @@ element('github-add').addEventListener('click',()=>{
   githubStatus.textContent=say('Projet ajouté. Relance le diagnostic pour prendre en compte cette preuve.','Project added. Run the assessment again to include this evidence.');
 });
 element('application-clear').addEventListener('click',()=>{githubController?.abort();githubPreview.value='';githubContribution.value='';element<HTMLInputElement>('github-url').value='';githubReview.hidden=true;githubStatus.textContent='';});
+
+element('cv-reformat').addEventListener('click',()=>{
+  if(currentResult) cvEditor.reformat(currentResult.cv_sections.map(section=>section.heading));
+});
+
+element('jobs-load').addEventListener('click',async()=>{
+  const button=element<HTMLButtonElement>('jobs-load');if(button.disabled)return;
+  const target=element('jobs-results');const message=element('jobs-status');
+  const endpoint=apiEndpoint('/api/jobs');if(!endpoint){message.textContent=say('Service d’annonces indisponible. Colle ton annonce ci-dessous.','Job service unavailable. Paste your posting below.');return;}
+  button.disabled=true;target.replaceChildren();message.textContent=say('Consultation des sources…','Checking sources…');
+  const active=new AbortController();const timer=window.setTimeout(()=>active.abort(),20000);
+  try {
+    const response=await fetch(endpoint,{signal:active.signal});if(!response.ok)throw new Error('jobs');
+    const data=await response.json();if(!Array.isArray(data.jobs)||!Array.isArray(data.unavailable_sources))throw new Error('jobs');
+    message.textContent=(data.jobs.length?say('Offres à examiner. Vérifie la source avant de candidater.','Openings to review. Check the source before applying.'):say('Aucune offre correspondant au filtre dans les sources disponibles. Tu peux toujours coller ton annonce.','No openings match the filter in available sources. You can still paste your posting.'))+
+      (data.unavailable_sources.length?' '+say('Sources indisponibles : ','Unavailable sources: ')+data.unavailable_sources.join(', '):'')+
+      ' '+say('Consultation : ','Checked: ')+new Date(data.checked_at).toLocaleString();
+    for(const job of data.jobs) {
+      if(typeof job.description!=='string'||job.description.length>20000)continue;
+      const url=new URL(job.url);if(url.protocol!=='https:')continue;
+      const card=document.createElement('article');card.className='application-card';
+      const link=text('a',say('Voir l’annonce source','View original posting')) as HTMLAnchorElement;link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';
+      const choose=text('button',say('Utiliser cette annonce','Use this posting')) as HTMLButtonElement;choose.type='button';choose.className='btn btn-secondary';
+      choose.addEventListener('click',()=>{
+        if(posting.value.trim() && posting.value!==job.description && !window.confirm(say('Remplacer l’annonce actuelle ? Le diagnostic devra être relancé.','Replace the current posting? You will need to run the assessment again.')))return;
+        posting.value=job.description;posting.dispatchEvent(new Event('input',{bubbles:true}));posting.focus();
+        message.textContent=say('Annonce chargée. Relis-la puis lance le diagnostic avec ton profil.','Posting loaded. Review it and run the assessment with your profile.');
+      });
+      card.append(text('h3',job.title),text('p',job.company+' · '+job.location),link,document.createElement('br'),choose);target.append(card);
+    }
+  }catch{message.textContent=say('Impossible de consulter les annonces. Ton dossier est conservé : colle une annonce pour continuer.','Cannot load openings. Your application is preserved: paste a posting to continue.');}
+  finally{window.clearTimeout(timer);button.disabled=false;}
+});
