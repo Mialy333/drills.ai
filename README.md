@@ -163,3 +163,26 @@ the same trimmed posting updates its entry and preserves status/notes. CV export
 never marks a submission. An older saved result migrates without an invented date.
 Interview count reflects current interview statuses. Storage uses the same tab/
 opt-in local expiry as the dossier; there is no server database or cross-device sync.
+
+### Technical rehearsal feedback
+
+`POST /api/interview/technical` accepts a known case ID, a 50–5000 character answer,
+FR/EN and explicit consent. The server selects the same versioned, authored rubric
+exposed by MCP `get_interview_rubric`. OpenAI classifies its four criteria as met,
+partial, missing or incorrect, with a short explanation and improvement. No exercise
+or criterion is generated at runtime. The server rejects duplicate/missing criterion
+indices and quotations absent from the answer. Provenance and references come from
+the catalogue, never the model. These checks validate structure and quote presence,
+not semantic correctness. Feedback has not been calibrated against expert-graded
+answers and is not an employer assessment. No code is executed.
+
+The interface shows a count of met criteria, expandable explanations, source-backed
+example answers, cancellation and unchanged-answer caching within the page. Editing
+an answer invalidates pending feedback. Draft technical answers stay in the page
+and are not persisted across reloads. The endpoint uses the existing concurrency,
+timeout and request limits, `store=False`, and `Cache-Control: no-store`.
+
+Catalogue v2 explicitly labels all three scenarios as DRILLS-authored practice,
+not verified questions used by employers. Technical reference links were checked
+2026-10-25. Connecting a future licensed/interviewer-reviewed question bank via MCP
+would improve provenance; MCP itself does not certify content or grading accuracy.

@@ -85,7 +85,7 @@ application_slots = asyncio.Semaphore(2)
 async def private_application_responses(request: Request, call_next):
     started = perf_counter()
     response = await call_next(request)
-    if request.url.path in {"/api/application", "/api/profile-import", "/api/interview/transcribe", "/api/interview/feedback"} or request.url.path.startswith("/mcp/"):
+    if request.url.path in {"/api/application", "/api/profile-import", "/api/interview/transcribe", "/api/interview/feedback", "/api/interview/technical"} or request.url.path.startswith("/mcp/"):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Server-Timing"] = f"application;dur={(perf_counter()-started)*1000:.0f}"
     return response
@@ -270,3 +270,12 @@ async def transcribe_pitch(request: Request, payload: AudioRequest):
 @limiter.limit("3/minute;20/hour")
 async def pitch_feedback(request: Request, payload: PitchRequest):
     return await run_application_operation(lambda: review_pitch(payload))
+
+
+from src.ai_generator.technical_interview import TechnicalRequest, review_technical
+
+
+@app.post("/api/interview/technical")
+@limiter.limit("3/minute;20/hour")
+async def technical_feedback(request: Request, payload: TechnicalRequest):
+    return await run_application_operation(lambda: review_technical(payload))

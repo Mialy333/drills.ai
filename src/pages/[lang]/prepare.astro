@@ -29,14 +29,26 @@ const fr = lang === "fr";
     <div id="practice-technical-panel" hidden><label for="practice-case">{fr ? "Choisis un cas" : "Choose a case"}</label><select id="practice-case">{catalog.cases.map(item=><option value={item.id}>{item[lang].title}</option>)}</select><div class="interview-cases">
       {catalog.cases.map(item => <article class="panel" data-interview-case={item.id} id={item.id}>
         <h2>{item[lang].title}</h2><p>{item[lang].scenario}</p>
+        <p class="technical-origin">{fr ? "Mise en situation DRILLS · grille fondée sur des références techniques, pas une question attestée d’un recruteur." : "DRILLS practice scenario · rubric based on technical references, not a verified employer interview question."}</p>
         <details><summary>{fr ? "Comprendre le cas et les notions utiles" : "Understand the case and key concepts"}</summary><p>{item[lang].explanation}</p></details>
         <label for={`answer-${item.id}`}>{fr ? "Ta réponse (brouillon non enregistré)" : "Your answer (unsaved draft)"}</label>
         <textarea id={`answer-${item.id}`} rows="5" maxlength="5000"></textarea>
+        <label class="practice-consent"><input type="checkbox" data-technical-consent />{fr ? "J’accepte d’envoyer cette réponse à DRILLS et OpenAI pour la comparer à la grille." : "I agree to send this answer to DRILLS and OpenAI for rubric-based feedback."}</label>
+        <div class="practice-actions"><button type="button" class="btn btn-primary" data-technical-review>{fr ? "Vérifier ma réponse" : "Review my answer"}</button><button type="button" class="btn btn-secondary" data-technical-cancel hidden>{fr ? "Annuler" : "Cancel"}</button></div>
+        <p data-technical-status role="status" aria-live="polite"></p><div data-technical-feedback></div>
+        <p>{fr ? "Retour pédagogique de l’IA : vérifie les explications avec le corrigé et ses références. Plusieurs solutions peuvent être valides." : "AI practice feedback: check explanations against the example and its references. More than one solution may be valid."}</p>
         <details><summary>{fr ? "Comparer avec les critères de correction" : "Compare with the review criteria"}</summary><ul>{item[lang].criteria.map(criterion => <li>{criterion}</li>)}</ul><h3>{fr ? "Exemple de réponse expliquée" : "Example answer"}</h3><p>{item[lang].sample_answer}</p><p>{fr ? "Ce raisonnement est un exemple : adapte-le aux contraintes de l’entreprise et explique tes compromis." : "This is one example: adapt it to the company’s constraints and explain your trade-offs."}</p><p>{fr ? "Références de la grille" : "Rubric references"}</p><ul>{item.references.map(source => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label}</a></li>)}</ul></details>
       </article>)}
     </div></div>
     <a class="btn btn-primary" href={href(`/${lang}/apply/`)}>{fr ? "Revenir à ma candidature" : "Back to my application"}</a>
   </section>
-  <script>import "../../scripts/prepare";</script>
-  <style>.pitch-practice { padding: 28px; margin: 28px 0; }.pitch-practice textarea { width: 100%; padding: 16px; font: inherit; box-sizing: border-box; }.pitch-practice p { line-height: 1.7; }.practice-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 18px 0; }.practice-consent { display: flex; gap: 12px; align-items: flex-start; }.practice-consent input { width: 22px; height: 22px; flex-shrink: 0; }.pitch-practice audio { width: 100%; margin: 12px 0; }.interview-cases { display: grid; gap: 24px; margin: 28px 0; }.interview-cases article { padding: 24px; }.interview-cases p, .interview-cases li { line-height: 1.7; }.interview-cases textarea { width: 100%; margin: 12px 0; padding: 14px; font: inherit; }.interview-cases label { display: block; }.interview-cases summary { cursor: pointer; padding: 16px 0; }</style>
+  <script>import "../../scripts/prepare"; import "../../scripts/technical-interview";</script>
+  <style>
+    .technical-origin {font-size:.95rem;color:var(--muted)}
+    [data-technical-feedback] :global(.technical-result) {border-left:5px solid;padding:14px 18px;margin:12px 0;background:var(--panel)}
+    [data-technical-feedback] :global([data-result="met"]) {border-color:#168766}
+    [data-technical-feedback] :global([data-result="partial"]) {border-color:#b57b0b}
+    [data-technical-feedback] :global([data-result="missing"]) {border-color:#777}
+    [data-technical-feedback] :global([data-result="incorrect"]) {border-color:#c44555}
+.pitch-practice { padding: 28px; margin: 28px 0; }.pitch-practice textarea { width: 100%; padding: 16px; font: inherit; box-sizing: border-box; }.pitch-practice p { line-height: 1.7; }.practice-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 18px 0; }.practice-consent { display: flex; gap: 12px; align-items: flex-start; }.practice-consent input { width: 22px; height: 22px; flex-shrink: 0; }.pitch-practice audio { width: 100%; margin: 12px 0; }.interview-cases { display: grid; gap: 24px; margin: 28px 0; }.interview-cases article { padding: 24px; }.interview-cases p, .interview-cases li { line-height: 1.7; }.interview-cases textarea { width: 100%; margin: 12px 0; padding: 14px; font: inherit; }.interview-cases label { display: block; }.interview-cases summary { cursor: pointer; padding: 16px 0; }</style>
 </App>
