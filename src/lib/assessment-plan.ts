@@ -26,7 +26,7 @@ const exerciseCopy: Record<string, Record<Lang, ExerciseCopy>> = {
       fixed: "def add_message(message, history=None):\n    if history is None:\n        history = []\n    history.append(message)\n    return history",
       tests: "first = add_message('bonjour')\nsecond = add_message('suite')\nassert first == ['bonjour']\nassert second == ['suite']\nexisting = ['avant']\nassert add_message('nouveau', existing) == ['avant', 'nouveau']\nassert existing == ['avant', 'nouveau']",
       mc: "Pourquoi une valeur mutable par défaut est-elle risquée pour l’historique ?", options: ["Le même objet peut être réutilisé entre plusieurs appels", "Python la copie à chaque appel", "Une liste ne peut pas contenir de texte", "La valeur par défaut est évaluée après chaque appel"],
-      why: "Python évalue une valeur par défaut une seule fois, à la définition de la fonction. Le sentinelle None permet de créer une nouvelle liste à chaque appel.",
+      why: "Python évalue une valeur par défaut une seule fois, à la définition de la fonction. La valeur sentinelle None permet de créer une nouvelle liste à chaque appel.",
       ideas: ["Utiliser None comme sentinelle", "Créer la liste dans la fonction", "Conserver l’historique fourni explicitement"],
     },
   },
