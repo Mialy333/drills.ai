@@ -1,7 +1,7 @@
 """FastAPI adapter for the existing DRILLS.ai specialist-agent pipeline.
 
 The API keeps the OpenAI key server-side. The Astro frontend remains a static
-GitHub Pages site and calls this service when a backend URL is configured.
+GitHub Pages site and calls this service using its configured public API origin.
 """
 import asyncio
 import logging

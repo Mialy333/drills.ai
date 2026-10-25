@@ -1,4 +1,5 @@
 import { CompanionRequestSchema, DynamicDrillSchema, type CompanionRequest } from "../lib/contracts";
+import { apiEndpoint } from "../lib/api-client";
 import { readLearnerProfile } from "../lib/learner";
 
 type Turn = { role: "user" | "assistant"; content: string };
@@ -100,20 +101,6 @@ function activeExercise(lang: "fr" | "en"): CompanionRequest["exercise"] {
   return { title, context, mission, current_answer: currentAnswer || undefined, latest_feedback: latestFeedback || undefined };
 }
 
-function backendUrl(): string | null {
-  try {
-    const raw = localStorage.getItem("DRILLS_API_BASE_URL")?.trim().replace(/\/+$/, "");
-    if (!raw) return null;
-    const parsed = new URL(raw);
-    const local = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
-    if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && local)) return null;
-    if (location.protocol === "https:" && parsed.protocol !== "https:" && !local) return null;
-    return parsed.origin + parsed.pathname.replace(/\/+$/, "");
-  } catch {
-    return null;
-  }
-}
-
 function appendMessage(transcript: HTMLElement, role: Turn["role"] | "guide", text: string): void {
   const message = document.createElement("p");
   message.className = `companion-message companion-message-${role}`;
@@ -128,71 +115,119 @@ function initializePanel(panel: HTMLElement): void {
   const submit = panel.querySelector<HTMLButtonElement>("[data-companion-submit]");
   const transcript = panel.querySelector<HTMLElement>("[data-companion-transcript]");
   const status = panel.querySelector<HTMLElement>("[data-companion-status]");
-  const setup = panel.querySelector<HTMLElement>("[data-companion-setup]");
-  if (!form || !input || !submit || !transcript || !status || !setup) return;
+  const retry = panel.querySelector<HTMLButtonElement>("[data-companion-retry]");
+  if (!form || !input || !submit || !transcript || !status || !retry) return;
 
   const lang = document.body.dataset.lang === "fr" ? "fr" : "en";
-  const url = backendUrl();
+  const endpoint = apiEndpoint("/api/coach");
   const copy = lang === "fr"
-    ? { waiting: "Réflexion…", failed: "Le compagnon n'a pas pu répondre. Réessaie dans un instant.", invalid: "Le service a renvoyé une réponse invalide.", unavailable: "Configure le service API pour activer le compagnon." }
-    : { waiting: "Thinking…", failed: "The companion could not respond. Try again in a moment.", invalid: "The service returned an invalid response.", unavailable: "Configure the API service to enable the companion." };
+    ? {
+        waiting: "Je prépare une réponse…",
+        failed: "Le compagnon n’a pas répondu. Vérifie ta connexion et réessaie.",
+        invalid: "La réponse n’a pas pu être vérifiée. Réessaie.",
+        unavailable: "Le compagnon est momentanément indisponible. Réessaie plus tard.",
+        rateLimited: "Trop de demandes rapprochées. Attends un instant puis réessaie.",
+      }
+    : {
+        waiting: "Preparing a reply…",
+        failed: "The companion did not respond. Check your connection and try again.",
+        invalid: "The reply could not be validated. Please try again.",
+        unavailable: "The companion is temporarily unavailable. Please try again later.",
+        rateLimited: "Too many requests in a short time. Wait a moment, then try again.",
+      };
   const history: Turn[] = [];
+  let failedRequest: CompanionRequest | null = null;
 
-  if (!url) {
+  if (!endpoint) {
     input.disabled = true;
     submit.disabled = true;
-    setup.hidden = false;
+    status.dataset.state = "error";
     status.textContent = copy.unavailable;
   }
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const message = input.value.trim();
-    if (!url || !message || submit.disabled) return;
-
-    const article = panel.dataset.scope === "exercise" ? activeExercise(lang) : undefined;
-    const priorHistory = history.slice(-8);
-    const request = CompanionRequestSchema.safeParse({
-      output_language: lang,
-      message,
-      history: priorHistory,
-      learner: learnerContext(lang),
-      roadmap: activeRoadmap(lang),
-      exercise: article,
+  panel.querySelectorAll<HTMLButtonElement>("[data-companion-suggestion]").forEach((button) => {
+    button.addEventListener("click", () => {
+      input.value = button.dataset.companionSuggestion ?? "";
+      input.focus();
     });
-    if (!request.success) {
-      status.textContent = copy.invalid;
-      return;
-    }
+  });
 
-    appendMessage(transcript, "user", message);
-    history.push({ role: "user", content: message });
-    input.value = "";
+  async function send(request: CompanionRequest, isRetry: boolean): Promise<void> {
+    if (!endpoint || submit.disabled) return;
+    if (!isRetry) {
+      appendMessage(transcript, "user", request.message);
+      history.push({ role: "user", content: request.message });
+      input.value = "";
+    }
     submit.disabled = true;
+    retry.disabled = true;
+    retry.hidden = true;
     input.disabled = true;
+    status.dataset.state = "busy";
     status.textContent = copy.waiting;
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 90_000);
     try {
-      const response = await fetch(`${url}/api/coach`, {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(request.data),
+        body: JSON.stringify(request),
+        signal: controller.signal,
       });
       const body: unknown = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (response.status === 429) throw new Error("rate-limited");
+      if (!response.ok) throw new Error("request-failed");
       if (!body || typeof body !== "object" || !("reply" in body) || typeof body.reply !== "string" || !body.reply.trim()) {
-        throw new Error("invalid response");
+        throw new Error("invalid-response");
       }
       appendMessage(transcript, "assistant", body.reply);
       history.push({ role: "assistant", content: body.reply });
       if (history.length > 8) history.splice(0, history.length - 8);
+      failedRequest = null;
       status.textContent = "";
+      delete status.dataset.state;
     } catch (error: unknown) {
-      status.textContent = error instanceof Error && error.message === "invalid response" ? copy.invalid : copy.failed;
+      status.dataset.state = "error";
+      status.textContent = error instanceof Error && error.message === "rate-limited"
+        ? copy.rateLimited
+        : error instanceof Error && error.message === "invalid-response"
+          ? copy.invalid
+          : copy.failed;
+      failedRequest = request;
+      retry.hidden = false;
     } finally {
+      window.clearTimeout(timeout);
       submit.disabled = false;
-      input.disabled = false;
-      input.focus();
+      retry.disabled = false;
+      input.disabled = !endpoint;
+      if (endpoint) input.focus();
     }
+  }
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const message = input.value.trim();
+    if (!message || !endpoint || submit.disabled) return;
+
+    const parsed = CompanionRequestSchema.safeParse({
+      output_language: lang,
+      message,
+      history: history.slice(-8),
+      learner: learnerContext(lang),
+      roadmap: activeRoadmap(lang),
+      exercise: panel.dataset.scope === "exercise" ? activeExercise(lang) : undefined,
+    });
+    if (!parsed.success) {
+      status.dataset.state = "error";
+      status.textContent = copy.invalid;
+      return;
+    }
+    void send(parsed.data, false);
+  });
+
+  retry.addEventListener("click", () => {
+    if (failedRequest) void send(failedRequest, true);
   });
 }
 

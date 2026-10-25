@@ -20,6 +20,7 @@ interface Props {
 }
 const { lang, title, path, track, activeId, section, showCatalogSidebar = true } = Astro.props;
 const t = ui[lang];
+const companionPath = track ? `/${lang}${path}#companion-exercise` : `/${lang}/#companion-dashboard`;
 const list = track && showCatalogSidebar ? drills(track, lang) : [];
 const pageTitle = title === t.brand ? t.brand : `${title} | ${t.brand}`;
 const strings = {
@@ -88,7 +89,9 @@ const game = {
         <span>{t.brand}</span>
       </a>
       <nav class="bar-nav" aria-label={lang === "fr" ? "Navigation principale" : "Main navigation"}>
-        <a href={href(`/${lang}/`)} aria-current={["home", "generate", "assess"].includes(section) ? "page" : undefined}>{t.nav.home}</a>
+        <a href={href(`/${lang}/`)} aria-current={section === "home" ? "page" : undefined}>{lang === "fr" ? "Accueil" : "Home"}</a>
+        <a href={href(`/${lang}/#journey`)}>{lang === "fr" ? "Parcours" : "Learning path"}</a>
+        <a href={href(companionPath)}>{lang === "fr" ? "Compagnon IA" : "AI companion"}</a>
         <a href={href(`/${lang}/progress/`)} aria-current={section === "progress" ? "page" : undefined}>{t.nav.progress}</a>
         <a href={href(`/${lang}/journal/`)} aria-current={section === "journal" ? "page" : undefined}>{t.nav.journal}</a>
       </nav>
@@ -137,9 +140,17 @@ const game = {
     </div>
 
     <nav class="tabbar" aria-label={lang === "fr" ? "Navigation" : "Navigation"}>
-      <a href={href(`/${lang}/`)} aria-current={["home", "generate", "assess"].includes(section) ? "page" : undefined}>
+      <a href={href(`/${lang}/`)} aria-current={section === "home" ? "page" : undefined}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z" /></svg>
-        <span>{t.nav.home}</span>
+        <span>{lang === "fr" ? "Accueil" : "Home"}</span>
+      </a>
+      <a href={href(`/${lang}/#journey`)}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /></svg>
+        <span>{lang === "fr" ? "Parcours" : "Path"}</span>
+      </a>
+      <a href={href(companionPath)}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a8 8 0 0 0-4.6 14.5L6.5 21l5.4-2A8 8 0 1 0 12 3zM8 11h.01M12 11h.01M16 11h.01" /></svg>
+        <span>{lang === "fr" ? "Coach" : "Coach"}</span>
       </a>
       <a href={href(`/${lang}/progress/`)} aria-current={section === "progress" ? "page" : undefined}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>

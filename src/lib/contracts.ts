@@ -56,6 +56,10 @@ export type LearnerProfile = z.infer<typeof LearnerProfileSchema>;
 export const CompanionRequestSchema = z.object({
   output_language: z.enum(["fr", "en"]),
   message: z.string().trim().min(1).max(2000),
+  history: z.array(z.object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string().min(1).max(2000),
+  }).strict()).max(8).optional(),
   learner: z.object({
     goal: z.string().max(120).optional(),
     python_experience: z.string().max(80).optional(),

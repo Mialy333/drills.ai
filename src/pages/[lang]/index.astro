@@ -54,14 +54,15 @@ const french = lang === "fr";
       </div>
     </section>
 
-    <section class="profile-card" id="profile-card" aria-labelledby="profile-title">
-      <div class="profile-intro">
+    <details class="profile-card" id="profile-card">
+      <summary class="profile-intro" aria-labelledby="profile-title">
         <p class="section-eyebrow">{french ? "FACULTATIF · 1 MINUTE" : "OPTIONAL · 1 MINUTE"}</p>
         <h2 id="profile-title">{french ? "Personnalise ton point de départ" : "Personalize your starting point"}</h2>
         <p>{french
           ? "Indique ton objectif, ton expérience et le temps disponible. Ces réponses sont une autoévaluation, pas une preuve de maîtrise."
           : "Share your goal, experience, and available time. These answers are self-reported, not proof of proficiency."}</p>
-      </div>
+        <span class="profile-open-hint">{french ? "Afficher le profil" : "Set up my profile"} <span aria-hidden="true">＋</span></span>
+      </summary>
       <form id="profile-form" class="profile-form">
         <label class="field">
           <span>{french ? "Mon objectif" : "My goal"}</span>
@@ -103,9 +104,9 @@ const french = lang === "fr";
         <button class="btn btn-primary" type="submit">{french ? "Enregistrer mon profil" : "Save my profile"}</button>
         <p class="profile-status" id="profile-status" role="status" aria-live="polite"></p>
       </form>
-    </section>
+    </details>
 
-    <section class="journey-section" aria-labelledby="journey-title">
+    <section class="journey-section" id="journey" aria-labelledby="journey-title">
       <div class="section-heading">
         <p class="section-eyebrow">{french ? "CHOISIS TON PROCHAIN PAS" : "CHOOSE YOUR NEXT STEP"}</p>
         <h2 id="journey-title">{french ? "Apprendre en faisant" : "Learn by doing"}</h2>
@@ -145,7 +146,7 @@ const french = lang === "fr";
     const pageLang = document.body.dataset.lang === "fr" ? "fr" : "en";
     const base = document.body.dataset.base ?? "/";
     const profileForm = document.querySelector<HTMLFormElement>("#profile-form");
-    const profileCard = document.querySelector<HTMLElement>("#profile-card");
+    const profileCard = document.querySelector<HTMLDetailsElement>("#profile-card");
     const dashboard = document.querySelector<HTMLElement>("#learner-dashboard");
     const profileSummary = document.querySelector<HTMLElement>("#profile-summary");
     const profileStatus = document.querySelector<HTMLElement>("#profile-status");
@@ -258,6 +259,7 @@ const french = lang === "fr";
     });
 
     editProfile?.addEventListener("click", () => {
+      if (profileCard) profileCard.open = true;
       profileCard?.scrollIntoView({ behavior: "smooth", block: "start" });
       (profileForm?.elements.namedItem("goal") as HTMLSelectElement | null)?.focus();
     });
