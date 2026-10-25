@@ -263,13 +263,13 @@ from src.ai_generator.interview import AudioRequest, Transcript, PitchRequest, P
 @app.post("/api/interview/transcribe", response_model=Transcript)
 @limiter.limit("3/minute;10/hour")
 async def transcribe_pitch(request: Request, payload: AudioRequest):
-    return await run_application_operation(lambda: transcribe_audio(payload))
+    raise HTTPException(status_code=410, detail="Interview preparation is no longer part of this MVP.")
 
 
 @app.post("/api/interview/feedback", response_model=PitchFeedback)
 @limiter.limit("3/minute;20/hour")
 async def pitch_feedback(request: Request, payload: PitchRequest):
-    return await run_application_operation(lambda: review_pitch(payload))
+    raise HTTPException(status_code=410, detail="Interview preparation is no longer part of this MVP.")
 
 
 from src.ai_generator.technical_interview import TechnicalRequest, review_technical
@@ -278,4 +278,4 @@ from src.ai_generator.technical_interview import TechnicalRequest, review_techni
 @app.post("/api/interview/technical")
 @limiter.limit("3/minute;20/hour")
 async def technical_feedback(request: Request, payload: TechnicalRequest):
-    return await run_application_operation(lambda: review_technical(payload))
+    raise HTTPException(status_code=410, detail="Interview preparation is no longer part of this MVP.")

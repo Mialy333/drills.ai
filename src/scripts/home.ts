@@ -1,7 +1,13 @@
-import { readApplicationState } from '../lib/application-state';
+import { deleteCandidateProfile } from '../lib/candidate-profile';
+import { clearApplicationState, readApplicationState } from '../lib/application-state';
 import { locale, translator } from '../lib/locale';
 const say=translator(locale(document.documentElement.lang));
 try{
+ if(new URL(location.href).searchParams.get('reset')==='1'){
+  clearApplicationState(sessionStorage,localStorage);deleteCandidateProfile();
+  const url=new URL(location.href);url.searchParams.delete('reset');history.replaceState(null,'',url);
+  document.getElementById('home-resume-note')!.textContent=say('Dossier effacé sur ce navigateur. Tu peux recommencer.','Application cleared in this browser. You can start again.');
+ }
  const saved=readApplicationState(sessionStorage,localStorage);
  if(saved&&saved.profile.trim().length>=50){
   const link=document.getElementById('home-start') as HTMLAnchorElement;

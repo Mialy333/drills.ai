@@ -71,7 +71,7 @@ function resetResults(): void {
   printButton.disabled = download.disabled = true;
   cvEditor.setText(""); pitch.value = "";
   inputSnapshot = null;
-  for (const id of ["application-evidence", "application-draft-sources", "application-print-text"]) element(id).replaceChildren();
+  for (const id of ["application-evidence", "application-print-text"]) element(id).replaceChildren();
 }
 function busy(value: boolean): void { fields.disabled = value; cancel.hidden = !value; form.setAttribute("aria-busy", String(value)); }
 function text(tag: string, value: string): HTMLElement {
@@ -131,6 +131,7 @@ async function perform(task: (signal: AbortSignal) => Promise<void>, message: st
 
 function render(result: ApplicationResult): void {
   currentResult = result; renderApplyLink();
+  element("application-target-role").textContent=say("Ta candidature : ","Your application: ")+result.role_title;
   element("application-result-title").textContent = result.role_title;
   element("application-scope").textContent = result.scope_reason;
   const conditions=result.requirements.filter(item=>item.kind==='eligibility'&&item.status!=='documented');
@@ -151,24 +152,16 @@ function render(result: ApplicationResult): void {
     const state = { documented: item.kind==='eligibility'?say("Déclaré dans ton profil", "Declared in your profile"):say("Documenté", "Documented"), partial: say("Partiel", "Partial"), not_documented: say("Non documenté", "Not documented") }[item.status];
     const priority = { core: say("Essentielle", "Core"), important: say("Importante", "Important"), supporting: say("Complémentaire", "Supporting") }[item.priority];
     const badge = text("span", state); badge.className = "evidence-badge";
-    const meaning = { documented: say("Une preuve figure dans ton profil. Prépare un exemple pour l’entretien.", "Your profile contains evidence. Prepare an example for the interview."), partial: say("Ton profil couvre une partie du besoin. Précise ta contribution ou ajoute une preuve.", "Your profile covers part of this requirement. Clarify your contribution or add evidence."), not_documented: say("Aucune preuve suffisante dans les éléments fournis : cela ne signifie pas que tu ne sais pas le faire.", "No sufficient evidence in the supplied information: this does not mean you cannot do it.") }[item.status];
+    const meaning = { documented: say("Une preuve figure dans ton profil. Mets cette contribution en valeur dans ta candidature.", "Your profile contains evidence. Highlight this contribution in your application."), partial: say("Ton profil couvre une partie du besoin. Précise ta contribution ou ajoute une preuve.", "Your profile covers part of this requirement. Clarify your contribution or add evidence."), not_documented: say("Aucune preuve suffisante dans les éléments fournis : cela ne signifie pas que tu ne sais pas le faire.", "No sufficient evidence in the supplied information: this does not mean you cannot do it.") }[item.status];
     const summary=document.createElement('summary');summary.append(badge,document.createTextNode(' '+item.name));card.append(summary);
     card.append( text("p", meaning), text("small", `${item.kind === "eligibility" ? say("Condition à vérifier", "Condition to review") : say("Compétence", "Skill")} · ${priority}`), text("p", item.explanation));
-    const quotes = document.createElement("details");
-    quotes.append(text("summary", say("Voir les preuves citées", "View quoted evidence")), text("p", say("Dans l’annonce", "In the posting")), text("blockquote", item.posting_quote));
-    quotes.append(text("p", say("Dans ton parcours", "In your experience")), text("blockquote", item.candidate_quote ?? say("Aucune preuve citée. Ajoute un exemple si tu en as un.", "No evidence cited. Add an example if you have one.")));
     const action = text("p", `${say("Prochaine action", "Next action")} : ${item.next_action}`); action.className = "evidence-action";
-    card.append(quotes, action);
+    card.append(action);
     return card;
   }));
   cvEditor.setSections(result.cv_sections);
   element("cv-role-title").textContent = result.role_title;
   pitch.value = result.pitch.text;
-  element("application-draft-sources").replaceChildren(...[...result.cv_sections, result.pitch].map((section) => {
-    const node = document.createElement("section");
-    node.append(text("h3", cvHeading(section.heading, language)), ...section.source_quotes.map((quote) => text("blockquote", quote)));
-    return node;
-  }));
   reviewed.checked = false;
   printButton.disabled = download.disabled = true;
   setStep("diagnostic");
@@ -346,7 +339,6 @@ function setStep(step:string, updateUrl=true):void {
   results.hidden=form.hidden===false;
   element('application-diagnostic-panel').hidden=step!=='diagnostic';
   element('application-documents-panel').hidden=step!=='documents';
-  element('application-interview-next').hidden=step!=='documents';
   const titles:Record<string,string>={profile:say('Ton profil, ton CV, tes projets.','Your profile, CV and projects.'),posting:say('Trouve ta prochaine opportunité.','Find your next opportunity.'),diagnostic:say('Ton diagnostic pour cette offre.','Your assessment for this role.'),documents:say('Prépare ta candidature.','Prepare your application.')};
   element('application-heading-title').textContent=titles[step];
   for(const button of document.querySelectorAll<HTMLButtonElement>('[data-application-step]')){

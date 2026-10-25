@@ -216,3 +216,18 @@ solutions are executed by repository tests, including invalid inputs and state
 isolation; candidate submissions are never executed. The model sees the authored
 snippet and reference solution when reviewing an answer. The application diagnostic
 continues to recommend at most three catalogue cases, preserving its API contract.
+
+### Final scope: obtaining interviews
+
+The public journey now stops at submitting and tracking applications. Interview
+navigation, technical exercises, audio rehearsal and visible citation/source panels
+are removed. Old preparation URLs redirect to the application page. The three
+interview POST endpoints return 410 without calling OpenAI, and the interview rubric
+is no longer exposed as an MCP tool. Archived implementation/tests remain for future
+work; source validation still protects application generation on the backend.
+
+The apply action shows the assessed role and preserved external URL. New visitors
+receive no candidate profile. Public build checks reject known creator CV markers.
+Opening the home URL with `?reset=1` explicitly clears the current browser's DRILLS
+application and legacy candidate profile, preserving unrelated storage. This action
+cannot remotely erase another browser or downloaded/exported files.

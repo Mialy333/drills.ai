@@ -47,7 +47,7 @@ def test_feedback_endpoint_requires_consent_and_private_cache(monkeypatch):
     from api.main import app
     monkeypatch.delenv('OPENAI_API_KEY',raising=False)
     response=TestClient(app).post('/api/interview/transcribe',json=audio().model_dump())
-    assert response.status_code==503
+    assert response.status_code==410
     assert response.headers['cache-control']=='no-store'
     response=TestClient(app).post('/api/interview/transcribe',json=audio().model_dump()|{'consent':False})
     assert response.status_code==422

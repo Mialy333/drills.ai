@@ -10,8 +10,8 @@ const fr = lang === "fr";
     <section class="welcome" aria-labelledby="welcome-title">
       <div class="welcome-text">
         <p class="home-kicker">{fr ? "TON PREMIER POSTE D’AGENT ENGINEER" : "YOUR FIRST AGENT ENGINEER ROLE"}</p>
-        <h1 class="welcome-title" id="welcome-title">{fr ? "Ton parcours a de la valeur. Fais-le voir." : "Your experience matters. Make it visible."}</h1>
-        <p class="welcome-lead">{fr ? "Importe ton CV. Choisis une annonce. Regarde si ton profil matche et optimise ta candidature : pour un stage, une alternance ou un premier emploi." : "Upload your CV. Choose a job posting. See how your profile matches and strengthen your application for an internship, apprenticeship or first job."}</p>
+        <h1 class="welcome-title" id="welcome-title">{fr ? "Décroche tes premiers entretiens d’Agent Engineer." : "Land your first Agent Engineer interviews."}</h1>
+        <p class="welcome-lead">{fr ? "Importe ton CV, choisis une offre et prépare une candidature qui met ton parcours en valeur. Pour un stage, une alternance ou un premier emploi." : "Upload your CV, choose an opening and build an application that highlights your experience. For an internship, apprenticeship or first job."}</p>
         <div class="welcome-actions"><a id="home-start" class="btn btn-primary" href={href(`/${lang}/apply/?step=profile`)}>{fr ? "Commencer ici →" : "Start here →"}</a><a id="home-edit-profile" hidden href={href(`/${lang}/apply/?step=profile`)}>{fr ? "Modifier mon profil" : "Edit my profile"}</a></div>
         <p id="home-resume-note" class="welcome-note">{fr ? "Première étape : ton profil. Aucun compte à créer pour ce MVP." : "First step: your profile. No account needed for this MVP."}</p>
         <p class="welcome-note">{fr ? "Tes expériences passées, tes projets et tes formations deviennent des preuves concrètes. Tu gardes la main sur les textes." : "Your previous experience, projects and education become concrete evidence. You stay in control of the wording."}</p>

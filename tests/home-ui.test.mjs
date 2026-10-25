@@ -16,3 +16,19 @@ test('home has a single start action and resumes saved profile, diagnosis or doc
  assert.match(link.textContent,stage==='new'?/Commencer ici/:/Reprendre/);
  }
 });
+
+test('explicit reset removes candidate data while preserving unrelated browser storage',t=>{
+ const dom=new JSDOM(readFileSync('dist/fr/index.html','utf8'),{url:'https://example.com/drills.ai/fr/?reset=1',runScripts:'outside-only'});t.after(()=>dom.window.close());const w=dom.window;
+ for(const storage of [w.sessionStorage,w.localStorage]){storage.setItem('drills.application.v1','private data');storage.setItem('unrelated','keep');}
+ w.localStorage.setItem('drills.candidate-profile.v1','private profile');w.eval(bundle.outputFiles[0].text);
+ for(const storage of [w.sessionStorage,w.localStorage]){assert.equal(storage.getItem('drills.application.v1'),null);assert.equal(storage.getItem('unrelated'),'keep');}
+ assert.equal(w.localStorage.getItem('drills.candidate-profile.v1'),null);assert.match(w.document.getElementById('home-start').textContent,/Commencer/);assert.equal(w.location.search,'');
+});
+test('public journey exposes neither interview preparation nor source panels',t=>{
+ for(const lang of ['fr','en'])for(const page of ['','apply/','progress/']){
+ const dom=new JSDOM(readFileSync(`dist/${lang}/${page}index.html`,'utf8'));t.after(()=>dom.window.close());
+ assert.equal(dom.window.document.querySelector('a[href*="/prepare/"]'),null);
+ assert.equal(dom.window.document.getElementById('application-draft-sources'),null);
+ }
+ for(const lang of ['fr','en'])assert.match(readFileSync(`dist/${lang}/prepare/index.html`,'utf8'),/apply/);
+});

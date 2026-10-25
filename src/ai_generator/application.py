@@ -114,7 +114,7 @@ Documented means supported in this profile, not independently verified mastery.
 Never claim mastery from a skill list. For eligibility gaps, suggest checking the
 employer's accepted equivalents or supplying existing evidence, not enrolling in
 an unnecessary degree. Even documented skills need a useful next_action, such as
-preparing a concrete example; never write "nothing to do".
+highlighting a concrete contribution in their CV; never write "nothing to do". Focus next actions on applying and obtaining an interview, not rehearsing one.
 Draft a usable targeted CV (plain text sections, no markdown), not a compressed
 summary. Where facts exist, separate target title, short profile, projects,
 professional experience, education and skills. For each relevant experience or

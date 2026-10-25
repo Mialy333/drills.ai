@@ -9,6 +9,9 @@ const forbiddenContent = [
   "grounded-research-agent",
   "novamart-multi-agent-support",
   "Black Monday 1987",
+  "Ratsimbazafy", "Candriam", "B-Wiize", "SafeHaven", "Northern Trust",
+  "Sources utilisées pour les brouillons", "Sources used for the drafts",
+  "practice-technical-panel", "practice-pitch-panel",
 ];
 const publicFiles = [];
 

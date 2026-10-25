@@ -44,7 +44,6 @@ async def get_job(job_id: str) -> dict[str, Any]:
     raise ValueError('Job not present in current available sources')
 
 
-@mcp.tool(annotations=LOCAL, structured_output=True)
 def get_interview_rubric(language: Literal['fr','en']='fr') -> dict[str, Any]:
     """Return the fixed authored Agent Engineer practice cases and source references."""
     catalog = json.loads((Path(__file__).parents[1]/'src/lib/interview-cases.json').read_text())

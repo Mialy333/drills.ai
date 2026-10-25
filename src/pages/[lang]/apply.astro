@@ -117,7 +117,7 @@ const fr = lang === "fr";
       </div>
       <section class="application-card" id="application-documents-panel">
         <h2>{fr ? "Tes textes, à relire et à personnaliser" : "Your drafts, ready for your review"}</h2>
-        <p>{fr ? "Les citations ont été retrouvées dans tes sources. Cela ne garantit pas que chaque reformulation soit exacte. Vérifie les faits, les dates et le niveau de maîtrise ; aucun résultat de recrutement ou de filtrage ATS n’est garanti." : "Quotes were found in your sources. This does not guarantee that every rephrased statement is accurate. Check facts, dates and proficiency; no hiring or ATS outcome is guaranteed."}</p>
+        <p>{fr ? "Relis les faits, les dates et les formulations avant d’envoyer ta candidature." : "Review facts, dates and wording before submitting your application."}</p>
         <details class="draft-editor" open><summary>{fr ? "Mon CV ciblé" : "My targeted CV"}</summary><p>{fr ? "Garde les contributions concrètes, les dates et les projets que tu peux expliquer. Ajuste les formulations pour qu’elles te ressemblent." : "Keep concrete contributions, dates and projects you can explain. Adjust the wording to sound like you."}</p>
         <label for="application-contact">{fr ? "Nom et coordonnées pour le CV (facultatif, reste dans ton navigateur)" : "Name and contact details for the CV (optional, stays in your browser)"}</label>
         <textarea id="application-contact" rows="2" maxlength="500" autocomplete="off"></textarea>
@@ -143,15 +143,13 @@ const fr = lang === "fr";
         <label for="application-pitch">{fr ? "Pitch de présentation — texte modifiable" : "Introduction pitch — editable text"}</label>
         <textarea id="application-pitch" rows="8" maxlength="4000" autocomplete="off"></textarea>
         </details>
-        <details><summary>{fr ? "Sources utilisées pour les brouillons" : "Sources used for the drafts"}</summary><div id="application-draft-sources"></div></details>
         <label class="application-check"><input id="application-reviewed" type="checkbox" /><span>{fr ? "J’ai relu et vérifié les textes avant export." : "I have reviewed and verified the text before export."}</span></label>
         <div class="application-actions">
           <button type="button" class="btn btn-primary" id="application-print-button" disabled>{fr ? "Imprimer / enregistrer le CV en PDF" : "Print / save CV as PDF"}</button>
           <button type="button" class="btn btn-secondary" id="application-download" disabled>{fr ? "Télécharger CV et pitch (.txt)" : "Download CV and pitch (.txt)"}</button>
         </div>
       </section>
-      <div class="application-actions application-next" id="application-interview-next"><a class="btn btn-primary" href={href(`/${lang}/prepare/`)}>{fr ? "Étape suivante : préparer mon entretien →" : "Next step: prepare for my interview →"}</a></div>
-      <div class="application-card"><a id="application-apply-link" class="btn btn-primary" target="_blank" rel="noopener noreferrer" hidden>{fr ? "Postuler sur le site de l’entreprise ↗" : "Apply on the company’s website ↗"}</a><p id="application-apply-note"></p><p>{fr ? "Après l’envoi, indique « Envoyée » dans Mon suivi. Ouvrir l’annonce ne compte pas comme une candidature envoyée." : "After submitting, mark it Sent in My progress. Opening a posting does not count as an application sent."}</p></div>
+      <div class="application-card"><h2 id="application-target-role"></h2><a id="application-apply-link" class="btn btn-primary" target="_blank" rel="noopener noreferrer" hidden>{fr ? "Postuler à cette offre ↗" : "Apply to this opening ↗"}</a><p id="application-apply-note"></p><p>{fr ? "Après l’envoi, indique « Envoyée » dans Mon suivi. Ouvrir l’annonce ne compte pas comme une candidature envoyée." : "After submitting, mark it Sent in My progress. Opening a posting does not count as an application sent."}</p></div>
       <section id="application-print" hidden><div id="application-print-text"></div></section>
     </section>
   </section>

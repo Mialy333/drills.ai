@@ -229,7 +229,7 @@ test('French page localizes CV section labels and GitHub notices without transla
  const preview=w.document.getElementById('github-preview').value;assert.match(preview,/Langage du dépôt/);assert.doesNotMatch(preview,/Repository language|Not a verification/);assert.match(preview,/Original repository description/);
 });
 test('all public MVP routes declare their language and use localized navigation',t=>{
- for(const lang of ['fr','en'])for(const page of ['','apply/','prepare/','progress/']){
+ for(const lang of ['fr','en'])for(const page of ['','apply/','progress/']){
   const dom=new JSDOM(readFileSync(`dist/${lang}/${page}index.html`,'utf8'));t.after(()=>dom.window.close());
   assert.equal(dom.window.document.documentElement.lang,lang);
   const nav=dom.window.document.querySelector('.bar-nav').textContent;

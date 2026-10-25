@@ -53,6 +53,6 @@ def test_endpoint_consent_and_no_store(monkeypatch):
     from api.main import app
     monkeypatch.delenv('OPENAI_API_KEY',raising=False)
     response=TestClient(app).post('/api/interview/technical',json=payload().model_dump())
-    assert response.status_code==503
+    assert response.status_code==410
     assert response.headers['cache-control']=='no-store'
     assert TestClient(app).post('/api/interview/technical',json=payload().model_dump()|{'consent':False}).status_code==422
