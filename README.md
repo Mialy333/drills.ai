@@ -4,7 +4,7 @@
 
 Upload your CV, choose an opening, and build an application that highlights your experience. For an internship, apprenticeship, or first job.
 
-[Try the app in English](https://mialy333.github.io/drills.ai/en/) · [Essayer en français](https://mialy333.github.io/drills.ai/fr/)
+[Watch the product demo](https://www.youtube.com/watch?v=rpC7ADxf-kI) · [Try the app in English](https://mialy333.github.io/drills.ai/en/) · [Essayer en français](https://mialy333.github.io/drills.ai/fr/)
 
 Built during the **OpenAI Devday hackathon · Impact → New Opportunities → Jobs**, with a build-in-public approach.
 
