@@ -48,7 +48,7 @@ async def get_job(job_id: str) -> dict[str, Any]:
 def get_interview_rubric(language: Literal['fr','en']='fr') -> dict[str, Any]:
     """Return the fixed authored Agent Engineer practice cases and source references."""
     catalog = json.loads((Path(__file__).parents[1]/'src/lib/interview-cases.json').read_text())
-    return {'version':catalog['version'], 'cases':[{'id':case['id'], **case[language], 'references':case['references'], 'provenance':case['provenance']} for case in catalog['cases']]}
+    return {'version':catalog['version'], 'cases':[{'id':case['id'], **case[language], 'references':case['references'], 'provenance':case['provenance'], 'category':case['category'], 'code':case.get('code'), 'solution_code':case.get('solution_code')} for case in catalog['cases']]}
 
 
 class MatchInput(ApplicationRequest):

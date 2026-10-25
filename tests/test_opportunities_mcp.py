@@ -21,7 +21,7 @@ def test_mcp_discovers_and_scores_using_web_app_rules():
             result=await client.call_tool('score_documented_match',{'payload':payload()})
             assert result.structured_content['score']==100
             rubric=await client.call_tool('get_interview_rubric',{'language':'fr'})
-            assert len(rubric.structured_content['cases'])==3
+            assert len(rubric.structured_content['cases'])==5
             invalid=payload();invalid['requirements'][0]['candidate_quote']='Fabricated Python project experience'
             failed=await client.call_tool('score_documented_match',{'payload':invalid})
             assert failed.is_error

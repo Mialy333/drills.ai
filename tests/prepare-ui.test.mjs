@@ -77,3 +77,13 @@ test('pitch and technical cases occupy separate views with one case at a time',t
  assert.equal(cards[0].hidden,true);assert.equal(cards[1].hidden,false);
  get('tab-pitch').click();assert.equal(get('pitch-panel').hidden,false);assert.equal(get('technical-panel').hidden,true);
 });
+
+test('technical categories filter cases without losing the written answer',t=>{
+ const {w,get}=setup(t);get('category').value='python';get('category').dispatchEvent(new w.Event('change'));
+ assert.equal(get('case').options.length,2);assert.equal(get('case').value,'python-state');
+ const answer=w.document.getElementById('answer-python-state');answer.value='My correction and explanation';
+ const visible=()=>[...w.document.querySelectorAll('[data-interview-case]')].filter(card=>!card.hidden);
+ assert.equal(visible().length,1);assert.equal(visible()[0].id,'python-state');
+ get('category').value='agent-design';get('category').dispatchEvent(new w.Event('change'));assert.equal(get('case').options.length,3);
+ get('category').value='python';get('category').dispatchEvent(new w.Event('change'));assert.equal(answer.value,'My correction and explanation');
+});

@@ -201,3 +201,18 @@ They persist with the existing dossier and are appended as explicit self-reporte
 statements only when preparing an analysis. Changes invalidate the current result.
 No nationality field is required. Residence does not establish work rights; these
 statements are not administrative verification and must not influence skill scores.
+
+### Final hackathon onboarding and interview scope
+
+Home contains one violet hero and a single primary action. New visitors start with
+the profile; a valid saved profile resumes opportunities, diagnosis or reviewed
+documents. An edit-profile link remains available. Existing storage expiry and
+opt-in persistence remain in force; no login/account system is introduced.
+
+Technical preparation has two categories: the three existing agent-design cases,
+and two fixed Python debugging/refactoring cases (shared mutable history and tool
+argument validation). Catalogue v3 is shared with the MCP rubric tool. Fixed Python
+solutions are executed by repository tests, including invalid inputs and state
+isolation; candidate submissions are never executed. The model sees the authored
+snippet and reference solution when reviewing an answer. The application diagnostic
+continues to recommend at most three catalogue cases, preserving its API contract.

@@ -214,7 +214,7 @@ def select_interview_cases(posting: str, language: str) -> list[InterviewQuestio
     ordered = sorted(catalog["cases"], key=lambda case: -sum(word in posting.casefold() for word in case["keywords"]))
     return [InterviewQuestion(question=case[language]["title"],
                               looking_for=case[language]["scenario"] + " " + " ".join(case[language]["criteria"]))
-            for case in ordered]
+            for case in ordered[:3]]
 
 def source_excerpts(text: str, prefix: str) -> dict[str, str]:
     """Bounded overlapping slices, each preserved verbatim from the approved input."""

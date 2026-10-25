@@ -89,9 +89,9 @@ const fr = lang === "fr";
           <label class="application-check"><input id="application-consent" type="checkbox" required />
             <span>{fr ? "J’accepte l’envoi des données saisies (et du PDF si je l’importe) au serveur DRILLS et à OpenAI pour cette préparation. Je retire les informations sensibles inutiles." : "I agree to send the entered data (and the PDF if imported) to the DRILLS server and OpenAI for this preparation. I remove unnecessary sensitive information."}</span>
           </label>
-          <p class="application-note">{fr ? "Ton dossier est conservé dans cet onglet. Active l’option ci-dessous pour le retrouver sur cet appareil pendant 30 jours. La conservation des réponses est désactivée dans l’appel OpenAI ; les règles du fournisseur restent applicables." : "Your application is kept in this tab. Enable the option below to remember it on this device for 30 days. Response storage is disabled in the OpenAI call; provider data handling policies still apply."}</p>
+          <p class="application-note">{fr ? "Ton dossier est conservé dans cet onglet. Active l’option ci-dessous pour le retrouver sur cet appareil pendant 30 jours." : "Your application is kept in this tab. Enable the option below to remember it on this device for 30 days."}</p>
           <label class="application-check"><input id="application-remember" type="checkbox" /><span>{fr ? "Conserver mon dossier sur cet appareil pendant 30 jours (éviter sur un appareil partagé)." : "Keep my application on this device for 30 days (avoid on shared devices)."}</span></label>
-          <p id="application-status" role="status" aria-live="polite">{fr ? "Sélectionne ton CV, colle l’annonce, coche ton accord puis lance le diagnostic." : "Select your CV, paste the posting, give consent, then start your assessment."}</p>
+          <p id="application-status" role="status" aria-live="polite">{fr ? "Commence par ton CV ou ton parcours, puis clique sur Suivant." : "Start with your CV or experience, then click Next."}</p>
           <div class="application-actions">
             <button class="btn btn-primary" type="submit" id="application-submit">{fr ? "Obtenir mon diagnostic" : "Get my assessment"}</button>
             <button class="btn btn-secondary" type="button" id="application-example">{fr ? "Remplir un exemple fictif" : "Fill a fictional example"}</button>
@@ -101,7 +101,7 @@ const fr = lang === "fr";
     </form>
     <div class="application-actions" id="application-reset-actions">
       <button type="button" class="btn btn-secondary" id="application-cancel" hidden>{fr ? "Annuler" : "Cancel"}</button>
-      <button type="button" class="text-button" id="application-clear">{fr ? "Effacer mon dossier et son profil enregistré" : "Delete this application and its saved profile"}</button>
+      <details><summary>{fr ? "Gérer mon dossier" : "Manage my application"}</summary><button type="button" class="text-button" id="application-clear">{fr ? "Effacer mon dossier et son profil enregistré" : "Delete this application and its saved profile"}</button></details>
     </div>
 
 

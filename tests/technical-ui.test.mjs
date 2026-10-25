@@ -9,7 +9,7 @@ const answer='I separate reads from writes, limit retries and check the reservat
 function setup(t){
  const dom=new JSDOM(readFileSync('dist/en/prepare/index.html','utf8'),{url:'https://example.com',runScripts:'outside-only'});t.after(()=>dom.window.close());const w=dom.window;w.eval(bundle.outputFiles[0].text);
  const card=w.document.querySelector('[data-interview-case]');const get=selector=>card.querySelector(selector);
- const data={case_id:'tool-failure',rubric_version:2,criteria:['met','partial','incorrect','missing'].map((status,i)=>({criterion_index:i,status,answer_quote:status==='missing'?null:'I separate reads from writes',explanation:'Explain this design choice with more precision.',next_action:'Describe how you handle an uncertain reservation.'}))};
+ const data={case_id:'tool-failure',rubric_version:3,criteria:['met','partial','incorrect','missing'].map((status,i)=>({criterion_index:i,status,answer_quote:status==='missing'?null:'I separate reads from writes',explanation:'Explain this design choice with more precision.',next_action:'Describe how you handle an uncertain reservation.'}))};
  return {w,get,data};
 }
 test('technical feedback requires consent, shows four grounded statuses and caches an unchanged answer',async t=>{

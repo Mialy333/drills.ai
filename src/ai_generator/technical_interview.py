@@ -15,7 +15,7 @@ def load_catalog():
 
 
 class TechnicalRequest(StrictModel):
-    case_id: Literal['tool-failure', 'untrusted-content', 'agent-evaluation']
+    case_id: Literal['tool-failure', 'untrusted-content', 'agent-evaluation', 'python-state', 'python-tool-validation']
     answer: str = Field(min_length=50, max_length=5000)
     output_language: Literal['fr', 'en'] = 'fr'
     consent: Literal[True]
@@ -50,7 +50,7 @@ async def review_technical(payload: TechnicalRequest, client=None):
         'improvement in short sentences. Do not invent candidate statements, criteria, references, '
         'employer expectations or interview provenance. The rubric is practice material, not a '
         'hiring verdict. Do not claim to have executed code or independently verified mastery.',
-        json.dumps({'rubric': rubric, 'answer': payload.answer}, ensure_ascii=False),
+        json.dumps({'rubric': rubric, 'code': case.get('code'), 'reference_solution': case.get('solution_code'), 'answer': payload.answer}, ensure_ascii=False),
         max_output_tokens=2000, model=os.getenv('OPENAI_FEEDBACK_MODEL') or None)
     if sorted(item.criterion_index for item in result.criteria) != list(range(4)):
         raise ApplicationOutputError('technical_criteria')

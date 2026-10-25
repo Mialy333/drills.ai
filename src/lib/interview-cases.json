@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "cases": [
     {
       "id": "tool-failure",
@@ -57,7 +57,8 @@
         "type": "authored_practice",
         "employer_interview": false,
         "reference_checked_on": "2026-10-25"
-      }
+      },
+      "category": "agent-design"
     },
     {
       "id": "untrusted-content",
@@ -103,7 +104,8 @@
         "type": "authored_practice",
         "employer_interview": false,
         "reference_checked_on": "2026-10-25"
-      }
+      },
+      "category": "agent-design"
     },
     {
       "id": "agent-evaluation",
@@ -149,6 +151,104 @@
         "type": "authored_practice",
         "employer_interview": false,
         "reference_checked_on": "2026-10-25"
+      },
+      "category": "agent-design"
+    },
+    {
+      "id": "python-state",
+      "category": "python",
+      "keywords": [
+        "python",
+        "debugging",
+        "memory"
+      ],
+      "code": "def add_message(message, history=[]):\n    history.append(message)\n    return history\n\nfirst = add_message(\"Candidate A\")\nsecond = add_message(\"Candidate B\")\n",
+      "solution_code": "def add_message(message, history=None):\n    result = [] if history is None else list(history)\n    result.append(message)\n    return result\n",
+      "fr": {
+        "title": "Debugging : une mémoire partagée entre candidats",
+        "scenario": "Deux candidats démarrent chacun une conversation. Pourquoi second contient-il aussi le message du premier ? Corrige la fonction : elle doit créer une nouvelle liste à chaque appel et ne pas modifier une liste fournie par l’appelant. Propose des tests.",
+        "criteria": [
+          "Identifier que la liste par défaut est créée une seule fois et partagée entre les appels.",
+          "Utiliser None comme valeur par défaut et créer une liste pour chaque appel.",
+          "Copier une liste fournie pour éviter de modifier celle de l’appelant.",
+          "Tester deux appels indépendants et vérifier qu’une liste fournie reste inchangée."
+        ],
+        "explanation": "Les arguments par défaut sont évalués à la définition de la fonction. Une liste par défaut conserve donc les messages entre appels. None distingue une nouvelle conversation ; list(history) protège la liste de l’appelant. Ici, une copie superficielle suffit car les messages sont des chaînes.",
+        "sample_answer": "Je remplace la liste par défaut par None. Je crée une liste vide ou une copie de la liste reçue, puis j’ajoute le message. Je vérifie que deux appels sans historique restent indépendants et que l’historique fourni n’est pas modifié."
+      },
+      "en": {
+        "title": "Debugging: shared memory across candidates",
+        "scenario": "Two candidates start separate conversations. Why does second also contain the first candidate’s message? Fix the function: each call must return a fresh list without modifying a caller-provided list. Propose tests.",
+        "criteria": [
+          "Identify that the default list is created once and shared across calls.",
+          "Use None as the default and create a list on every call.",
+          "Copy a supplied list to avoid modifying caller state.",
+          "Test independent calls and verify that a supplied list remains unchanged."
+        ],
+        "explanation": "Default arguments are evaluated when the function is defined. A default list therefore retains messages across calls. None distinguishes a new conversation; list(history) protects caller state. A shallow copy suffices here because messages are strings.",
+        "sample_answer": "I replace the default list with None. I create an empty list or copy the supplied list before appending the message. I test two independent calls and confirm the caller’s history remains unchanged."
+      },
+      "references": [
+        {
+          "label": "Python: default argument values",
+          "url": "https://docs.python.org/3/tutorial/controlflow.html#default-argument-values"
+        }
+      ],
+      "provenance": {
+        "type": "authored_practice",
+        "employer_interview": false,
+        "solution_validation": "repository_tests"
+      }
+    },
+    {
+      "id": "python-tool-validation",
+      "category": "python",
+      "keywords": [
+        "python",
+        "refactoring",
+        "tool",
+        "validation"
+      ],
+      "code": "def run_tool(call):\n    try:\n        if call[\"name\"] == \"add\":\n            return float(call[\"arguments\"][\"a\"]) + float(call[\"arguments\"][\"b\"])\n    except Exception:\n        return 0\n",
+      "solution_code": "def run_tool(call):\n    if not isinstance(call, dict) or call.get(\"name\") != \"add\":\n        raise ValueError(\"Unsupported tool\")\n    args = call.get(\"arguments\")\n    if not isinstance(args, dict) or set(args) != {\"a\", \"b\"}:\n        raise ValueError(\"Expected a and b\")\n    if any(type(args[key]) is not int for key in (\"a\", \"b\")):\n        raise ValueError(\"Expected integers\")\n    return args[\"a\"] + args[\"b\"]\n",
+      "fr": {
+        "title": "Refactoring : valider un appel d’outil Python",
+        "scenario": "Un modèle fournit un appel d’outil sous forme de dictionnaire. Refactorise cette fonction : seul add est autorisé, arguments doit contenir exactement a et b, deux entiers (pas de booléens ni de chaînes). Une entrée invalide doit lever ValueError ; une somme nulle reste un succès. Explique tes tests.",
+        "criteria": [
+          "Autoriser uniquement add et refuser explicitement un outil inconnu.",
+          "Valider le dictionnaire arguments et les deux clés exactes a et b.",
+          "Accepter uniquement des entiers, en excluant booléens et chaînes.",
+          "Lever ValueError pour une entrée invalide et tester qu’un résultat nul reste valide."
+        ],
+        "explanation": "Un résultat 0 ne doit pas masquer une erreur. La validation des arguments doit être effectuée par l’application avant l’exécution d’un outil. En Python, bool est une sous-classe de int : isinstance(True, int) vaut True. Le contrat de ce cas demande de refuser explicitement ces booléens.",
+        "sample_answer": "Je vérifie le nom de l’outil et la structure avant le calcul. Je contrôle les deux clés et les types ; je refuse notamment True et les chaînes numériques. Je lève ValueError au lieu de renvoyer 0 en cas d’erreur. Je teste un outil inconnu, une clé manquante, un type invalide et une somme égale à zéro."
+      },
+      "en": {
+        "title": "Refactoring: validate a Python tool call",
+        "scenario": "A model supplies a tool call as a dictionary. Refactor this function: only add is allowed, arguments must contain exactly a and b, both integers (not booleans or strings). Invalid input must raise ValueError; a zero sum is a valid success. Explain your tests.",
+        "criteria": [
+          "Allow only add and explicitly reject unknown tools.",
+          "Validate the arguments dictionary and exactly the keys a and b.",
+          "Accept only integers, excluding booleans and strings.",
+          "Raise ValueError for invalid input and test that a zero result remains valid."
+        ],
+        "explanation": "A zero result must not mask an error. Application code must validate arguments before executing a tool. In Python, bool subclasses int: isinstance(True, int) is True. This scenario explicitly requires rejecting booleans.",
+        "sample_answer": "I check the tool name and input structure before calculating. I validate both keys and types, rejecting True and numeric strings. I raise ValueError instead of returning zero on errors. I test unknown tools, missing keys, invalid types and a valid sum of zero."
+      },
+      "references": [
+        {
+          "label": "Python: Boolean type",
+          "url": "https://docs.python.org/3/library/stdtypes.html#boolean-type-bool"
+        },
+        {
+          "label": "Python: handling exceptions",
+          "url": "https://docs.python.org/3/tutorial/errors.html#handling-exceptions"
+        }
+      ],
+      "provenance": {
+        "type": "authored_practice",
+        "employer_interview": false,
+        "solution_validation": "repository_tests"
       }
     }
   ]

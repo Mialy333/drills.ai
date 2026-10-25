@@ -8,7 +8,7 @@
     "build": "astro build && node scripts/verify-public-build.mjs",
     "test:contracts": "node --experimental-strip-types --test tests/frontend-contract.test.mjs tests/assessment-plan.test.mjs tests/recommendation-provenance.test.mjs tests/lesson-course.test.mjs tests/lesson-progress.test.mjs tests/game.test.mjs tests/candidate-profile.test.mjs tests/candidate-match.test.mjs tests/application.test.mjs",
     "preview": "astro preview",
-    "test:ui": "node --test tests/application-ui.test.mjs tests/prepare-ui.test.mjs tests/progress-ui.test.mjs tests/technical-ui.test.mjs"
+    "test:ui": "node --test tests/application-ui.test.mjs tests/prepare-ui.test.mjs tests/progress-ui.test.mjs tests/technical-ui.test.mjs tests/home-ui.test.mjs"
   },
   "dependencies": {
     "@fontsource/chakra-petch": "^5.3.0",

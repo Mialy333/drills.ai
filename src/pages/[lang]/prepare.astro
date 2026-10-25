@@ -26,9 +26,12 @@ const fr = lang === "fr";
       <p id="practice-status" role="status" aria-live="polite"></p><div id="practice-feedback"></div>
       <p>{fr ? "Grille fixe : clarté, preuves concrètes et lien avec l’annonce. Le retour est généré par l’IA ; il n’évalue ni ta voix, ni ton accent, ni tes chances d’embauche." : "Fixed rubric: clarity, concrete evidence and relevance to the posting. Feedback is AI-generated; it does not rate your voice, accent or hiring chances."}</p>
     </section>
-    <div id="practice-technical-panel" hidden><label for="practice-case">{fr ? "Choisis un cas" : "Choose a case"}</label><select id="practice-case">{catalog.cases.map(item=><option value={item.id}>{item[lang].title}</option>)}</select><div class="interview-cases">
-      {catalog.cases.map(item => <article class="panel" data-interview-case={item.id} id={item.id}>
+    <div id="practice-technical-panel" hidden>
+      <label for="practice-category">{fr ? "Catégorie" : "Category"}</label><select id="practice-category"><option value="agent-design">{fr ? "Conception, fiabilité et sécurité des agents" : "Agent design, reliability and safety"}</option><option value="python">Debugging &amp; refactoring · Python</option></select>
+      <label for="practice-case">{fr ? "Choisis un cas" : "Choose a case"}</label><select id="practice-case">{catalog.cases.map(item=><option value={item.id}>{item[lang].title}</option>)}</select><div class="interview-cases">
+      {catalog.cases.map(item => <article class="panel" data-interview-case={item.id} data-case-category={item.category} id={item.id}>
         <h2>{item[lang].title}</h2><p>{item[lang].scenario}</p>
+        {'code' in item && <pre class="technical-code"><code>{item.code}</code></pre>}
         <p class="technical-origin">{fr ? "Mise en situation DRILLS · grille fondée sur des références techniques, pas une question attestée d’un recruteur." : "DRILLS practice scenario · rubric based on technical references, not a verified employer interview question."}</p>
         <details><summary>{fr ? "Comprendre le cas et les notions utiles" : "Understand the case and key concepts"}</summary><p>{item[lang].explanation}</p></details>
         <label for={`answer-${item.id}`}>{fr ? "Ta réponse (brouillon non enregistré)" : "Your answer (unsaved draft)"}</label>
@@ -37,13 +40,16 @@ const fr = lang === "fr";
         <div class="practice-actions"><button type="button" class="btn btn-primary" data-technical-review>{fr ? "Vérifier ma réponse" : "Review my answer"}</button><button type="button" class="btn btn-secondary" data-technical-cancel hidden>{fr ? "Annuler" : "Cancel"}</button></div>
         <p data-technical-status role="status" aria-live="polite"></p><div data-technical-feedback></div>
         <p>{fr ? "Retour pédagogique de l’IA : vérifie les explications avec le corrigé et ses références. Plusieurs solutions peuvent être valides." : "AI practice feedback: check explanations against the example and its references. More than one solution may be valid."}</p>
-        <details><summary>{fr ? "Comparer avec les critères de correction" : "Compare with the review criteria"}</summary><ul>{item[lang].criteria.map(criterion => <li>{criterion}</li>)}</ul><h3>{fr ? "Exemple de réponse expliquée" : "Example answer"}</h3><p>{item[lang].sample_answer}</p><p>{fr ? "Ce raisonnement est un exemple : adapte-le aux contraintes de l’entreprise et explique tes compromis." : "This is one example: adapt it to the company’s constraints and explain your trade-offs."}</p><p>{fr ? "Références de la grille" : "Rubric references"}</p><ul>{item.references.map(source => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label}</a></li>)}</ul></details>
+        <details><summary>{fr ? "Comparer avec les critères de correction" : "Compare with the review criteria"}</summary><ul>{item[lang].criteria.map(criterion => <li>{criterion}</li>)}</ul><h3>{fr ? "Exemple de réponse expliquée" : "Example answer"}</h3><p>{item[lang].sample_answer}</p>{'solution_code' in item && <><pre class="technical-code"><code>{item.solution_code}</code></pre><p>{fr ? "Ce corrigé fixe est couvert par les tests du projet. Ton code n’est pas exécuté : le feedback IA examine ta réponse." : "This fixed solution is covered by repository tests. Your code is not executed: AI feedback reviews your answer."}</p></>}<p>{fr ? "Ce raisonnement est un exemple : adapte-le aux contraintes de l’entreprise et explique tes compromis." : "This is one example: adapt it to the company’s constraints and explain your trade-offs."}</p><p>{fr ? "Références de la grille" : "Rubric references"}</p><ul>{item.references.map(source => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label}</a></li>)}</ul></details>
       </article>)}
     </div></div>
     <a class="btn btn-primary" href={href(`/${lang}/apply/`)}>{fr ? "Revenir à ma candidature" : "Back to my application"}</a>
   </section>
   <script>import "../../scripts/prepare"; import "../../scripts/technical-interview";</script>
   <style>
+    .technical-code {overflow:auto;white-space:pre;padding:18px;background:#171425;color:#f4efff;border-radius:8px;font-size:1rem;line-height:1.65}
+    #practice-category,#practice-case {font:inherit;padding:12px;max-width:100%;margin:8px 0 18px}
+
     .technical-origin {font-size:.95rem;color:var(--muted)}
     [data-technical-feedback] :global(.technical-result) {border-left:5px solid;padding:14px 18px;margin:12px 0;background:var(--panel)}
     [data-technical-feedback] :global([data-result="met"]) {border-color:#168766}

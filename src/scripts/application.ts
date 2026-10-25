@@ -191,7 +191,7 @@ async function extractProfile(file: File, signal: AbortSignal): Promise<void> {
   resetResults();
   profile.value = raw.candidate_text;
   pdf.value = ""; element("application-file-name").textContent=say("Aucun fichier sélectionné", "No file selected");
-  editor.open = true;
+  editor.open = false;
   persist();
 }
 

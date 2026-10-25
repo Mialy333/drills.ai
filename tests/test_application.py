@@ -180,7 +180,10 @@ def test_interview_cases_are_fixed_bilingual_catalog_not_model_output():
     eval_cases = select_interview_cases("evaluation test quality monitor", "en")
     assert api_cases[0].question == "A tool fails: what should your agent do?"
     assert eval_cases[0].question == "How would you demonstrate that your agent improved?"
-    assert {case.question for case in api_cases} == {case.question for case in eval_cases}
+    from src.ai_generator.technical_interview import load_catalog
+    titles = {case['en']['title'] for case in load_catalog()['cases']}
+    assert len(api_cases) == len(eval_cases) == 3
+    assert {case.question for case in api_cases + eval_cases} <= titles
     assert len(select_interview_cases("sécurité RAG", "fr")) == 3
     assert "frontières de confiance" in select_interview_cases("sécurité RAG", "fr")[0].looking_for
 

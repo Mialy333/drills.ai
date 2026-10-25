@@ -11,15 +11,13 @@ const fr = lang === "fr";
       <div class="welcome-text">
         <p class="home-kicker">{fr ? "TON PREMIER POSTE D’AGENT ENGINEER" : "YOUR FIRST AGENT ENGINEER ROLE"}</p>
         <h1 class="welcome-title" id="welcome-title">{fr ? "Ton parcours a de la valeur. Fais-le voir." : "Your experience matters. Make it visible."}</h1>
-        <p class="welcome-lead">{fr ? "Importe ton CV une fois. Choisis une annonce. Identifie tes preuves et prépare une candidature qui te ressemble — pour un stage, une alternance ou un premier emploi." : "Import your CV once. Choose a posting. Identify your evidence and prepare an application that sounds like you — for an internship, apprenticeship or first job."}</p>
-        <div class="welcome-actions"><a class="btn btn-primary" href={href(`/${lang}/apply/`)}>{fr ? "Préparer ma candidature" : "Prepare my application"}</a><a class="btn btn-secondary" href={href(`/${lang}/progress/`)}>{fr ? "Reprendre mon dossier" : "Resume my application"}</a></div>
+        <p class="welcome-lead">{fr ? "Importe ton CV. Choisis une annonce. Regarde si ton profil matche et optimise ta candidature : pour un stage, une alternance ou un premier emploi." : "Upload your CV. Choose a job posting. See how your profile matches and strengthen your application for an internship, apprenticeship or first job."}</p>
+        <div class="welcome-actions"><a id="home-start" class="btn btn-primary" href={href(`/${lang}/apply/?step=profile`)}>{fr ? "Commencer ici →" : "Start here →"}</a><a id="home-edit-profile" hidden href={href(`/${lang}/apply/?step=profile`)}>{fr ? "Modifier mon profil" : "Edit my profile"}</a></div>
+        <p id="home-resume-note" class="welcome-note">{fr ? "Première étape : ton profil. Aucun compte à créer pour ce MVP." : "First step: your profile. No account needed for this MVP."}</p>
         <p class="welcome-note">{fr ? "Tes expériences passées, tes projets et tes formations deviennent des preuves concrètes. Tu gardes la main sur les textes." : "Your previous experience, projects and education become concrete evidence. You stay in control of the wording."}</p>
       </div>
     </section>
-    <section class="journey-grid" aria-label={fr ? "Les étapes" : "Your steps"}>
-      <a class="journey-card" href={href(`/${lang}/apply/?step=profile`)}><span class="journey-index">01</span><h2>{fr ? "Un profil, une seule fois" : "One profile, entered once"}</h2><p>{fr ? "Importe ton CV ou décris ton parcours. Retrouve-le quand tu changes d’annonce." : "Import your CV or describe your experience. Reuse it for another posting."}</p></a>
-      <a class="journey-card" href={href(`/${lang}/apply/?step=posting`)}><span class="journey-index">02</span><h2>{fr ? "Une candidature argumentée" : "An evidence-based application"}</h2><p>{fr ? "Compare les exigences aux preuves de ton parcours, puis personnalise ton CV et ton pitch." : "Compare requirements with your evidence, then personalise your CV and pitch."}</p></a>
-      <a class="journey-card" href={href(`/${lang}/prepare/`)}><span class="journey-index">03</span><h2>{fr ? "Un entretien préparé" : "A prepared interview"}</h2><p>{fr ? "Travaille des cas concrets d’Agent Engineering avec des critères de correction fixes, sans exercice généré." : "Practise concrete Agent Engineering cases with fixed review criteria, without generated exercises."}</p></a>
-    </section>
+
   </div>
+  <script>import "../../scripts/home";</script>
 </App>

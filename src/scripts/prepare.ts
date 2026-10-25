@@ -125,4 +125,15 @@ function interviewTab(technical:boolean){
 }
 el('tab-pitch').addEventListener('click',()=>interviewTab(false));el('tab-technical').addEventListener('click',()=>interviewTab(true));
 function selectCase(){for(const card of document.querySelectorAll<HTMLElement>('[data-interview-case]'))card.hidden=card.dataset.interviewCase!==el<HTMLSelectElement>('case').value;}
-el('case').addEventListener('change',selectCase);selectCase();interviewTab(new URL(location.href).searchParams.get('tab')==='technical');
+const caseSelect=el<HTMLSelectElement>('case');
+const caseOptions=[...caseSelect.options].map(option=>({value:option.value,text:option.textContent??''}));
+function selectCategory(){
+ const category=el<HTMLSelectElement>('category').value;
+ const previous=caseSelect.value;
+ const ids=[...document.querySelectorAll<HTMLElement>('[data-interview-case]')].filter(card=>card.dataset.caseCategory===category).map(card=>card.dataset.interviewCase);
+ caseSelect.replaceChildren(...caseOptions.filter(option=>ids.includes(option.value)).map(option=>{const node=document.createElement('option');node.value=option.value;node.textContent=option.text;return node;}));
+ if(ids.includes(previous))caseSelect.value=previous;
+ selectCase();
+}
+el('category').addEventListener('change',selectCategory);
+el('case').addEventListener('change',selectCase);selectCategory();interviewTab(new URL(location.href).searchParams.get('tab')==='technical');

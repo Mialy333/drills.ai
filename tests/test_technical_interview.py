@@ -24,7 +24,7 @@ def test_invalid_request(changes):
 
 def test_server_owned_rubric_sources_and_language():
     connection,parse=client(feedback());result=asyncio.run(review_technical(payload(),connection))
-    assert result['rubric_version']==2
+    assert result['rubric_version']==3
     assert result['provenance']['employer_interview'] is False
     assert len(result['references'])==4
     assert result['criteria'][0]['criterion'].startswith('Distinguer')
