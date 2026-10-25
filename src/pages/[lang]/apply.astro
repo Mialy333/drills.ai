@@ -85,7 +85,18 @@ const fr = lang === "fr";
         <label for="application-contact">{fr ? "Nom et coordonnées pour le CV (facultatif, reste dans ton navigateur)" : "Name and contact details for the CV (optional, stays in your browser)"}</label>
         <textarea id="application-contact" rows="2" maxlength="500" autocomplete="off"></textarea>
         <label for="application-cv">{fr ? "CV ciblé — texte modifiable" : "Targeted CV — editable text"}</label>
-        <textarea id="application-cv" rows="14" maxlength="20000" autocomplete="off"></textarea>
+        <div id="cv-toolbar" class="cv-toolbar" role="group" aria-label={fr ? "Mise en forme du CV" : "CV formatting"}>
+          <button type="button" data-command="bold"><strong>{fr ? "Gras" : "Bold"}</strong></button>
+          <button type="button" data-command="italic"><em>{fr ? "Italique" : "Italic"}</em></button>
+          <button type="button" data-command="underline"><u>{fr ? "Souligné" : "Underline"}</u></button>
+          <span>{fr ? "Alignement du CV :" : "CV alignment:"}</span>
+          {[['left',fr ? 'Gauche' : 'Left'],['center',fr ? 'Centré' : 'Center'],['right',fr ? 'Droite' : 'Right'],['justify',fr ? 'Justifié' : 'Justify']].map(([command,label]) => <button type="button" data-command={command}>{label}</button>)}
+          <label for="cv-link-url">{fr ? "Adresse du lien" : "Link address"}</label><input id="cv-link-url" type="url" placeholder="https://…" />
+          <button type="button" data-command="link">{fr ? "Ajouter le lien à la sélection" : "Link selected text"}</button>
+        </div>
+        <p id="cv-editor-note" role="status">{fr ? "Sélectionne un passage pour le mettre en forme. L’alignement s’applique à tout le CV." : "Select a passage to format it. Alignment applies to the whole CV."}</p>
+        <div id="cv-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label={fr ? "CV ciblé modifiable" : "Editable targeted CV"} spellcheck="true"></div>
+        <textarea id="application-cv" hidden aria-hidden="true" tabindex="-1"></textarea>
         </details>
         <details class="draft-editor"><summary>{fr ? "Mon pitch, à dire à voix haute" : "My pitch, to say out loud"}</summary><p>{fr ? "Lis-le comme si tu répondais à « Parlez-moi de vous ». Remplace les mots que tu n’emploierais pas et garde un exemple précis de ton parcours." : "Read it as your answer to ‘Tell me about yourself’. Replace words you would not use and keep one specific example from your experience."}</p>
         <label for="application-pitch">{fr ? "Pitch de présentation — texte modifiable" : "Introduction pitch — editable text"}</label>
@@ -99,7 +110,7 @@ const fr = lang === "fr";
         </div>
       </section>
       <div class="application-actions application-next"><a class="btn btn-primary" href={href(`/${lang}/prepare/`)}>{fr ? "Étape suivante : préparer mon entretien →" : "Next step: prepare for my interview →"}</a></div>
-      <section id="application-print" hidden><pre id="application-print-text"></pre></section>
+      <section id="application-print" hidden><div id="application-print-text"></div></section>
     </section>
   </section>
   <noscript>{fr ? "Active JavaScript pour importer ton CV et obtenir un diagnostic." : "Enable JavaScript to import your CV and get an assessment."}</noscript>
@@ -138,6 +149,11 @@ const fr = lang === "fr";
     .application-evidence [data-evidence="not_documented"] { --evidence-color: #466ba6; --evidence-tint: #e8efff; --evidence-ink: #234572; }
     .evidence-badge { display: inline-block; padding: 5px 12px; border-radius: 30px; background: var(--evidence-tint); color: var(--evidence-ink); font: 700 .95rem/1.5 var(--font-body); }
     .application-evidence .evidence-action { padding: 16px; background: var(--evidence-tint); color: var(--evidence-ink); border-radius: 8px; font-weight: 600; }
+    .cv-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+    .cv-toolbar button, .cv-toolbar input { font: inherit; padding: 8px 12px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+    #cv-rich-editor { white-space: pre-wrap; overflow-wrap: anywhere; min-height: 350px; padding: 20px; border: 1px solid var(--line); background: var(--bg); font: 1rem/1.7 var(--font-body); }
+    #cv-rich-editor a { color: var(--accent); text-decoration: underline; }
+    #application-print-text a { color: black; text-decoration: underline; }
     .draft-editor { border-top: 1px solid var(--line); padding: 12px 0; }
     .draft-editor > summary { font: 700 1.2rem/1.5 var(--font-body); }
     .application-next { justify-content: flex-end; margin: 28px 0; }

@@ -6,6 +6,7 @@ GitHub Pages site and calls this service using its configured public API origin.
 import asyncio
 import logging
 import os
+from time import perf_counter
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
@@ -76,8 +77,11 @@ async def run_application_operation(operation):
     if application_slots.locked():
         raise HTTPException(status_code=429, detail="Application service is busy. Please try again shortly.")
     async with application_slots:
+        started = perf_counter()
         try:
-            return await asyncio.wait_for(operation(), timeout=95)
+            result = await asyncio.wait_for(operation(), timeout=95)
+            logger.info("Application operation completed in %.2fs", perf_counter() - started)
+            return result
         except (asyncio.TimeoutError, TimeoutError):
             raise HTTPException(status_code=504, detail="Preparation timed out. Your inputs have not been saved.") from None
         except ApplicationOutputError as exc:

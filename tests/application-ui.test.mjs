@@ -102,3 +102,27 @@ test('evidence validation failure explains the problem and preserves the importe
  assert.equal(get('profile').value,profileText);
  assert.equal(get('results').hidden,true);
 });
+
+test('CV toolbar formats selected text and preserves formatting and links in print',async t=>{
+ const {w,get}=setup(t);get('profile').value=profileText;get('posting').value='AI Agent Engineer internship with API integration, tests and workflow design.';get('consent').checked=true;
+ submit(w,get);await done(get);
+ const editor=w.document.getElementById('cv-rich-editor');
+ const range=w.document.createRange();range.selectNodeContents(editor);
+ w.getSelection().removeAllRanges();w.getSelection().addRange(range);w.document.dispatchEvent(new w.Event('selectionchange'));
+ w.document.querySelector('[data-command="bold"]').click();assert.ok(editor.querySelector('strong'));
+ w.document.getElementById('cv-link-url').value='https://example.com/portfolio';
+ w.document.querySelector('[data-command="link"]').click();assert.equal(editor.querySelector('a').getAttribute('href'),'https://example.com/portfolio');
+ w.document.querySelector('[data-command="center"]').click();assert.equal(editor.style.textAlign,'center');
+ assert.match(JSON.parse(w.sessionStorage.getItem('drills.application.v1')).cv_html,/<strong>/);
+ get('reviewed').checked=true;get('reviewed').dispatchEvent(new w.Event('change'));
+ w.print=()=>{};get('print-button').click();assert.ok(get('print-text').querySelector('strong'));assert.ok(get('print-text').querySelector('a'));
+});
+
+test('restored CV formatting strips executable HTML and unsafe links',t=>{
+ const dom=new JSDOM(html,{url:'http://localhost:4321/drills.ai/en/apply/',runScripts:'outside-only'});t.after(()=>dom.window.close());
+ const w=dom.window;
+ w.sessionStorage.setItem('drills.application.v1',JSON.stringify({version:1,expiresAt:Date.now()+60000,profile:profileText,posting:'test posting',result:fixture,cv:'Plain',cv_html:'<div style="text-align:right"><strong>Safe</strong><script>alert(1)</script><img src=x onerror=alert(1)><a href="javascript:alert(1)">Link</a></div>',pitch:'Text',reviewed:false,remember:false}));
+ w.eval(bundle.outputFiles[0].text);
+ const editor=w.document.getElementById('cv-rich-editor');
+ assert.ok(editor.querySelector('strong'));assert.equal(editor.querySelector('script,img'),null);assert.equal(editor.querySelector('a').hasAttribute('href'),false);assert.equal(editor.style.textAlign,'right');
+});

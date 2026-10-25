@@ -1,3 +1,4 @@
+import { createCvEditor, cleanCvHtml } from "../lib/cv-editor";
 import { apiEndpoint } from "../lib/api-client";
 import { applicationCv, applicationDraftChanged, ApplicationResultSchema, type ApplicationResult } from "../lib/application";
 import { readApplicationState, saveApplicationState, clearApplicationState } from "../lib/application-state";
@@ -23,6 +24,7 @@ const printButton = element<HTMLButtonElement>("application-print-button");
 const download = element<HTMLButtonElement>("application-download");
 const remember = element<HTMLInputElement>("application-remember");
 const editor = element<HTMLDetailsElement>("application-profile-editor");
+const cvEditor = createCvEditor(element("cv-rich-editor"), cv, element("cv-toolbar"));
 let currentResult: ApplicationResult | null = null;
 let controller: AbortController | null = null;
 
@@ -35,7 +37,7 @@ function persist(): boolean {
   profileSummary();
   try {
     const saved = saveApplicationState({version: 1, expiresAt: Date.now() + (remember.checked ? 30 : 1) * 86400000,
-      profile: profile.value, posting: posting.value, result: currentResult, cv: cv.value, pitch: pitch.value,
+      profile: profile.value, posting: posting.value, result: currentResult, cv: cv.value, cv_html: cvEditor.html(), pitch: pitch.value,
       reviewed: reviewed.checked, remember: remember.checked}, sessionStorage, localStorage);
     if (!saved) status(say("Le stockage est indisponible. Garde cet onglet ouvert et exporte tes textes avant de quitter.", "Storage is unavailable. Keep this tab open and export your text before leaving."));
     return saved;
@@ -49,7 +51,7 @@ function resetResults(): void {
   currentResult = null;
   reviewed.checked = false;
   printButton.disabled = download.disabled = true;
-  cv.value = pitch.value = "";
+  cvEditor.setText(""); pitch.value = "";
   inputSnapshot = null;
   for (const id of ["application-evidence", "application-draft-sources", "application-print-text"]) element(id).replaceChildren();
 }
@@ -137,7 +139,7 @@ function render(result: ApplicationResult): void {
     card.append(quotes, action);
     return card;
   }));
-  cv.value = applicationCv(result);
+  cvEditor.setText(applicationCv(result));
   pitch.value = result.pitch.text;
   element("application-draft-sources").replaceChildren(...[...result.cv_sections, result.pitch].map((section) => {
     const node = document.createElement("section");
@@ -244,7 +246,10 @@ remember.addEventListener("change", persist);
 const cvText = (): string => [contact.value.trim(), cv.value.trim()].filter(Boolean).join("\n\n");
 printButton.addEventListener("click", () => {
   if (!reviewed.checked || results.hidden) return;
-  element("application-print-text").textContent = cvText();
+  const print = element("application-print-text");
+  print.replaceChildren();
+  if (contact.value.trim()) print.append(text("p", contact.value.trim()));
+  print.append(cleanCvHtml(cvEditor.html()));
   document.body.classList.add("application-print");
   window.print();
 });
@@ -275,7 +280,7 @@ try {
     editor.open = false;
     if (saved.result && saved.result.output_language === (fr ? "fr" : "en")) {
       inputSnapshot = {profile: saved.profile, posting: saved.posting};
-      render(saved.result); cv.value = saved.cv; pitch.value = saved.pitch;
+      render(saved.result); if (saved.cv_html) cvEditor.setHtml(saved.cv_html); else cvEditor.setText(saved.cv); pitch.value = saved.pitch;
       reviewed.checked = saved.reviewed; printButton.disabled = download.disabled = !saved.reviewed;
     }
   } else {
