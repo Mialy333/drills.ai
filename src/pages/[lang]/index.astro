@@ -23,10 +23,10 @@ const french = lang === "fr";
           ? "Colle une annonce de stage, d’alternance ou de premier poste. Compare ses critères aux expériences que tu as réellement décrites, puis prépare la suite."
           : "Paste an internship, apprenticeship, or entry-level posting. Compare its requirements with experience you have actually described, then prepare your next step."}</p>
         <div class="welcome-actions">
-          <a class="btn btn-primary" href={href(`/${lang}/generate/`)}>{french ? "Analyser une annonce" : "Check a job posting"}</a>
+          <a class="btn btn-primary" href={href(`/${lang}/apply/`)}>{french ? "Préparer ma candidature" : "Prepare my application"}</a>
           <a class="btn btn-secondary" href={href(`/${lang}/assess/`)}>{french ? "Faire le diagnostic technique" : "Take the technical diagnostic"}</a>
         </div>
-        <p class="welcome-note">{french ? "Pas de CV brut envoyé à l’IA. Le texte de l’annonce est analysé ; tes expériences restent dans ce navigateur." : "No raw CV is sent to AI. The posting is analysed; your experience stays in this browser."}</p>
+        <p class="welcome-note">{french ? "Tu choisis les informations envoyées à l’IA et tu valides les textes avant export." : "You choose what to share with AI and review the drafts before export."}</p>
       </div>
     </section>
 

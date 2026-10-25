@@ -1,0 +1,37 @@
+{
+  "role_title": "AI Agent Engineer internship",
+  "scope": "in_scope",
+  "scope_reason": "An entry-level role building AI agents with Python.",
+  "requirements": [
+    {
+      "name": "Python",
+      "kind": "skill",
+      "priority": "core",
+      "posting_quote": "Python and REST APIs are essential",
+      "status": "documented",
+      "candidate_quote": "I built a Python API with FastAPI",
+      "explanation": "The candidate describes a Python API project.",
+      "next_action": "Prepare a walkthrough of the API project."
+    }
+  ],
+  "cv_sections": [
+    {
+      "heading": "Personal project",
+      "text": "Built a Python API with FastAPI and wrote pytest tests.",
+      "source_quotes": ["I built a Python API with FastAPI", "wrote pytest tests"]
+    }
+  ],
+  "pitch": {
+    "heading": "Introduction",
+    "text": "I built a Python API with FastAPI and would like to contribute to your agent workflows.",
+    "source_quotes": ["I built a Python API with FastAPI"]
+  },
+  "interview_questions": [
+    {"question": "How would you validate an API input?", "looking_for": "Describe a concrete input validation strategy."},
+    {"question": "How do you test an agent tool failure?", "looking_for": "Discuss error cases and deterministic fixtures."},
+    {"question": "How would you document a workflow?", "looking_for": "Explain inputs, outputs and failure boundaries."}
+  ],
+  "score": 100,
+  "decision": "prepare",
+  "output_language": "en"
+}

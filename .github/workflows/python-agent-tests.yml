@@ -8,12 +8,14 @@ on:
       - feat/validator-hardening
       - feat/behavioral-validator-tests
       - feat/drills-ai-ux-refactor
+      - feat/hackathon-mvp
   pull_request:
     branches:
       - devday-codex
       - feat/agent-orchestration
       - feat/fastapi-multi-agent-backend
       - feat/drills-ai-ux-refactor
+      - feat/hackathon-mvp
       - feat/validator-hardening
       - main
 

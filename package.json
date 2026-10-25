@@ -8,7 +8,7 @@
     "dev": "astro dev",
     "prebuild": "node scripts/copy-pyodide.mjs",
     "build": "astro build && node scripts/verify-public-build.mjs",
-    "test:contracts": "node --experimental-strip-types --test tests/frontend-contract.test.mjs tests/assessment-plan.test.mjs tests/recommendation-provenance.test.mjs tests/lesson-course.test.mjs tests/lesson-progress.test.mjs tests/game.test.mjs tests/candidate-profile.test.mjs tests/candidate-match.test.mjs",
+    "test:contracts": "node --experimental-strip-types --test tests/frontend-contract.test.mjs tests/assessment-plan.test.mjs tests/recommendation-provenance.test.mjs tests/lesson-course.test.mjs tests/lesson-progress.test.mjs tests/game.test.mjs tests/candidate-profile.test.mjs tests/candidate-match.test.mjs tests/application.test.mjs",
     "preview": "astro preview"
   },
   "dependencies": {

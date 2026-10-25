@@ -1,18 +1,69 @@
 # DRILLS.ai
 
-DRILLS.ai helps career changers prepare an application for an internship, apprenticeship, or entry-level AI Agent Engineer role in France. Its first demo starts with a pasted job posting: candidates compare the posting with experience they choose to enter, then review an evidence summary and a focused Python exercise. It is not a general coding course or a job board. The Astro frontend is a static GitHub Pages site; generation is handled by the separate API service.
+DRILLS.ai helps career changers prepare a credible application for their first AI Agent Engineer internship, apprenticeship, or entry-level job. The hackathon category is **Impact → New Opportunities → Jobs**, with a build-in-public approach. The application supports candidates; it does not make hiring decisions or estimate their probability of getting hired.
 
-## Learner journey
+## Candidate application MVP
 
-1. Paste a France-based internship, apprenticeship, or entry-level job posting.
-2. Enter an experience title and a short description of work or projects. Company, period, and school names are optional; a full CV is not required.
-3. Review a local, keyword-based evidence comparison against the skills extracted from the posting. Core requirements carry more weight; a missing text match is not proof that the candidate lacks a skill, and the score is not a hiring probability.
-4. Review the posting-grounded preparation steps and generate a focused Python exercise, then run its tests, answer the concept check, and explain the approach.
-5. Use the optional technical diagnostic, reviewed MCP lesson, and learning companion as supporting practice. Save attempts and track progress in the browser.
+Open `/fr/apply/` or `/en/apply/` (under the Astro `/drills.ai/` base path):
 
-The exercises should help learners build job-relevant ability, not predict interview questions or promise a hiring outcome.
+1. Paste a CV/profile or import a PDF of at most 4 MiB. The PDF is sent to OpenAI only after explicit consent. Review and correct the extracted text before analysis. A previously saved local profile can also be reused.
+2. Paste the full target posting. URL fetching and live job feeds are not connected in this iteration.
+3. Review the extracted requirements, exact source excerpts, evidence gaps and recommended next actions. Eligibility conditions are displayed separately from skill coverage.
+4. Review and edit the CV sections and introduction pitch. Add contact details locally, then confirm review to download plain text or print the CV to PDF. PDF layout and pagination depend on the browser; inspect the print preview. No ATS acceptance is promised.
+5. Practise three posting-specific interview questions. They are generated practice material, not known employer interview questions.
 
-This MVP does not search or rank live job listings, generate CVs or cover letters, contact recruiters, or submit applications. It does not claim a candidate is qualified from a keyword score. The first flow is deliberately a pasted-posting demo so the candidate can inspect what evidence the comparison used.
+The home CTA opens this workflow. The older `/generate/` exercise preparation path, diagnostic, MCP course, journal and progress screens remain available. No existing browser profile is deleted by clearing the new application page.
+
+### OpenAI integration
+
+- `POST /api/application`: Responses API + Pydantic Structured Outputs. The model selects requirements and drafts text; application code checks that every cited excerpt exists in the supplied source and calculates the coverage score.
+- `POST /api/profile-import`: Responses API PDF input, in-memory base64 transfer; no Files API upload or local PDF persistence. Extracted text must be reviewed by the user.
+- Both use `store=False`, an SDK timeout, a bounded output and no automatic SDK retries. Configure `OPENAI_APPLICATION_MODEL` to select a compatible model; the default is the existing `OPENAI_MODEL` from `src/ai_generator/config.py`. Model/tool access depends on the project's credentials.
+- The current agent/drill pipeline remains separate. This change does not claim to integrate Agents SDK, Realtime, Web Search or third-party job feeds.
+
+Exact quote validation is **not** semantic verification: negations, relevance, skill levels and generated paraphrases can still be misinterpreted. Review every result. Coverage includes only extracted skills, with priority weights 3/2/1 and evidence credit 1/0.5/0. A 60% threshold is a product heuristic, not a calibrated recruitment metric. Missing core evidence or unresolved eligibility conditions prompt further review even above 60%. Uncertain/out-of-scope roles receive no numeric score. Age, gender and nationality must not be used as scoring factors.
+
+### Data and deployment boundary
+
+Unlike the older exercise comparison, the new application workflow sends the approved profile and posting to the DRILLS API and OpenAI. It does not automatically save profiles, PDFs or generated applications in browser storage or a database; the current page holds them until navigation/reload/clear. Contact details entered for export stay in the browser. Downloaded files and printed PDFs remain on the user's device. `store=False` disables response storage, not all provider data processing/retention. Deployment-level logs and provider settings must also be reviewed.
+
+New API responses carry `Cache-Control: no-store`; exception logging records the exception class, not CV content or provider error text. PDF validation checks size, base64 and the PDF header, not file safety or factual authenticity. The server does not execute uploaded or generated code in this workflow.
+
+The new endpoints have per-IP request limits (application: 3/minute and 20/hour; import: 3/minute and 10/hour), plus two concurrent requests per process. These are **demo controls**, not authentication, a distributed limit or a guaranteed spend cap. The older drill/coach routes retain their existing limits. A public unrestricted launch still needs authenticated or otherwise restricted access, deployment-level quotas, budget monitoring and verified proxy/IP handling. No production deployment is performed by this branch.
+
+### Hackathon roadmap retained
+
+| Capability | Current state | Next integration |
+| --- | --- | --- |
+| Candidate application, evidence, editable CV/pitch | Implemented; mock-backed tests | Live credential and hosted smoke test |
+| PDF profile extraction | Implemented; mock-backed tests | Validate real candidate PDF with consent |
+| Portfolio evidence | Manual text input | Selected GitHub repositories, read-only |
+| Opportunity discovery | Pasted posting | OpenAI Web Search with citations; Greenhouse/Ashby feeds |
+| French job feeds | Not connected | France Travail access request; La bonne alternance commercial terms review |
+| Persistent accounts and applications | Not connected | Supabase Auth, Postgres and private Storage with tested access policies |
+| Voice interview | Not connected | OpenAI Realtime after core workflow validation |
+| Agent observability | Minimal server diagnostics | Agents SDK traces or Langfuse, with personal data excluded |
+| Networking and reminders | Not connected | Reviewed contact drafts and opt-in transactional notifications |
+
+The fictional example button fills only inputs; it does not simulate a successful AI result. Build-in-public screenshots should use that fictional profile or anonymised data. Report completed functionality separately from roadmap items.
+
+## Local verification
+
+Python 3.12 is the CI/runtime baseline (the project also allows newer versions). Use an isolated environment in this checkout:
+
+```bash
+uv venv --python 3.12 .venv
+source .venv/bin/activate
+uv pip install -r requirements-devday.txt -r requirements-api.txt
+python -m pytest -q
+npm ci
+npm run test:contracts
+npm run build
+```
+
+Configure `OPENAI_API_KEY` only in the API environment or an ignored `.env`. Start `python -m uvicorn api.main:app --reload --port 8000` in one terminal and `npm run dev` in another. Visit `http://localhost:4321/drills.ai/fr/apply/`. For production builds, the public API origin must be supplied as `PUBLIC_DRILLS_API_URL`; it is not an API key.
+
+The full-stack workflow runs frontend contracts, the public build and Python tests on `feat/hackathon-mvp`. Automated API tests mock OpenAI: they do not prove credential validity, model availability, live output quality or production readiness.
 
 ## Learning design and visual system
 
@@ -69,7 +120,7 @@ A small, reviewed starter set of generic AI-agent Python exercises would also le
 
 ## Privacy and API key
 
-There is no user account system. The candidate profile stores only experience titles and descriptions, optional company names and periods, and school names in the current browser for 30 days. The user can export or delete it from the posting page; expired or invalid data is removed when read. The profile is not sent to the model. Only the pasted job posting and output language are sent to the configured DRILLS.ai API for analysis and generation. Candidate matching runs locally in the browser and uses only the experience title and description; company, period, and school names are not used as skill evidence. The separate optional companion may receive the current page's recent conversation, diagnostic summary, and visible exercise context as described above. Do not log or persist submitted content unnecessarily. Generated content and learning progress remain in browser storage. No OpenAI key is requested from or stored in the learner's browser.
+There is no user account system. The candidate profile stores only experience titles and descriptions, optional company names and periods, and school names in the current browser for 30 days. The user can export or delete it from the posting page; expired or invalid data is removed when read. On the legacy `/generate/` route, the profile is not sent to the model; that route sends the posting and output language. On the new `/apply/` route, the approved profile is also sent to OpenAI, as described above. Candidate matching runs locally in the browser and uses only the experience title and description; company, period, and school names are not used as skill evidence. The separate optional companion may receive the current page's recent conversation, diagnostic summary, and visible exercise context as described above. Do not log or persist submitted content unnecessarily. Generated content and learning progress remain in browser storage. No OpenAI key is requested from or stored in the learner's browser.
 
 ## Run locally
 

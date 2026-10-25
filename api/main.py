@@ -18,6 +18,10 @@ from slowapi.util import get_remote_address
 from src.ai_generator.agents.mentor import MentorAgent
 from src.ai_generator.orchestrator import DrillOrchestrator, DrillPipelineError
 from src.ai_generator.pipeline_schemas import DynamicDrillSchema
+from src.ai_generator.application import (
+    ApplicationAgent, ApplicationRequest, ApplicationResult,
+    ProfileImportRequest, ImportedProfile,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +56,46 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
+
+# Shared across these two workflows in this process. This is a demo capacity
+# guard, not a distributed quota or authentication boundary.
+application_slots = asyncio.Semaphore(2)
+
+
+@app.middleware("http")
+async def private_application_responses(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path in {"/api/application", "/api/profile-import"}:
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+async def run_application_operation(operation):
+    if not os.getenv("OPENAI_API_KEY"):
+        raise HTTPException(status_code=503, detail="Application service is not configured.")
+    if application_slots.locked():
+        raise HTTPException(status_code=429, detail="Application service is busy. Please try again shortly.")
+    async with application_slots:
+        try:
+            return await asyncio.wait_for(operation(), timeout=95)
+        except (asyncio.TimeoutError, TimeoutError):
+            raise HTTPException(status_code=504, detail="Preparation timed out. Your inputs have not been saved.") from None
+        except Exception as exc:
+            # Never log a CV, prompt, provider response or exception message.
+            logger.warning("Application preparation failed (%s)", type(exc).__name__)
+            raise HTTPException(status_code=502, detail="Preparation failed validation or the AI service is unavailable. Please try again.") from None
+
+
+@app.post("/api/application", response_model=ApplicationResult)
+@limiter.limit("3/minute;20/hour")
+async def prepare_application(request: Request, payload: ApplicationRequest) -> ApplicationResult:
+    return await run_application_operation(lambda: ApplicationAgent().prepare(payload))
+
+
+@app.post("/api/profile-import", response_model=ImportedProfile)
+@limiter.limit("3/minute;10/hour")
+async def import_candidate_pdf(request: Request, payload: ProfileImportRequest) -> ImportedProfile:
+    return await run_application_operation(lambda: ApplicationAgent().import_pdf(payload))
 
 
 class DrillRequest(BaseModel):

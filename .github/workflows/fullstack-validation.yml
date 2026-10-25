@@ -5,11 +5,13 @@ on:
     branches:
       - feat/fastapi-multi-agent-backend
       - feat/drills-ai-ux-refactor
+      - feat/hackathon-mvp
   pull_request:
     branches:
       - feat/offline-first-session
       - feat/fastapi-multi-agent-backend
       - feat/drills-ai-ux-refactor
+      - feat/hackathon-mvp
       - main
 
 jobs:
@@ -22,6 +24,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run test:contracts
       - run: npm run build
 
   python-tests:
