@@ -278,10 +278,11 @@ try {
   if (saved) {
     profile.value = saved.profile; posting.value = saved.posting; remember.checked = saved.remember;
     editor.open = false;
-    if (saved.result && saved.result.output_language === (fr ? "fr" : "en")) {
+    if (saved.result) {
       inputSnapshot = {profile: saved.profile, posting: saved.posting};
       render(saved.result); if (saved.cv_html) cvEditor.setHtml(saved.cv_html); else cvEditor.setText(saved.cv); pitch.value = saved.pitch;
       reviewed.checked = saved.reviewed; printButton.disabled = download.disabled = !saved.reviewed;
+      if (saved.result.output_language !== (fr ? "fr" : "en")) status(say("Ton dossier et tes modifications sont conservés. Les textes restent dans leur langue d’origine ; changer la langue de l’interface ne les traduit pas.", "Your application and edits are preserved. Drafts remain in their original language; changing the interface language does not translate them."));
     }
   } else {
     const legacy = readCandidateProfile();

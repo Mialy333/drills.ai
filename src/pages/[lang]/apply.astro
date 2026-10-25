@@ -86,16 +86,19 @@ const fr = lang === "fr";
         <textarea id="application-contact" rows="2" maxlength="500" autocomplete="off"></textarea>
         <label for="application-cv">{fr ? "CV ciblé — texte modifiable" : "Targeted CV — editable text"}</label>
         <div id="cv-toolbar" class="cv-toolbar" role="group" aria-label={fr ? "Mise en forme du CV" : "CV formatting"}>
-          <button type="button" data-command="bold"><strong>{fr ? "Gras" : "Bold"}</strong></button>
-          <button type="button" data-command="italic"><em>{fr ? "Italique" : "Italic"}</em></button>
-          <button type="button" data-command="underline"><u>{fr ? "Souligné" : "Underline"}</u></button>
-          <span>{fr ? "Alignement du CV :" : "CV alignment:"}</span>
-          {[['left',fr ? 'Gauche' : 'Left'],['center',fr ? 'Centré' : 'Center'],['right',fr ? 'Droite' : 'Right'],['justify',fr ? 'Justifié' : 'Justify']].map(([command,label]) => <button type="button" data-command={command}>{label}</button>)}
-          <label for="cv-link-url">{fr ? "Adresse du lien" : "Link address"}</label><input id="cv-link-url" type="url" placeholder="https://…" />
-          <button type="button" data-command="link">{fr ? "Ajouter le lien à la sélection" : "Link selected text"}</button>
+          <select id="cv-font" aria-label={fr ? "Police" : "Font"}>{['Arial','Georgia','Verdana','Times New Roman'].map(font=><option value={font}>{font}</option>)}</select>
+          <select id="cv-size" aria-label={fr ? "Taille de police" : "Font size"}>{[8,9,10,11,12,14,16,18,20,24,28,32,36].map(size=><option value={`${size}pt`} selected={size===11}>{size}</option>)}</select>
+          <input id="cv-color" type="color" value="#111111" aria-label={fr ? "Couleur du texte" : "Text color"} title={fr ? "Couleur du texte" : "Text color"} />
+          {[['bold','B',fr?'Gras':'Bold'],['italic','I',fr?'Italique':'Italic'],['underline','U',fr?'Souligné':'Underline'],['strike','S',fr?'Barré':'Strikethrough'],['left','≡←',fr?'Aligner à gauche':'Align left'],['center','≡',fr?'Centrer':'Center'],['right','→≡',fr?'Aligner à droite':'Align right'],['justify','☰',fr?'Justifier':'Justify'],['bulletList','• ≡',fr?'Liste à puces':'Bullet list'],['orderedList','1. ≡',fr?'Liste numérotée':'Numbered list'],['undo','↶',fr?'Annuler':'Undo'],['redo','↷',fr?'Rétablir':'Redo'],['clear','Tx',fr?'Effacer la mise en forme':'Clear formatting']].map(([command,icon,label]) => <button type="button" data-command={command} aria-label={label} title={label}>{icon}</button>)}
+          <select id="cv-line-height" aria-label={fr?'Interligne':'Line spacing'}>{['1','1.2','1.5','1.8','2'].map(value=><option value={value} selected={value==='1.5'}>↕ {value}</option>)}</select>
+          <details class="cv-link-panel"><summary>{fr ? "Lien" : "Link"}</summary><div>
+            <label for="cv-link-url">{fr ? "Adresse du lien" : "Link address"}</label><input id="cv-link-url" type="url" placeholder="https://…" />
+            <button type="button" data-command="link">{fr ? "Appliquer / modifier" : "Apply / edit"}</button>
+            <button type="button" data-command="unlink">{fr ? "Supprimer le lien" : "Remove link"}</button>
+          </div></details>
         </div>
-        <p id="cv-editor-note" role="status">{fr ? "Sélectionne un passage pour le mettre en forme. L’alignement s’applique à tout le CV." : "Select a passage to format it. Alignment applies to the whole CV."}</p>
-        <div id="cv-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label={fr ? "CV ciblé modifiable" : "Editable targeted CV"} spellcheck="true"></div>
+        <p id="cv-editor-note" role="status">{fr ? "Sélectionne le texte. Reclique sur un bouton actif pour retirer son effet. L’alignement concerne les paragraphes sélectionnés." : "Select text. Click an active button again to remove its effect. Alignment applies to selected paragraphs."}</p>
+        <div id="cv-rich-editor"></div>
         <textarea id="application-cv" hidden aria-hidden="true" tabindex="-1"></textarea>
         </details>
         <details class="draft-editor"><summary>{fr ? "Mon pitch, à dire à voix haute" : "My pitch, to say out loud"}</summary><p>{fr ? "Lis-le comme si tu répondais à « Parlez-moi de vous ». Remplace les mots que tu n’emploierais pas et garde un exemple précis de ton parcours." : "Read it as your answer to ‘Tell me about yourself’. Replace words you would not use and keep one specific example from your experience."}</p>
@@ -150,7 +153,17 @@ const fr = lang === "fr";
     .evidence-badge { display: inline-block; padding: 5px 12px; border-radius: 30px; background: var(--evidence-tint); color: var(--evidence-ink); font: 700 .95rem/1.5 var(--font-body); }
     .application-evidence .evidence-action { padding: 16px; background: var(--evidence-tint); color: var(--evidence-ink); border-radius: 8px; font-weight: 600; }
     .cv-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
-    .cv-toolbar button, .cv-toolbar input { font: inherit; padding: 8px 12px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+    .cv-toolbar button, .cv-toolbar input, .cv-toolbar select { font: inherit; padding: 8px 12px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+    .cv-toolbar button[aria-pressed="true"] { background: var(--retro-soft-lavender); outline: 2px solid var(--ink); }
+    .cv-toolbar button { min-width: 40px; }
+    .cv-toolbar [data-command="bold"] { font-weight: 800; }
+    .cv-toolbar [data-command="italic"] { font-style: italic; }
+    .cv-toolbar [data-command="underline"] { text-decoration: underline; }
+    .cv-toolbar [data-command="strike"] { text-decoration: line-through; }
+    .cv-toolbar input[type="color"] { width: 44px; height: 44px; padding: 4px; }
+    .cv-link-panel > div { padding: 12px; border: 1px solid var(--line); }
+    #cv-rich-editor .tiptap { outline: none; min-height: 350px; font: 11pt/1.5 Arial, sans-serif; }
+    #cv-rich-editor .tiptap p, #application-print-text p { margin: 0 0 .35em; }
     #cv-rich-editor { white-space: pre-wrap; overflow-wrap: anywhere; min-height: 350px; padding: 20px; border: 1px solid var(--line); background: var(--bg); font: 1rem/1.7 var(--font-body); }
     #cv-rich-editor a { color: var(--accent); text-decoration: underline; }
     #application-print-text a { color: black; text-decoration: underline; }
