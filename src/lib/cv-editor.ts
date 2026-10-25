@@ -1,3 +1,4 @@
+import { cvHeading, locale } from './locale';
 import { cvLayout } from "./cv-layout";
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
@@ -34,7 +35,7 @@ export function cleanCvHtml(html: string): DocumentFragment {
   return fragment;
 }
 export function createCvEditor(element: HTMLElement, field: HTMLTextAreaElement, toolbar: HTMLElement) {
-  const fr = document.documentElement.lang === 'fr';
+  const fr = locale(document.documentElement.lang) === 'fr';
   const note = document.getElementById('cv-editor-note');
   const linkInput = document.getElementById('cv-link-url') as HTMLInputElement;
   let editor: Editor;
@@ -134,6 +135,7 @@ export function createCvEditor(element: HTMLElement, field: HTMLTextAreaElement,
           const heading=document.createElement('h3'); heading.append(...node.childNodes); node.replaceWith(heading);
         }
       }
+      for(const heading of container.querySelectorAll('h3')) heading.textContent=cvHeading(heading.textContent ?? '',locale(document.documentElement.lang));
       editor.commands.setContent(safeHtml(container.innerHTML),{emitUpdate:false});field.value=editor.getText();updateControls(); },
     html:()=>safeHtml(editor.getHTML()),
   };

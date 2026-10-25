@@ -65,9 +65,11 @@ application_slots = asyncio.Semaphore(2)
 
 @app.middleware("http")
 async def private_application_responses(request: Request, call_next):
+    started = perf_counter()
     response = await call_next(request)
     if request.url.path in {"/api/application", "/api/profile-import", "/api/interview/transcribe", "/api/interview/feedback"}:
         response.headers["Cache-Control"] = "no-store"
+        response.headers["Server-Timing"] = f"application;dur={(perf_counter()-started)*1000:.0f}"
     return response
 
 

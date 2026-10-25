@@ -1,8 +1,10 @@
+import { locale, translator } from '../lib/locale';
 import { z } from 'zod';
 import { apiEndpoint } from '../lib/api-client';
 import { readApplicationState, saveApplicationState } from '../lib/application-state';
-const fr=document.documentElement.lang==='fr';
-const say=(f:string,e:string)=>fr?f:e;
+const language=locale(document.documentElement.lang);
+const fr=language==='fr';
+const say=translator(language);
 const el=<T extends HTMLElement>(id:string)=>document.getElementById('practice-'+id) as T;
 const field=el<HTMLTextAreaElement>('text');
 const consent=el<HTMLInputElement>('consent');
@@ -22,24 +24,25 @@ const feedbackSchema=z.object({clarity:criterion,evidence:criterion,relevance:cr
 let recorder:MediaRecorder|null=null, stream:MediaStream|null=null, blob:Blob|null=null, objectUrl='';
 let clock:number|undefined, started=0, recording=false, pending=false, epoch=0;
 let active:AbortController|null=null;
+let lastFeedback: {key:string; html:string} | null = null;
 const supported=!!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder!=='undefined';
 function controls(){record.disabled=!supported||pending||recording||!!active;stop.hidden=!recording;transcribe.disabled=!blob||recording||!!active;review.disabled=recording||pending||!!active;draft.disabled=recording||!!active;}
 function release(){stream?.getTracks().forEach(track=>track.stop());stream=null;window.clearInterval(clock);}
 function clearAudio(){if(objectUrl)URL.revokeObjectURL(objectUrl);objectUrl='';blob=null;audio.removeAttribute('src');audio.hidden=true;}
-function finish(){if(recorder?.state==='recording')recorder.stop();release();recording=false;controls();}
+function finish(){if(recorder?.state==='recording')recorder.stop();window.clearInterval(clock);controls();}
 controls();
 if(!supported)note(say('Micro non disponible dans ce navigateur. Tu peux écrire ou coller ton pitch.','Microphone unavailable in this browser. You can type or paste your pitch.'));
 record.addEventListener('click',async()=>{
  if(record.disabled)return;
  pending=true;controls();const attempt=++epoch;
  try{
-  const media=await navigator.mediaDevices.getUserMedia({audio:true});
+  const media=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
   if(attempt!==epoch){media.getTracks().forEach(track=>track.stop());return;}
   stream=media;
-  const mime=['audio/webm;codecs=opus','audio/mp4'].find(type=>MediaRecorder.isTypeSupported(type));
+  const mime=['audio/mp4','audio/webm;codecs=opus'].find(type=>MediaRecorder.isTypeSupported(type));
   if(!mime)throw new Error('format');
   clearAudio();const chunks:BlobPart[]=[];let size=0;
-  recorder=new MediaRecorder(media,{mimeType:mime});
+  recorder=new MediaRecorder(media,{mimeType:mime,audioBitsPerSecond:128000});
   recorder.ondataavailable=event=>{if(event.data.size){chunks.push(event.data);size+=event.data.size;if(size>8*1024*1024)finish();}};
   recorder.onstop=()=>{
    if(attempt!==epoch)return;
@@ -48,8 +51,8 @@ record.addEventListener('click',async()=>{
    blob=new Blob(chunks,{type:mime.split(';')[0]});objectUrl=URL.createObjectURL(blob);audio.src=objectUrl;audio.hidden=false;controls();
    note(say('Enregistrement prêt. Écoute-le, puis coche ton accord pour le transcrire.','Recording ready. Listen, then give consent to transcribe it.'));
   };
-  recorder.onerror=()=>{finish();note(say('Enregistrement interrompu. Tu peux écrire ton pitch.','Recording interrupted. You can type your pitch.'));};
-  recorder.start(1000);recording=true;started=Date.now();
+  recorder.onerror=()=>{finish();release();recording=false;controls();note(say('Enregistrement interrompu. Tu peux écrire ton pitch.','Recording interrupted. You can type your pitch.'));};
+  recorder.start();recording=true;started=Date.now();
   el('timer').textContent='0 / 90 s';
   clock=window.setInterval(()=>{const seconds=Math.floor((Date.now()-started)/1000);el('timer').textContent=`${seconds} / 90 s`;if(seconds>=90)finish();},500);
   note(say('Enregistrement local en cours…','Recording locally…'));
@@ -65,9 +68,11 @@ async function call(path:'/api/interview/transcribe'|'/api/interview/feedback',p
 async function run(task:()=>Promise<void>,message:string){
  if(active||recording)return;
  if(!consent.checked){note(say('Coche ton accord avant l’envoi à OpenAI.','Give consent before sending to OpenAI.'));return;}
- const request=new AbortController();active=request;controls();note(message);const timer=window.setTimeout(()=>request.abort(),100000);
+ const request=new AbortController();active=request;controls();note(message);const requestStarted=Date.now();
+ const elapsed=window.setInterval(()=>{if(active===request)note(message+' '+Math.floor((Date.now()-requestStarted)/1000)+' s');},1000);
+ const timer=window.setTimeout(()=>request.abort(),100000);
  try{await task();}catch(error){if(active===request)note(error instanceof Error && error.message==='429'?say('Limite temporaire atteinte. Ton texte est conservé ; réessaie plus tard.','Temporary limit reached. Your text is preserved; try later.'):say('Le service n’a pas abouti. Ton texte est conservé ; réessaie ou utilise la grille des cas ci-dessous.','The service did not complete. Your text is preserved; retry or use the case rubrics below.'));}
- finally{window.clearTimeout(timer);if(active===request)active=null;controls();}
+ finally{window.clearInterval(elapsed);window.clearTimeout(timer);if(active===request)active=null;controls();}
 }
 transcribe.addEventListener('click',()=>{
  if(!blob)return;
@@ -86,6 +91,8 @@ review.addEventListener('click',()=>{
  if(!currentState||currentState.profile.trim().length<50||currentState.posting.trim().length<50){note(say('Ajoute ton profil et une annonce dans Ma candidature avant ce retour.','Add your profile and a posting in My application before requesting feedback.'));return;}
  if(field.value.trim().length<50){note(say('Écris au moins 50 caractères pour obtenir un retour utile.','Write at least 50 characters for useful feedback.'));return;}
  const transcript=field.value;const current=epoch;el('feedback').replaceChildren();
+ const key=JSON.stringify([transcript,currentState.profile,currentState.posting,fr]);
+ if(lastFeedback?.key===key){el('feedback').innerHTML=lastFeedback.html;note(say('Retour déjà disponible pour cette version.','Feedback already available for this version.'));return;}
  void run(async()=>{
   const feedback=feedbackSchema.parse(await call('/api/interview/feedback',{candidate_text:currentState.profile,job_description:currentState.posting,transcript,output_language:fr?'fr':'en',consent:true}));
   if(current!==epoch)return;
@@ -96,6 +103,7 @@ review.addEventListener('click',()=>{
    const action=document.createElement('p');action.textContent=say('À essayer : ','Try: ')+feedback[key].next_action;card.append(heading,observation,action);el('feedback').append(card);
   }
   const question=document.createElement('p');question.textContent=say('Question de relance : ','Follow-up question: ')+feedback.follow_up_question;el('feedback').append(question);
+  lastFeedback={key,html:el('feedback').innerHTML};
   note(say('Retour prêt. Choisis une amélioration, puis refais ton pitch avec tes mots.','Feedback ready. Pick one improvement, then rehearse again in your own words.'));
  },say('Analyse du contenu de ton pitch…','Reviewing your pitch content…'));
 });
@@ -105,6 +113,6 @@ draft.addEventListener('click',()=>{
  if(field.value.trim()&&!window.confirm(say('Remplacer ton texte par le pitch préparé ?','Replace your text with the prepared pitch?')))return;
  field.value=prepared;field.dispatchEvent(new Event('input'));note(say('Pitch repris. Adapte-le à ta manière de parler.','Draft loaded. Adapt it to how you speak.'));
 });
-function cleanup(){epoch++;active?.abort();active=null;finish();clearAudio();}
+function cleanup(){epoch++;active?.abort();active=null;finish();release();recording=false;lastFeedback=null;clearAudio();}
 el('clear').addEventListener('click',()=>{cleanup();field.value='';el('feedback').replaceChildren();el('timer').textContent='';persist();controls();note(say('Entraînement effacé. Ton dossier reste intact.','Rehearsal cleared. Your application is unchanged.'));});
 window.addEventListener('pagehide',cleanup);

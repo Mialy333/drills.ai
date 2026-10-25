@@ -1,3 +1,4 @@
+import { cvHeading, locale } from './locale';
 /** Deterministic layout of supplied text; no facts are generated. */
 export function cvLayout(value: string, headings: string[]): string {
   const defaults=['Target Title','Short Profile','Professional Experience','Personal project','Projects','Education','Skills','Profil','Projets','Expérience professionnelle','Expériences professionnelles','Formation','Formations','Compétences','Titre cible'];
@@ -12,7 +13,8 @@ export function cvLayout(value: string, headings: string[]): string {
     const bullet=/^[-•]\s+/.test(line);
     const node=document.createElement(heading?'h3':bullet?'li':'p');
     // Only a minimal inline emphasis syntax; raw HTML stays plain text.
-    const parts=line.replace(/^[-•]\s+/,'').split(/(\*{2,3}[^*]+\*{2,3})/g);
+    const display=heading?cvHeading(line.replace(/:$/,''),locale(document.documentElement.lang)):line;
+    const parts=display.replace(/^[-•]\s+/,'').split(/(\*{2,3}[^*]+\*{2,3})/g);
     for(const part of parts) {
       if(/^\*{2,3}[^*]+\*{2,3}$/.test(part)) {const strong=document.createElement('strong');strong.textContent=part.replace(/^\*+|\*+$/g,'');node.append(strong);}
       else node.append(document.createTextNode(part));

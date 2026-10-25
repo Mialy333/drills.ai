@@ -26,7 +26,9 @@ const fr = lang === "fr";
               <h3>{fr ? "Importer mon CV PDF (4 Mio max.)" : "Import my PDF CV (4 MiB max.)"}</h3>
               <p>{fr ? "L’import remplace le profil actuel, sans ressaisie. Relis et corrige l’extraction avant l’analyse. Le fichier sera transmis à OpenAI après ton accord ci-dessous." : "Import replaces the current profile, without retyping. Review and correct the extraction before analysis. The file is sent to OpenAI after you agree below."}</p>
               <label for="application-pdf">{fr ? "CV au format PDF" : "PDF CV"}</label>
-              <input id="application-pdf" type="file" accept="application/pdf,.pdf" />
+              <input id="application-pdf" class="sr-only" type="file" accept="application/pdf,.pdf" />
+              <button type="button" class="btn btn-secondary" id="application-pick-pdf">{fr ? "Choisir mon CV PDF" : "Choose my PDF CV"}</button>
+              <span id="application-file-name" role="status">{fr ? "Aucun fichier sélectionné" : "No file selected"}</span>
               <button type="button" class="btn btn-secondary" id="application-import">{fr ? "Extraire le texte du CV" : "Extract CV text"}</button>
             </div>
             <details class="application-import"><summary>{fr ? "Ajouter un projet GitHub public" : "Add a public GitHub project"}</summary>
@@ -185,7 +187,7 @@ const fr = lang === "fr";
     #cv-rich-editor { white-space: pre-wrap; overflow-wrap: anywhere; min-height: 350px; padding: 20px; border: 1px solid var(--line); background: var(--bg); font: 1rem/1.7 var(--font-body); }
     #cv-rich-editor a { color: var(--accent); text-decoration: underline; }
     #application-print-text a { color: black; text-decoration: underline; }
-    #application-pdf { display: block; width: 100%; font-size: 1.05rem; padding: 12px 0; }
+    #application-pick-pdf { min-height: 54px; padding: 14px 22px; font-size: 1.05rem; margin: 12px 8px 12px 0; }
     #application-pdf::file-selector-button { min-height: 52px; padding: 14px 22px; margin-right: 12px; font: 700 1.05rem var(--font-body); border: 2px solid var(--line); background: #e7dfff; color: #202124; cursor: pointer; border-radius: 6px; }
     #github-url { width: 100%; min-height: 54px; font-size: 1.1rem; padding: 14px; box-sizing: border-box; }
     #github-load, #github-add { min-height: 54px; padding: 14px 22px; font-size: 1.05rem; margin-top: 12px; }

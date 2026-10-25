@@ -1,3 +1,4 @@
+import { locale, translator, cvHeading } from "../lib/locale";
 import { fetchGithubProject } from "../lib/github-project";
 import { createCvEditor, cleanCvHtml } from "../lib/cv-editor";
 import { apiEndpoint } from "../lib/api-client";
@@ -5,8 +6,9 @@ import { applicationDraftChanged, ApplicationResultSchema, type ApplicationResul
 import { readApplicationState, saveApplicationState, clearApplicationState } from "../lib/application-state";
 import { readCandidateProfile, deleteCandidateProfile } from "../lib/candidate-profile";
 
-const fr = document.documentElement.lang === "fr";
-const say = (french: string, english: string): string => fr ? french : english;
+const language = locale(document.documentElement.lang);
+const fr = language === "fr";
+const say = translator(language);
 const element = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 const form = element<HTMLFormElement>("application-form");
 const profileMode = new URLSearchParams(location.search).get("step") === "profile";
@@ -145,7 +147,7 @@ function render(result: ApplicationResult): void {
   pitch.value = result.pitch.text;
   element("application-draft-sources").replaceChildren(...[...result.cv_sections, result.pitch].map((section) => {
     const node = document.createElement("section");
-    node.append(text("h3", section.heading), ...section.source_quotes.map((quote) => text("blockquote", quote)));
+    node.append(text("h3", cvHeading(section.heading, language)), ...section.source_quotes.map((quote) => text("blockquote", quote)));
     return node;
   }));
   reviewed.checked = false;
@@ -169,7 +171,7 @@ async function extractProfile(file: File, signal: AbortSignal): Promise<void> {
   if (!raw || typeof raw !== "object" || !("candidate_text" in raw) || typeof raw.candidate_text !== "string" || raw.candidate_text.trim().length < 50 || raw.candidate_text.length > 16000) throw new Error("unreadable-pdf");
   resetResults();
   profile.value = raw.candidate_text;
-  pdf.value = "";
+  pdf.value = ""; element("application-file-name").textContent=say("Aucun fichier sélectionné", "No file selected");
   editor.open = true;
   persist();
 }
@@ -219,7 +221,7 @@ element("application-import").addEventListener("click", () => {
 });
 
 element("application-example").addEventListener("click", () => {
-  pdf.value = "";
+  pdf.value = ""; element("application-file-name").textContent=say("Aucun fichier sélectionné", "No file selected");
   resetResults();
   profile.value = fr
     ? "PROFIL FICTIF — EXEMPLE DE DÉMONSTRATION\n2020–2024 : analyste opérations. J’ai documenté les étapes de traitement des demandes clients et coordonné la résolution d’incidents.\n2025 : formation en développement web, projets JavaScript et API REST.\nProjet personnel : j’ai construit une API Python avec FastAPI, validé les entrées avec Pydantic et écrit des tests pytest. J’ai ajouté un appel OpenAI pour classer des demandes. Je n’ai pas encore déployé ce projet ni utilisé LangGraph."
@@ -295,7 +297,9 @@ try {
   }
 } catch { /* Manual input and import remain available without storage. */ }
 profileSummary();
+element("application-pick-pdf").addEventListener("click",()=>pdf.click());
 pdf.addEventListener("change", () => {
+  element("application-file-name").textContent=pdf.files?.[0]?.name ?? say("Aucun fichier sélectionné", "No file selected");
   if (pdf.files?.length) status(say("CV sélectionné. Coche ton accord, puis clique sur le bouton principal : le CV sera lu avant de continuer.", "CV selected. Check your consent, then click the main button: your CV will be read before continuing."));
 });
 if (profileMode) {
@@ -328,7 +332,7 @@ element('github-load').addEventListener('click',async()=>{
   const button=element<HTMLButtonElement>('github-load'); button.disabled=true; githubReview.hidden=true;
   githubStatus.textContent=say('Lecture du dépôt public…','Reading public repository…');
   try {
-    const project=await fetchGithubProject(element<HTMLInputElement>('github-url').value,active.signal);
+    const project=await fetchGithubProject(element<HTMLInputElement>('github-url').value,active.signal,fr?'fr':'en');
     if(active.signal.aborted) return;
     githubPreview.value=project; githubContribution.value=''; githubReview.hidden=false;
     githubStatus.textContent=say('Vérifie les informations puis décris ta contribution. Rien n’a encore été ajouté.','Review the information and describe your contribution. Nothing has been added yet.');

@@ -48,15 +48,22 @@ test('recording stays local until explicit consent and transcription, and releas
   w.URL.createObjectURL=()=> 'blob:test';w.URL.revokeObjectURL=()=>{};
   w.MediaRecorder=class {
    static isTypeSupported(){return true;}
-   state='inactive';start(){this.state='recording';}
-   stop(){this.state='inactive';this.ondataavailable({data:new w.Blob(['test recording'],{type:'audio/webm'})});this.onstop();}
+   state='inactive';start(...args){assert.equal(args.length,0);this.state='recording';}
+   stop(){this.state='inactive';this.ondataavailable({data:new w.Blob(['test recording'],{type:'audio/mp4'})});this.onstop();}
   };
  });
- let calls=0;w.fetch=async(url,options)=>{calls++;assert.match(url,/interview\/transcribe$/);assert.equal(JSON.parse(options.body).media_type,'audio/webm');return {ok:true,json:async()=>({text:'I built an agent with a tool API and wrote tests for failures.'})};};
+ let calls=0;w.fetch=async(url,options)=>{calls++;assert.match(url,/interview\/transcribe$/);assert.equal(JSON.parse(options.body).media_type,'audio/mp4');return {ok:true,json:async()=>({text:'I built an agent with a tool API and wrote tests for failures.'})};};
  get('record').click();await tick();assert.equal(get('stop').hidden,false);get('stop').click();
  assert.ok(stopped>0);assert.equal(get('audio').hidden,false);assert.equal(calls,0);
  get('transcribe').click();await tick();assert.equal(calls,0);
  get('consent').checked=true;get('transcribe').click();for(let i=0;i<10&&!get('text').value;i++)await tick();
  assert.equal(calls,1);assert.match(get('text').value,/I built an agent/);
  get('clear').click();assert.equal(get('audio').hidden,true);
+});
+test('identical feedback requests reuse the last result without another API call',async t=>{
+ const {w,get}=setup(t);get('use-draft').click();get('consent').checked=true;let calls=0;
+ const criterion={observation:'Your example is concrete.',next_action:'Describe one failing test.'};
+ w.fetch=async()=>{calls++;return {ok:true,json:async()=>({clarity:criterion,evidence:criterion,relevance:criterion,follow_up_question:'What happened when the API failed?'})};};
+ get('review').click();await tick();get('review').click();await tick();assert.equal(calls,1);
+ get('text').value+=' I also tested retries.';get('text').dispatchEvent(new w.Event('input'));get('review').click();await tick();assert.equal(calls,2);
 });

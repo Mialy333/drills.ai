@@ -51,3 +51,15 @@ def test_feedback_endpoint_requires_consent_and_private_cache(monkeypatch):
     assert response.headers['cache-control']=='no-store'
     response=TestClient(app).post('/api/interview/transcribe',json=audio().model_dump()|{'consent':False})
     assert response.status_code==422
+
+
+def test_feedback_enforces_french_and_a_small_output_budget():
+    criterion={'observation':'Une contribution concrète est présente.','next_action':'Explique un test que tu as écrit.'}
+    feedback=PitchFeedback(clarity=criterion,evidence=criterion,relevance=criterion,follow_up_question='Que fais-tu si cet appel échoue ?')
+    parse=AsyncMock(return_value=SimpleNamespace(output_parsed=feedback))
+    payload=PitchRequest(candidate_text='I built an API with validation and automated tests in a personal project.',job_description='Agent Engineer internship building tools, API calls and automated evaluations.',transcript='I built an API with validation and I want to apply those skills to your agent workflow.',consent=True,output_language='fr')
+    asyncio.run(review_pitch(payload,SimpleNamespace(responses=SimpleNamespace(parse=parse))))
+    args=parse.call_args.kwargs
+    assert 'French (français)' in args['instructions']
+    assert 'MUST be entirely in this language' in args['instructions']
+    assert args['max_output_tokens']==1800

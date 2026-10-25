@@ -11,6 +11,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, ConfigDict, Field, field_validator, create_model
 
 from src.ai_generator.config import OPENAI_MODEL
+from src.ai_generator.language import language_instruction
 
 
 class StrictModel(BaseModel):
@@ -242,10 +243,10 @@ class ApplicationAgent:
     def __init__(self, client=None):
         self.client = client
 
-    async def _parse(self, schema, instructions, content):
-        model = os.getenv("OPENAI_APPLICATION_MODEL", OPENAI_MODEL)
+    async def _parse(self, schema, instructions, content, *, max_output_tokens=7000, model=None):
+        model = model or os.getenv("OPENAI_APPLICATION_MODEL", OPENAI_MODEL)
         kwargs = dict(model=model, instructions=instructions, input=content,
-                      text_format=schema, store=False, max_output_tokens=7_000)
+                      text_format=schema, store=False, max_output_tokens=max_output_tokens)
         if self.client is not None:
             response = await self.client.responses.parse(**kwargs)
         else:
@@ -264,7 +265,7 @@ class ApplicationAgent:
         # Still bounded by the endpoint's deadline; inconsistent status or
         # duplicate requirements may need one retry. Quotes are never rewritten.
         for attempt in range(2):
-            instructions = SYSTEM_PROMPT
+            instructions = SYSTEM_PROMPT + "\n" + language_instruction(payload.output_language)
             if attempt:
                 instructions += ("\nThe previous selection failed validation (" + issue +
                     "). Select only provided IDs. Use null candidate_quote for "

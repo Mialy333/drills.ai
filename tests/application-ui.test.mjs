@@ -214,3 +214,24 @@ test('job selection fills the posting without sending the candidate profile to G
  w.document.querySelector('#jobs-results button').click();assert.equal(get('posting').value,description);assert.equal(get('profile').value,profileText);
  assert.equal(JSON.parse(w.sessionStorage.getItem('drills.application.v1')).posting,description);
 });
+test('French page localizes CV section labels and GitHub notices without translating source facts',async t=>{
+ const frenchHtml=readFileSync('dist/fr/apply/index.html','utf8');
+ const dom=new JSDOM(frenchHtml,{url:'https://example.com/drills.ai/fr/apply/',runScripts:'outside-only'});t.after(()=>dom.window.close());const w=dom.window;
+ const result=structuredClone(fixture);result.cv_sections[0].heading='Projects';
+ const saved={version:1,expiresAt:Date.now()+86400000,profile:profileText,posting:'AI Agent Engineer internship with tools and API evaluation.',result,cv:'Projects\nBuilt an API.',cv_html:'<h3>Projects</h3><p>Built an API.</p>',pitch:result.pitch.text,reviewed:false,remember:false};
+ w.sessionStorage.setItem('drills.application.v1',JSON.stringify(saved));w.eval(bundle.outputFiles[0].text);
+ assert.equal(w.document.querySelector('#cv-rich-editor h3').textContent,'Projets');
+ assert.match(w.document.getElementById('application-pick-pdf').textContent,/Choisir mon CV PDF/);
+ w.fetch=async()=>({ok:true,status:200,json:async()=>({private:false,full_name:'octocat/demo',description:'Original repository description',language:'Python',fork:false})});
+ w.document.getElementById('github-url').value='https://github.com/octocat/demo';w.document.getElementById('github-load').click();await tick();
+ const preview=w.document.getElementById('github-preview').value;assert.match(preview,/Langage du dépôt/);assert.doesNotMatch(preview,/Repository language|Not a verification/);assert.match(preview,/Original repository description/);
+});
+test('all public MVP routes declare their language and use localized navigation',t=>{
+ for(const lang of ['fr','en'])for(const page of ['','apply/','prepare/','progress/']){
+  const dom=new JSDOM(readFileSync(`dist/${lang}/${page}index.html`,'utf8'));t.after(()=>dom.window.close());
+  assert.equal(dom.window.document.documentElement.lang,lang);
+  const nav=dom.window.document.querySelector('.bar-nav').textContent;
+  assert.match(nav,lang==='fr'?/Ma candidature/:/My application/);
+  assert.doesNotMatch(nav,lang==='fr'?/My application/:/Ma candidature/);
+ }
+});
