@@ -10,12 +10,12 @@ const fr = lang === "fr";
   <section class="application-page" id="application-page">
     <header class="application-heading">
       <p class="application-eyebrow">{fr ? "TON PARCOURS → TA PROCHAINE OPPORTUNITÉ" : "YOUR EXPERIENCE → YOUR NEXT OPPORTUNITY"}</p>
-      <h1>{fr ? "Ta prochaine candidature commence ici." : "Your next application starts here."}</h1>
+      <h1 id="application-heading-title">{fr ? "Ta prochaine candidature commence ici." : "Your next application starts here."}</h1>
       <p>{fr ? "Fais le lien entre ton parcours et un premier poste d’Agent Engineer. Repars avec des preuves, des priorités et une candidature à personnaliser." : "Connect your experience to a first Agent Engineer role. Leave with evidence, priorities and an application to make your own."}</p>
       <ol class="application-steps"><li>{fr ? "Ton parcours" : "Your experience"}</li><li>{fr ? "L’offre cible" : "The target role"}</li><li>{fr ? "Ta candidature" : "Your application"}</li></ol>
     </header>
 
-    <form id="application-form">
+    <form id="application-form" novalidate>
       <fieldset id="application-inputs" class="application-inputs">
         <legend class="sr-only">{fr ? "Préparer une candidature" : "Prepare an application"}</legend>
         <div class="application-grid">
@@ -36,10 +36,11 @@ const fr = lang === "fr";
             </details>
 
           </section>
-          <section class="application-card">
+          <section class="application-card" id="application-posting-card">
             <h2>{fr ? "02 · L’opportunité que tu vises" : "02 · The opportunity you want"}</h2>
             <p>{fr ? "Stage, alternance ou premier emploi : colle l’annonce complète, avec les missions, compétences et conditions. Un lien seul ne suffit pas." : "Internship, apprenticeship or first job: paste the full posting, including duties, skills and conditions. A link alone is not enough."}</p>
             <p>{fr ? "Ton profil est repris automatiquement : aucune expérience à ressaisir ici." : "Your profile is reused automatically: no experience to enter again here."}</p>
+            <p id="application-saved-profile" hidden>{fr ? "Ton profil enregistré sera utilisé." : "Your saved profile will be used."} <a href={href(`/${lang}/apply/?step=profile`)}>{fr ? "Consulter ou modifier mon profil" : "View or edit my profile"}</a></p>
             <label for="application-posting">{fr ? "Texte de l’annonce" : "Job posting text"}</label>
             <textarea id="application-posting" required minlength="50" maxlength="20000" rows="13" autocomplete="off" placeholder={fr ? "Intitulé · missions · compétences · contrat · localisation…" : "Title · duties · skills · contract · location…"}></textarea>
             <p class="application-note">{fr ? "Les conditions de candidature sont séparées des compétences. Le bilan ne prédit pas tes chances de recrutement." : "Application conditions are separate from skills. The assessment does not predict hiring chances."}</p>
@@ -51,8 +52,9 @@ const fr = lang === "fr";
           </label>
           <p class="application-note">{fr ? "Ton dossier est conservé dans cet onglet. Active l’option ci-dessous pour le retrouver sur cet appareil pendant 30 jours. La conservation des réponses est désactivée dans l’appel OpenAI ; les règles du fournisseur restent applicables." : "Your application is kept in this tab. Enable the option below to remember it on this device for 30 days. Response storage is disabled in the OpenAI call; provider data handling policies still apply."}</p>
           <label class="application-check"><input id="application-remember" type="checkbox" /><span>{fr ? "Conserver mon dossier sur cet appareil pendant 30 jours (éviter sur un appareil partagé)." : "Keep my application on this device for 30 days (avoid on shared devices)."}</span></label>
+          <p id="application-status" role="status" aria-live="polite">{fr ? "Sélectionne ton CV, colle l’annonce, coche ton accord puis lance le diagnostic." : "Select your CV, paste the posting, give consent, then start your assessment."}</p>
           <div class="application-actions">
-            <button class="btn btn-primary" type="submit" id="application-submit">{fr ? "Préparer ma candidature" : "Prepare my application"}</button>
+            <button class="btn btn-primary" type="submit" id="application-submit">{fr ? "Obtenir mon diagnostic" : "Get my assessment"}</button>
             <button class="btn btn-secondary" type="button" id="application-example">{fr ? "Remplir un exemple fictif" : "Fill a fictional example"}</button>
           </div>
         </div>
@@ -62,7 +64,7 @@ const fr = lang === "fr";
       <button type="button" class="btn btn-secondary" id="application-cancel" hidden>{fr ? "Annuler" : "Cancel"}</button>
       <button type="button" class="text-button" id="application-clear">{fr ? "Effacer mon dossier et son profil enregistré" : "Delete this application and its saved profile"}</button>
     </div>
-    <p id="application-status" role="status" aria-live="polite"></p>
+
 
     <section id="application-results" hidden aria-labelledby="application-result-title">
       <div class="application-card">
@@ -99,6 +101,7 @@ const fr = lang === "fr";
       <section id="application-print" hidden><pre id="application-print-text"></pre></section>
     </section>
   </section>
+  <noscript>{fr ? "Active JavaScript pour importer ton CV et obtenir un diagnostic." : "Enable JavaScript to import your CV and get an assessment."}</noscript>
   <script>import "../../scripts/application.ts";</script>
   <style is:global>
     .application-page { max-width: 1080px; margin: 0 auto; }
@@ -109,6 +112,7 @@ const fr = lang === "fr";
     .application-steps { display: flex; flex-wrap: wrap; gap: 12px 34px; padding-left: 22px; }
     .application-inputs { border: 0; padding: 0; margin: 0; min-width: 0; }
     .application-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .application-single-step .application-grid { grid-template-columns: 1fr; }
     .application-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 24px; margin-bottom: 20px; min-width: 0; }
     .application-card h2 { font-size: 1.2rem; margin-top: 0; }
     .application-card p { line-height: 1.65; }

@@ -14,9 +14,10 @@ const fr = lang === "fr";
     <div class="interview-cases">
       {catalog.cases.map(item => <article class="panel" id={item.id}>
         <h2>{item[lang].title}</h2><p>{item[lang].scenario}</p>
+        <details><summary>{fr ? "Comprendre le cas et les notions utiles" : "Understand the case and key concepts"}</summary><p>{item[lang].explanation}</p></details>
         <label for={`answer-${item.id}`}>{fr ? "Ta réponse (brouillon non enregistré)" : "Your answer (unsaved draft)"}</label>
         <textarea id={`answer-${item.id}`} rows="5" maxlength="5000"></textarea>
-        <details><summary>{fr ? "Comparer avec les critères de correction" : "Compare with the review criteria"}</summary><ul>{item[lang].criteria.map(criterion => <li>{criterion}</li>)}</ul><p>{fr ? "Références de la grille" : "Rubric references"}</p><ul>{item.references.map(source => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label}</a></li>)}</ul></details>
+        <details><summary>{fr ? "Comparer avec les critères de correction" : "Compare with the review criteria"}</summary><ul>{item[lang].criteria.map(criterion => <li>{criterion}</li>)}</ul><h3>{fr ? "Exemple de réponse expliquée" : "Example answer"}</h3><p>{item[lang].sample_answer}</p><p>{fr ? "Ce raisonnement est un exemple : adapte-le aux contraintes de l’entreprise et explique tes compromis." : "This is one example: adapt it to the company’s constraints and explain your trade-offs."}</p><p>{fr ? "Références de la grille" : "Rubric references"}</p><ul>{item.references.map(source => <li><a href={source.url} target="_blank" rel="noopener noreferrer">{source.label}</a></li>)}</ul></details>
       </article>)}
     </div>
     <a class="btn btn-primary" href={href(`/${lang}/apply/`)}>{fr ? "Revenir à ma candidature" : "Back to my application"}</a>

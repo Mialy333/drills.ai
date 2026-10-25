@@ -17,8 +17,8 @@ const fr = lang === "fr";
       </div>
     </section>
     <section class="journey-grid" aria-label={fr ? "Les étapes" : "Your steps"}>
-      <a class="journey-card" href={href(`/${lang}/apply/#application-profile-card`)}><span class="journey-index">01</span><h2>{fr ? "Un profil, une seule fois" : "One profile, entered once"}</h2><p>{fr ? "Importe ton CV ou décris ton parcours. Retrouve-le quand tu changes d’annonce." : "Import your CV or describe your experience. Reuse it for another posting."}</p></a>
-      <a class="journey-card" href={href(`/${lang}/apply/#application-posting`)}><span class="journey-index">02</span><h2>{fr ? "Une candidature argumentée" : "An evidence-based application"}</h2><p>{fr ? "Compare les exigences aux preuves de ton parcours, puis personnalise ton CV et ton pitch." : "Compare requirements with your evidence, then personalise your CV and pitch."}</p></a>
+      <a class="journey-card" href={href(`/${lang}/apply/?step=profile`)}><span class="journey-index">01</span><h2>{fr ? "Un profil, une seule fois" : "One profile, entered once"}</h2><p>{fr ? "Importe ton CV ou décris ton parcours. Retrouve-le quand tu changes d’annonce." : "Import your CV or describe your experience. Reuse it for another posting."}</p></a>
+      <a class="journey-card" href={href(`/${lang}/apply/?step=posting`)}><span class="journey-index">02</span><h2>{fr ? "Une candidature argumentée" : "An evidence-based application"}</h2><p>{fr ? "Compare les exigences aux preuves de ton parcours, puis personnalise ton CV et ton pitch." : "Compare requirements with your evidence, then personalise your CV and pitch."}</p></a>
       <a class="journey-card" href={href(`/${lang}/prepare/`)}><span class="journey-index">03</span><h2>{fr ? "Un entretien préparé" : "A prepared interview"}</h2><p>{fr ? "Travaille des cas concrets d’Agent Engineering avec des critères de correction fixes, sans exercice généré." : "Practise concrete Agent Engineering cases with fixed review criteria, without generated exercises."}</p></a>
     </section>
   </div>

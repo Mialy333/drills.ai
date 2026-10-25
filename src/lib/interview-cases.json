@@ -19,7 +19,9 @@
           "Respecter Retry-After et borner les nouvelles tentatives.",
           "Utiliser une clé d’idempotence ou vérifier l’état avant de recréer la réservation.",
           "Prévoir un arrêt explicite et une reprise humaine."
-        ]
+        ],
+        "explanation": "Une lecture peut généralement être répétée sans créer de nouvel objet. Une réservation, elle, modifie le système : un délai dépassé ne prouve pas que la réservation a échoué. Relancer aveuglément peut en créer deux. Une clé d’idempotence identifie une même opération pour que le serveur ne la réalise qu’une fois, si l’API prend cette fonction en charge. Un code 429 indique une limitation de débit : attendre la durée Retry-After lorsqu’elle est fournie, puis limiter les tentatives évite une boucle incontrôlée.",
+        "sample_answer": "Je sépare la consultation du stock et la réservation. Pour le stock, j’attends puis réessaie un nombre limité de fois. Pour une réservation dont la réponse est incertaine, je consulte son état ou réutilise la même clé d’idempotence si l’API le permet. Si je ne peux pas confirmer le résultat, j’arrête l’action et signale le cas à une personne. Je teste aussi le cas où la réservation réussit mais où la réponse est perdue."
       },
       "en": {
         "title": "A tool fails: what should your agent do?",
@@ -29,7 +31,9 @@
           "Respect Retry-After and bound retries.",
           "Use an idempotency key or check state before creating another reservation.",
           "Provide an explicit stop and human recovery."
-        ]
+        ],
+        "explanation": "A read can usually be repeated without creating another object. A reservation changes state: a timeout does not prove that it failed. Retrying blindly may create two bookings. An idempotency key identifies one operation so a supporting API can avoid performing it twice. A 429 response signals rate limiting: respect Retry-After when provided and bound retries to avoid an uncontrolled loop.",
+        "sample_answer": "I separate stock lookup from reservation. For stock, I wait and retry a limited number of times. If a reservation result is uncertain, I check its status or reuse its idempotency key when supported. If I cannot confirm the outcome, I stop and escalate to a person. I also test a successful reservation whose response is lost."
       },
       "references": [
         {
@@ -56,7 +60,9 @@
           "Ne jamais transmettre un secret au modèle ou à un outil sans nécessité.",
           "Limiter les outils et destinations autorisés ; valider les paramètres côté application.",
           "Exiger une validation humaine pour un envoi sensible et tester ce scénario."
-        ]
+        ],
+        "explanation": "Une page externe apporte des informations ; elle ne reçoit pas le droit de donner des instructions à ton agent. Le message malveillant est une injection de prompt. Lui demander simplement de l’ignorer ne suffit pas : les contrôles doivent aussi vivre dans l’application. Par exemple, garder les secrets hors du contexte du modèle, limiter les destinations des messages et faire confirmer les actions sensibles réduit les possibilités d’exfiltration.",
+        "sample_answer": "Je traite la page comme une source non fiable. Je n’exécute pas ses instructions et je n’expose pas ma clé API au modèle. L’application vérifie les destinataires et les paramètres de l’outil ; un envoi sensible demande une confirmation qui montre le destinataire et le contenu. Je teste le scénario avec une fausse clé et un outil simulé pour vérifier qu’aucun secret n’est transmis."
       },
       "en": {
         "title": "A source asks the agent to disclose a secret",
@@ -66,7 +72,9 @@
           "Do not expose secrets to a model or tool unnecessarily.",
           "Restrict permitted tools and destinations; validate arguments in application code.",
           "Require human approval for sensitive sends and test this scenario."
-        ]
+        ],
+        "explanation": "An external page provides information; it has no authority to instruct your agent. The malicious text is a prompt injection. Asking the model to ignore it is insufficient: application-level controls are also needed. Keep secrets out of model context, restrict message destinations and require confirmation for sensitive actions to reduce exfiltration opportunities.",
+        "sample_answer": "I treat the page as untrusted data. I do not execute its instructions or expose my API key to the model. The application validates tool arguments and recipients; sensitive sends require confirmation showing the recipient and content. I test with a fake secret and a simulated tool to check that no secret is transmitted."
       },
       "references": [
         {
@@ -93,7 +101,9 @@
           "Comparer ancienne et nouvelle versions sur les mêmes cas ; garder un jeu de test séparé.",
           "Mesurer qualité des décisions, appels d’outils, latence et coût, pas seulement la fluidité du texte.",
           "Définir des seuils de publication et une procédure de retour arrière."
-        ]
+        ],
+        "explanation": "Cinq exemples réussis ne représentent pas nécessairement les demandes réelles. Un jeu de test séparé contient des cas qui n’ont pas servi à ajuster les instructions. Comparer les deux versions sur les mêmes cas permet d’observer les régressions. Pour un agent, une belle réponse peut cacher une mauvaise action : il faut donc examiner les décisions et les appels d’outils, puis le coût et le temps de réponse. Les seuils dépendent du risque du produit.",
+        "sample_answer": "Je construis un jeu de demandes avec les catégories et actions attendues, dont des demandes ambiguës et des tentatives d’injection. Je garde des cas à part pour la validation finale. Je compare les erreurs de classement, les outils appelés, la latence et le coût entre les deux versions. Je décide avant publication des erreurs bloquantes. Après une mise en ligne limitée, je surveille ces mesures et je peux réactiver la version précédente."
       },
       "en": {
         "title": "How would you demonstrate that your agent improved?",
@@ -103,7 +113,9 @@
           "Compare both versions on identical cases; keep a held-out test set.",
           "Measure decision quality, tool calls, latency and cost, not just fluent wording.",
           "Define release thresholds and a rollback procedure."
-        ]
+        ],
+        "explanation": "Five successful examples may not represent real traffic. A held-out test set contains cases not used to tune instructions. Comparing versions on identical cases helps detect regressions. Fluent text can hide an incorrect action, so inspect decisions and tool calls alongside cost and latency. Release thresholds depend on product risk.",
+        "sample_answer": "I build a labelled request set with expected categories and actions, including ambiguous requests and injection attempts. I keep cases separate for final validation. I compare classification errors, tool calls, latency and cost across versions and define blocking failures before release. After a limited rollout, I monitor these measures and retain the option to restore the previous version."
       },
       "references": [
         {

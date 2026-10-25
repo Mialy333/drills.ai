@@ -7,6 +7,7 @@ const fr = document.documentElement.lang === "fr";
 const say = (french: string, english: string): string => fr ? french : english;
 const element = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 const form = element<HTMLFormElement>("application-form");
+const profileMode = new URLSearchParams(location.search).get("step") === "profile";
 const fields = element<HTMLFieldSetElement>("application-inputs");
 const profile = element<HTMLTextAreaElement>("application-profile");
 const posting = element<HTMLTextAreaElement>("application-posting");
@@ -30,14 +31,15 @@ function profileSummary(): void {
     ? say("Profil prêt : il sera réutilisé pour cette annonce. Tu peux le consulter ou le corriger ci-dessous.", "Profile ready: it will be reused for this posting. You can view or edit it below.")
     : say("Importe ton CV ou ouvre la saisie manuelle. Aucun texte supplémentaire n’est demandé après l’import.", "Import your CV or open manual entry. No additional text is required after import.");
 }
-function persist(): void {
+function persist(): boolean {
   profileSummary();
   try {
     const saved = saveApplicationState({version: 1, expiresAt: Date.now() + (remember.checked ? 30 : 1) * 86400000,
       profile: profile.value, posting: posting.value, result: currentResult, cv: cv.value, pitch: pitch.value,
       reviewed: reviewed.checked, remember: remember.checked}, sessionStorage, localStorage);
     if (!saved) status(say("Le stockage est indisponible. Garde cet onglet ouvert et exporte tes textes avant de quitter.", "Storage is unavailable. Keep this tab open and export your text before leaving."));
-  } catch { status(say("Le stockage est indisponible : ce dossier restera uniquement dans la page ouverte.", "Storage is unavailable: this application will remain only in the open page.")); }
+    return saved;
+  } catch { status(say("Le stockage est indisponible : ce dossier restera uniquement dans la page ouverte.", "Storage is unavailable: this application will remain only in the open page.")); return false; }
 }
 let inputSnapshot: { profile: string; posting: string } | null = null;
 
@@ -51,7 +53,7 @@ function resetResults(): void {
   inputSnapshot = null;
   for (const id of ["application-evidence", "application-draft-sources", "application-interview", "application-print-text"]) element(id).replaceChildren();
 }
-function busy(value: boolean): void { fields.disabled = value; cancel.hidden = !value; }
+function busy(value: boolean): void { fields.disabled = value; cancel.hidden = !value; form.setAttribute("aria-busy", String(value)); }
 function text(tag: string, value: string): HTMLElement {
   const node = document.createElement(tag);
   node.textContent = value;
@@ -68,12 +70,15 @@ async function post(path: "/api/application" | "/api/profile-import", body: unkn
   if (response.status === 429) throw new Error("limited");
   if (response.status === 503) throw new Error("unavailable");
   if (response.status === 422) throw new Error("invalid-input");
+  if (response.status === 504) throw new DOMException("Timeout", "AbortError");
   if (response.status === 502) throw new Error("validation");
   if (!response.ok) throw new Error("failed");
   return response.json();
 }
 
 function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message === "invalid-pdf") return say("Choisis un PDF non vide de 4 Mio maximum.", "Choose a non-empty PDF of at most 4 MiB.");
+  if (error instanceof Error && error.message === "unreadable-pdf") return say("Le texte du CV n’a pas pu être extrait correctement. Essaie un PDF avec du texte sélectionnable, ou utilise la saisie manuelle.", "CV text could not be extracted. Try a PDF with selectable text or use manual entry.");
   if (error instanceof TypeError) return say("Impossible de joindre le service. Vérifie que le serveur DRILLS est démarré, puis réessaie. Ton profil est conservé.", "Cannot reach the service. Check that the DRILLS server is running, then try again. Your profile is preserved.");
   if (error instanceof Error && error.message === "invalid-input") return say("Le document ou le texte envoyé n’est pas valide. Vérifie le PDF et colle l’annonce complète.", "The document or text is invalid. Check the PDF and paste the full posting.");
   if (error instanceof DOMException && error.name === "AbortError") return say("Préparation annulée ou délai dépassé. Tes champs sont conservés.", "Preparation cancelled or timed out. Your fields are preserved.");
@@ -139,58 +144,72 @@ function render(result: ApplicationResult): void {
   element("application-result-title").focus();
 }
 
+async function extractProfile(file: File, signal: AbortSignal): Promise<void> {
+  if ((!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") || file.size > 4 * 1024 * 1024 || file.size === 0) throw new Error("invalid-pdf");
+  status(say("Étape 1/2 · Lecture de ton CV…", "Step 1/2 · Reading your CV…"));
+  const encoded = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1]);
+    reader.onerror = () => reject(new Error("file"));
+    reader.readAsDataURL(file);
+  });
+  if (signal.aborted) throw new DOMException("Cancelled", "AbortError");
+  const raw = await post("/api/profile-import", { pdf_base64: encoded, consent: true }, signal);
+  if (signal.aborted) throw new DOMException("Cancelled", "AbortError");
+  if (!raw || typeof raw !== "object" || !("candidate_text" in raw) || typeof raw.candidate_text !== "string" || raw.candidate_text.trim().length < 50 || raw.candidate_text.length > 16000) throw new Error("unreadable-pdf");
+  resetResults();
+  profile.value = raw.candidate_text;
+  pdf.value = "";
+  editor.open = true;
+  persist();
+}
+
 form.addEventListener("submit", (event) => {
   event.preventDefault();
+  if (controller) return;
   if (!consent.checked) { consent.reportValidity(); status(say("Confirme l’envoi à l’IA avant de continuer.", "Confirm sharing with AI before continuing.")); return; }
-  if (profile.value.trim().length < 50 && pdf.files?.length) { element("application-import").click(); return; }
-  if (!form.reportValidity()) return;
-  const candidate = profile.value.trim();
+  const file = pdf.files?.[0];
   const job = posting.value.trim();
-  if (candidate.length < 50 || job.length < 50) {
-    editor.open = true;
-    status(say("Décris ton parcours et colle une annonce complète (50 caractères minimum chacun).", "Describe your experience and paste a full posting (at least 50 characters each)."));
-    return;
+  if (!profileMode && job.length < 50) {
+    status(say("Colle le texte complet de l’annonce (50 caractères minimum).", "Paste the full posting (at least 50 characters).")); posting.focus(); return;
   }
-  resetResults();
+  if (!file && profile.value.trim().length < 50) {
+    element("application-profile-card").hidden = false; editor.open = true;
+    status(say("Ajoute ton CV PDF ou renseigne ton profil une seule fois. Aucun profil exploitable n’est encore enregistré.", "Add your PDF CV or enter your profile once. No usable profile has been saved yet.")); profile.focus(); return;
+  }
   void perform(async (signal) => {
+    if (file) await extractProfile(file, signal);
+    if (profileMode) {
+      if (!persist()) return;
+      const next = new URL(location.href); next.search = "?step=posting"; next.hash = "";
+      location.assign(next.href); return;
+    }
+    const candidate = profile.value.trim();
+    resetResults(); persist();
+    status(say("Étape 2/2 · Comparaison de ton profil avec l’annonce et préparation de ta candidature…", "Step 2/2 · Comparing your profile with the posting and preparing your application…"));
     const raw = await post("/api/application", { candidate_text: candidate, job_description: job, output_language: fr ? "fr" : "en", consent: true }, signal);
     if (signal.aborted) return;
     const result = ApplicationResultSchema.parse(raw);
     if (result.output_language !== (fr ? "fr" : "en")) throw new Error("language");
     inputSnapshot = { profile: candidate, posting: job };
-    render(result);
-    persist();
-    status(say("Bilan prêt. Relis les preuves, puis personnalise tes textes avant export.", "Assessment ready. Review the evidence, then personalise your drafts before export."));
-  }, say("Analyse de l’annonce, rapprochement des preuves et préparation des textes…", "Analysing the posting, matching evidence and preparing drafts…"));
+    render(result); persist();
+    status(say("Diagnostic prêt. Vérifie les preuves et les textes proposés, notamment les informations extraites du CV.", "Assessment ready. Review the evidence and drafts, including the information extracted from your CV."));
+    results.scrollIntoView?.({behavior: "smooth", block: "start"});
+  }, say("Préparation de ton dossier…", "Preparing your application…"));
 });
 
 element("application-import").addEventListener("click", () => {
-  if (!consent.checked) { consent.reportValidity(); status(say("Ton accord est nécessaire avant l’envoi du PDF.", "Your consent is required before sending the PDF.")); return; }
+  if (!consent.checked) { consent.reportValidity(); status(say("Coche ton accord ci-dessous, puis clique sur « Extraire le texte du CV » ou « Obtenir mon diagnostic ».", "Check your consent below, then click Extract CV text or Get my assessment.")); return; }
   const file = pdf.files?.[0];
-  if (!file || !file.name.toLowerCase().endsWith(".pdf") || file.size > 4 * 1024 * 1024 || file.size === 0) {
-    status(say("Choisis un PDF non vide de 4 Mio maximum.", "Choose a non-empty PDF of at most 4 MiB.")); return;
-  }
-  void perform(async (signal) => {
-    const encoded = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result).split(",")[1]);
-      reader.onerror = () => reject(new Error("file"));
-      reader.readAsDataURL(file);
-    });
-    if (signal.aborted) return;
-    const raw = await post("/api/profile-import", { pdf_base64: encoded, consent: true }, signal);
-    if (signal.aborted) return;
-    if (!raw || typeof raw !== "object" || !("candidate_text" in raw) || typeof raw.candidate_text !== "string" || !raw.candidate_text.trim() || raw.candidate_text.length > 16000) throw new Error("invalid");
-    resetResults();
-    profile.value = raw.candidate_text;
-    editor.open = true;
-    persist();
-    pdf.value = "";
-    status(say("Texte extrait. Relis-le et corrige-le avant de préparer ta candidature.", "Text extracted. Review and correct it before preparing your application."));
-  }, say("Extraction du CV en cours…", "Extracting CV text…"));
+  if (!file) { status(say("Sélectionne un CV PDF à importer.", "Select a PDF CV to import.")); return; }
+  void perform(async signal => {
+    await extractProfile(file, signal);
+    status(say("CV importé. Tu peux le relire, puis lancer ton diagnostic sans ressaisir ton parcours.", "CV imported. Review it, then start your assessment without re-entering your experience."));
+  }, say("Lecture du CV…", "Reading CV…"));
 });
 
 element("application-example").addEventListener("click", () => {
+  pdf.value = "";
   resetResults();
   profile.value = fr
     ? "PROFIL FICTIF — EXEMPLE DE DÉMONSTRATION\n2020–2024 : analyste opérations. J’ai documenté les étapes de traitement des demandes clients et coordonné la résolution d’incidents.\n2025 : formation en développement web, projets JavaScript et API REST.\nProjet personnel : j’ai construit une API Python avec FastAPI, validé les entrées avec Pydantic et écrit des tests pytest. J’ai ajouté un appel OpenAI pour classer des demandes. Je n’ai pas encore déployé ce projet ni utilisé LangGraph."
@@ -237,6 +256,8 @@ element("application-clear").addEventListener("click", () => {
   try { clearApplicationState(sessionStorage, localStorage); } catch {}
   deleteCandidateProfile();
   profileSummary();
+  element("application-profile-card").hidden = false;
+  element("application-saved-profile").hidden = true;
   status(say("Dossier et profil candidat effacés de ce navigateur. Les fichiers exportés restent sur ton appareil.", "Application and candidate profile deleted from this browser. Exported files remain on your device."));
 });
 
@@ -258,9 +279,21 @@ try {
 } catch { /* Manual input and import remain available without storage. */ }
 profileSummary();
 pdf.addEventListener("change", () => {
-  if (pdf.files?.length && consent.checked) element("application-import").click();
-  else if (pdf.files?.length) status(say("CV sélectionné. Confirme l’envoi à l’IA ci-dessous : l’extraction démarrera automatiquement.", "CV selected. Confirm sharing with AI below: extraction will start automatically."));
+  if (pdf.files?.length) status(say("CV sélectionné. Coche ton accord, puis clique sur le bouton principal : le CV sera lu avant de continuer.", "CV selected. Check your consent, then click the main button: your CV will be read before continuing."));
 });
-consent.addEventListener("change", () => {
-  if (consent.checked && pdf.files?.length) element("application-import").click();
-});
+if (profileMode) {
+  form.classList.add("application-single-step");
+  element("application-posting-card").hidden = true; posting.required = false;
+  element("application-submit").textContent = say("Enregistrer mon profil et choisir une annonce", "Save my profile and choose a posting");
+  element("application-example").hidden = true;
+  element("application-heading-title").textContent = say("Ton profil, une seule fois.", "Your profile, entered once.");
+  results.hidden = true;
+} else if (new URLSearchParams(location.search).get("step") === "posting") {
+  element("application-heading-title").textContent = say("Quelle annonce veux-tu viser ?", "Which posting are you targeting?");
+  if (profile.value.trim().length >= 50) {
+    form.classList.add("application-single-step");
+    element("application-profile-card").hidden = true;
+    element("application-saved-profile").hidden = false;
+  }
+  posting.focus();
+}

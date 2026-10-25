@@ -6,13 +6,13 @@ DRILLS.ai helps career changers prepare a credible application for their first A
 
 Open `/fr/apply/` or `/en/apply/` (under the Astro `/drills.ai/` base path):
 
-1. Paste a CV/profile or import a PDF of at most 4 MiB. The PDF is sent to OpenAI only after explicit consent. Review and correct the extracted text before analysis. A previously saved local profile can also be reused.
-2. Paste the full target posting. URL fetching and live job feeds are not connected in this iteration.
+1. Paste a CV/profile or select a PDF of at most 4 MiB. The PDF is sent to OpenAI only after explicit consent. Review and correct the extracted text before analysis. A previously saved local profile can also be reused.
+2. Paste the full target posting, confirm consent and click **Get my assessment**. One action extracts a selected CV, then analyses the posting. Selecting a file or checking consent alone does not start a paid request. URL fetching and live job feeds are not connected in this iteration.
 3. Review the extracted requirements, exact source excerpts, evidence gaps and recommended next actions. Eligibility conditions are displayed separately from skill coverage.
 4. Review and edit the CV sections and introduction pitch. Add contact details locally, then confirm review to download plain text or print the CV to PDF. PDF layout and pagination depend on the browser; inspect the print preview. No ATS acceptance is promised.
 5. Practise three authored interview cases with fixed criteria, ordered by posting keywords. They are not generated or known employer interview questions.
 
-The home CTA opens this workflow. A saved/imported profile is reused automatically; editing it is optional. The delete action clears this dossier and the older candidate profile from this browser.
+The home CTA opens this workflow. Home card 1 opens the profile step (`?step=profile`); card 2 opens the posting step (`?step=posting`). A saved/imported profile is reused automatically; editing it is optional. The delete action clears this dossier and the older candidate profile from this browser.
 
 ### OpenAI integration
 
@@ -59,6 +59,7 @@ python -m pytest -q
 npm ci
 npm run test:contracts
 npm run build
+npm run test:ui
 ```
 
 Configure `OPENAI_API_KEY` only in the API environment or an ignored `.env`. Start `python -m uvicorn api.main:app --reload --port 8000` in one terminal and `npm run dev` in another. Visit `http://localhost:4321/drills.ai/fr/apply/`. For production builds, the public API origin must be supplied as `PUBLIC_DRILLS_API_URL`; it is not an API key.
@@ -67,7 +68,7 @@ The full-stack workflow runs frontend contracts, the public build and Python tes
 
 ## Candidate progress and interview preparation
 
-`/progress/` shows three milestones: profile ready, posting analysed, application reviewed. Review does not mean an application was sent or an interview obtained. `/prepare/` offers three bilingual authored cases with fixed assessment criteria: tool failures, untrusted content and agent evaluation. The API orders these cases by posting keywords; no exercise or interview question is generated. These are practice cases, not verified employer questions or externally certified assessments.
+`/progress/` shows three milestones: profile ready, posting analysed, application reviewed. Review does not mean an application was sent or an interview obtained. `/prepare/` offers three bilingual authored cases with fixed assessment criteria: tool failures, untrusted content and agent evaluation. The API orders these cases by posting keywords; no exercise or interview question is generated. Each case includes a concept explanation, an example answer and technical references. These are practice cases, not verified employer questions or externally certified assessments.
 
 Old `/generate/`, `/assess/`, and `/journal/` links redirect to the candidate workflow. Python drill and course routes are disabled in development and production. The archived learning code and its tests remain in the repository, but the public application does not load a Python runner. `POST /api/drills` returns HTTP 410 and does not invoke a model.
 
