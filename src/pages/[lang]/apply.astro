@@ -111,6 +111,7 @@ const fr = lang === "fr";
         <h2 id="application-result-title" tabindex="-1"></h2>
         <p id="application-scope"></p>
         <p class="application-score" id="application-score"></p>
+        <p id="application-eligibility" role="status"></p>
         <p id="application-decision"></p>
         <div id="application-evidence" class="application-evidence"></div>
         <button type="button" class="btn btn-primary" data-application-step="documents">{fr ? "Préparer mes documents →" : "Prepare my documents →"}</button>
@@ -118,6 +119,13 @@ const fr = lang === "fr";
       <section class="application-card" id="application-documents-panel">
         <h2>{fr ? "Tes textes, à relire et à personnaliser" : "Your drafts, ready for your review"}</h2>
         <p>{fr ? "Relis les faits, les dates et les formulations avant d’envoyer ta candidature." : "Review facts, dates and wording before submitting your application."}</p>
+        <p id="application-drafts-status" role="status" aria-live="polite"></p>
+        <div id="application-drafts-controls" hidden>
+          <p>{fr ? "Ton diagnostic est prêt. Le CV et la présentation sont rédigés à cette étape pour ne pas retarder ton bilan." : "Your assessment is ready. Your CV and introduction are drafted at this step so they do not delay your assessment."}</p>
+          <label class="application-check"><input type="checkbox" id="application-drafts-consent" /><span>{fr ? "J’accepte l’envoi de mon profil et de cette annonce à OpenAI pour rédiger mes documents." : "I agree to send my profile and this posting to OpenAI to draft my documents."}</span></label>
+          <button type="button" class="btn btn-primary" id="application-generate-documents">{fr ? "Rédiger mes documents" : "Draft my documents"}</button>
+        </div>
+        <div id="application-drafts-content">
         <details class="draft-editor" open><summary>{fr ? "Mon CV ciblé" : "My targeted CV"}</summary><p>{fr ? "Garde les contributions concrètes, les dates et les projets que tu peux expliquer. Ajuste les formulations pour qu’elles te ressemblent." : "Keep concrete contributions, dates and projects you can explain. Adjust the wording to sound like you."}</p>
         <label for="application-contact">{fr ? "Nom et coordonnées pour le CV (facultatif, reste dans ton navigateur)" : "Name and contact details for the CV (optional, stays in your browser)"}</label>
         <textarea id="application-contact" rows="2" maxlength="500" autocomplete="off"></textarea>
@@ -147,6 +155,7 @@ const fr = lang === "fr";
         <div class="application-actions">
           <button type="button" class="btn btn-primary" id="application-print-button" disabled>{fr ? "Imprimer / enregistrer le CV en PDF" : "Print / save CV as PDF"}</button>
           <button type="button" class="btn btn-secondary" id="application-download" disabled>{fr ? "Télécharger CV et pitch (.txt)" : "Download CV and pitch (.txt)"}</button>
+        </div>
         </div>
       </section>
       <div class="application-card"><h2 id="application-target-role"></h2><a id="application-apply-link" class="btn btn-primary" target="_blank" rel="noopener noreferrer" hidden>{fr ? "Postuler à cette offre ↗" : "Apply to this opening ↗"}</a><p id="application-apply-note"></p><p>{fr ? "Après l’envoi, indique « Envoyée » dans Mon suivi. Ouvrir l’annonce ne compte pas comme une candidature envoyée." : "After submitting, mark it Sent in My progress. Opening a posting does not count as an application sent."}</p></div>

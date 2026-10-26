@@ -64,7 +64,7 @@ flowchart TD
     Storage["Browser dossier · session / opt-in local storage"]
     GitHub["Public GitHub repository metadata"]
     API["FastAPI · consent, limits and timeouts"]
-    Agent["ApplicationAgent · PDF import and application preparation"]
+    Agent["ApplicationAgent · import, assess, then draft on demand"]
     OpenAI["OpenAI Responses API · Structured Outputs"]
     Checks["Python · source checks and coverage calculation"]
     Jobs["Job adapters · filtered public listings"]
@@ -90,12 +90,12 @@ Public GitHub metadata is read directly by the browser. Job discovery uses backe
 
 ### The active agent and its boundaries
 
-`ApplicationAgent` is the model-facing component in the current candidate workflow. Its two entry points share the Responses API helper; PDF extraction is a separate operation from the profile/posting assessment.
+`ApplicationAgent` is the model-facing component in the current candidate workflow. Its model operations share the Responses API helper. PDF extraction, assessment, and document drafting are separate operations. The existing `/api/application` endpoint remains compatible with older clients.
 
 | Component | Responsibility | Implementation |
 | --- | --- | --- |
-| `ApplicationAgent.import_pdf()` | Extract factual CV text for the candidate to review | PDF input to OpenAI, parsed into `ImportedProfile` |
-| `ApplicationAgent.prepare()` | Identify role requirements, relate supplied experience to them, and draft application text | OpenAI Responses API with Pydantic Structured Outputs |
+| `ApplicationAgent.import_pdf()` | Extract factual CV text for the candidate to review | Bounded text extraction first; OpenAI PDF input as fallback, parsed into `ImportedProfile` |
+| `ApplicationAgent.assess()` / `draft()` | Return the assessment first; draft the CV and introduction when requested | OpenAI Responses API with Pydantic Structured Outputs |
 | `source_excerpts()` / `resolve_selection()` | Assign source IDs and resolve model-selected IDs back to original text | Deterministic Python |
 | `validate_analysis()` / `calculate_match()` | Check references and consistency, then calculate documented skill coverage | Deterministic Python; not another LLM agent |
 | Job adapters | Read, filter, and deduplicate public openings | Greenhouse and Ashby APIs; no model-generated listings |
@@ -113,7 +113,7 @@ sequenceDiagram
     API->>Agent: Validated request
     Agent->>Agent: Split inputs into numbered excerpts
     Agent->>LLM: Constrained source IDs + output schema
-    LLM-->>Agent: Requirements, evidence selections and drafts
+    LLM-->>Agent: Requirements and evidence selections
     Agent->>Checks: Resolve IDs and validate analysis
     alt Invalid evidence selection
         Checks-->>Agent: Safe error code
@@ -124,6 +124,7 @@ sequenceDiagram
     Checks-->>Agent: Coverage and result, or validation failure
     Agent-->>API: Validated result or safe error
     API-->>UI: Assessment to review, or recoverable error
+    Note over UI,LLM: CV and introduction are drafted only when the candidate opens Documents
 ```
 
 There is at most one correction attempt within the endpoint deadline. A persistent failure returns an error, not a fabricated score. These checks validate structure and source presence; they do not independently establish semantic correctness or candidate skill mastery.
@@ -146,8 +147,8 @@ This pipeline explains the project's development history. **It is not the curren
 
 | Integration | What is implemented |
 | --- | --- |
-| **OpenAI Responses API** | PDF CV extraction, profile/posting analysis, and editable application drafts |
-| **Structured Outputs + Pydantic** | Typed outputs and constrained evidence selections |
+| **OpenAI Responses API** | Fallback PDF reading, profile/posting analysis, and on-demand application drafts |
+| **Structured Outputs + Pydantic** | Typed outputs and constrained evidence selections, preserved across assessment and drafting |
 | **Greenhouse + Ashby** | A limited selection of public company job boards, filtered for relevant junior/internship opportunities |
 | **GitHub public API** | Repository metadata preview with candidate-confirmed personal contribution; no code audit |
 | **MCP** | Optional `/mcp/` server exposing `search_jobs`, `get_job`, and `score_documented_match` |
@@ -157,6 +158,16 @@ The product calls the **OpenAI API**, not a ChatGPT conversation. A compatible M
 The MCP tools do not make paid model calls, access browser dossiers, write external data, or submit applications. `score_documented_match` validates and scores caller-supplied requirements and evidence; it does not independently choose or semantically verify those requirements.
 
 Job discovery is not an exhaustive market database or personalised ranking. Some searches may return no suitable openings. A GitHub repository's metadata is not proof of authorship or technical proficiency.
+
+## Responsiveness and diagnostics
+
+- Text-based PDFs are extracted in a bounded subprocess (4-second wall timeout, 3-second CPU limit, 256 MiB address-space limit, up to 10 pages). Unreadable, scanned, oversized-text or unsupported documents fall back to the existing OpenAI PDF flow. Extracted text still needs human review; no PDF parser guarantees correct reading order.
+- `/api/assessment` returns the validated requirements and indicative score without waiting for CV and pitch generation. `/api/application-drafts` writes those documents on demand, revalidates source references, and keeps the existing assessment and score.
+- Reopening an unchanged assessment or completed documents does not repeat a model call. This reuse is local to the current dossier; there is no shared server cache of candidate data.
+- Numeric skill scores, including zero, are displayed alongside separate eligibility warnings. Uncertain/out-of-scope assessments and assessments without evaluable skills keep an explicit unavailable-score message, never an invented percentage.
+- Server logs distinguish PDF text/model routing, model-operation duration, and endpoint-stage duration without logging CV text, postings, generated text or provider error details. Private responses carry `Server-Timing` and `Cache-Control: no-store`.
+- Opening the application sends one anonymous health request to overlap host wake-up with profile entry; it sends no candidate data and triggers no model call. There is no periodic keep-alive.
+- Network time, hosting wake-up, provider load and PDF complexity still affect latency. A health check is not a model benchmark, and no fixed response time is guaranteed.
 
 ## Understanding the assessment
 
@@ -224,7 +235,7 @@ npm run build
 npm run test:ui
 ```
 
-At the final MVP consolidation: **114 Python tests and 63 frontend tests passed**, together with the static build and public-content checks. API unit tests mock OpenAI. They do not establish live output quality or compatibility with every browser. The screenshot session additionally exercised one real fictional-profile assessment on the deployed app.
+The test suites cover the original candidate workflow as well as separate assessment/drafting, PDF text extraction with fallback, score visibility, cancellation, and preservation of existing dossiers. API unit tests mock OpenAI. They do not establish live output quality or compatibility with every browser. The screenshot session additionally exercised one real fictional-profile assessment on the deployed app.
 
 | Layer | Deployment |
 | --- | --- |

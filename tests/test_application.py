@@ -265,3 +265,106 @@ def test_source_slices_keep_original_text_and_fit_public_quote_limits():
     assert len(excerpts) > 1
     assert all(8 <= len(value) <= 600 and value in text for value in excerpts.values())
     assert any("je n’ai pas déployé" in value for value in excerpts.values())
+
+
+def test_fast_assessment_excludes_drafts_and_preserves_score_and_evidence(analysis, payload):
+    from src.ai_generator.application import selection_schema, source_excerpts
+    selected = as_selection(analysis)
+    schema = selection_schema(source_excerpts(PROFILE,"profile"),source_excerpts(POSTING,"job"),assessment_only=True)
+    assessment = schema.model_validate(selected.model_dump(include={'role_title','scope','scope_reason','requirements'}))
+    parse = AsyncMock(return_value=SimpleNamespace(output_parsed=assessment))
+    result = asyncio.run(ApplicationAgent(SimpleNamespace(responses=SimpleNamespace(parse=parse))).assess(payload))
+    assert result.score == 100 and result.drafts_pending is True
+    assert result.cv_sections == [] and result.pitch is None
+    assert result.requirements[0].candidate_quote == PROFILE
+    schema = parse.call_args.kwargs['text_format'].model_fields
+    assert 'cv_sections' not in schema and 'pitch' not in schema
+    assert parse.await_count == 1
+    assert parse.call_args.kwargs['store'] is False
+
+
+def test_lazy_drafts_keep_assessment_and_reject_fabricated_sources(analysis, payload):
+    from src.ai_generator.application import AssessmentAnalysis, ApplicationDraftRequest, ApplicationDrafts, EvidenceError
+    assessment = AssessmentAnalysis.model_validate(analysis.model_dump(include={'role_title','scope','scope_reason','requirements'}))
+    request = ApplicationDraftRequest(**payload.model_dump(), assessment=assessment)
+    selected = as_selection(analysis)
+    drafts = ApplicationDrafts(cv_sections=selected.cv_sections, pitch=selected.pitch)
+    parse = AsyncMock(return_value=SimpleNamespace(output_parsed=drafts))
+    agent = ApplicationAgent(SimpleNamespace(responses=SimpleNamespace(parse=parse)))
+    result = asyncio.run(agent.draft(request))
+    assert result.requirements == assessment.requirements and result.score == 100
+    assert result.pitch.source_quotes == [PROFILE]
+    assert set(parse.call_args.kwargs['text_format'].model_fields) == {'cv_sections','pitch'}
+    drafts.pitch.source_quotes = ['invented_profile_id']
+    parse.reset_mock()
+    with pytest.raises(EvidenceError):
+        asyncio.run(agent.draft(request))
+    assert parse.await_count == 2
+    request.assessment.requirements[0].candidate_quote = 'A fabricated qualification not in this CV'
+    parse.reset_mock()
+    with pytest.raises(EvidenceError):
+        asyncio.run(agent.draft(request))
+    assert parse.await_count == 0
+
+
+def test_split_endpoints_require_consent_and_keep_private_responses(client, payload, analysis, result, monkeypatch):
+    from src.ai_generator.application import AssessmentResult
+    brief = AssessmentResult(**result.model_dump(exclude={'cv_sections','pitch'}))
+    monkeypatch.setattr(api_main.ApplicationAgent, 'assess', AsyncMock(return_value=brief))
+    monkeypatch.setattr(api_main.ApplicationAgent, 'draft', AsyncMock(return_value=result))
+    body = payload.model_dump()
+    response = client.post('/api/assessment', json=body)
+    assert response.status_code == 200 and response.json()['drafts_pending']
+    assert response.headers['cache-control'] == 'no-store'
+    body['assessment'] = analysis.model_dump(include={'role_title','scope','scope_reason','requirements'})
+    response = client.post('/api/application-drafts', json=body)
+    assert response.status_code == 200 and response.json()['score'] == 100
+    assert response.headers['cache-control'] == 'no-store'
+    body['consent'] = False
+    assert client.post('/api/application-drafts',json=body).status_code == 422
+    del body['assessment']
+    assert client.post('/api/assessment',json=body).status_code == 422
+
+
+def text_pdf(text):
+    import io
+    from pypdf import PdfWriter
+    from pypdf.generic import DictionaryObject, NameObject, DecodedStreamObject
+    writer=PdfWriter()
+    page=writer.add_blank_page(width=595,height=842)
+    font=DictionaryObject({NameObject('/Type'):NameObject('/Font'),NameObject('/Subtype'):NameObject('/Type1'),NameObject('/BaseFont'):NameObject('/Helvetica')})
+    page[NameObject('/Resources')]=DictionaryObject({NameObject('/Font'):DictionaryObject({NameObject('/F1'):writer._add_object(font)})})
+    stream=DecodedStreamObject();stream.set_data(('BT /F1 12 Tf 40 780 Td ('+text.replace('\\','\\\\').replace('(','\\(').replace(')','\\)')+') Tj ET').encode())
+    page[NameObject('/Contents')]=writer._add_object(stream)
+    output=io.BytesIO();writer.write(output);return output.getvalue()
+
+
+def test_text_pdf_import_avoids_model_and_keeps_original_facts():
+    parse=AsyncMock()
+    request=ProfileImportRequest(pdf_base64=base64.b64encode(text_pdf(PROFILE)).decode(),consent=True)
+    imported=asyncio.run(ApplicationAgent(SimpleNamespace(responses=SimpleNamespace(parse=parse))).import_pdf(request))
+    assert imported.candidate_text == PROFILE
+    assert parse.await_count == 0
+
+
+def test_blank_or_invalid_pdf_uses_model_fallback():
+    from src.ai_generator.pdf_text import extract_pdf_text
+    assert asyncio.run(extract_pdf_text(b'%PDF-invalid')) is None
+    assert asyncio.run(extract_pdf_text(text_pdf('Too short'))) is None
+
+
+def test_pdf_worker_is_killed_on_timeout(monkeypatch):
+    from src.ai_generator import pdf_text
+    class Worker:
+        returncode = None
+        killed = False
+        async def communicate(self, data):
+            raise asyncio.TimeoutError()
+        def kill(self):
+            self.killed = True
+        async def wait(self):
+            self.returncode = -9
+    worker=Worker()
+    monkeypatch.setattr(pdf_text.asyncio,'create_subprocess_exec',AsyncMock(return_value=worker))
+    assert asyncio.run(pdf_text.extract_pdf_text(b'%PDF-test')) is None
+    assert worker.killed

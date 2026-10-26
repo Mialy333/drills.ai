@@ -3,6 +3,7 @@ name = "drills-ai"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "pypdf==6.21.2",
     "openai>=2.0.0,<4.0.0",
     "pydantic>=2.0.0",
     "pytest>=8.0.0",

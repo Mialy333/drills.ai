@@ -63,7 +63,7 @@ function persist(): boolean {
 }
 let inputSnapshot: { profile: string; posting: string } | null = null;
 
-function status(message: string): void { element("application-status").textContent = message; }
+function status(message: string): void { element("application-status").textContent = message; element("application-drafts-status").textContent = message; }
 function resetResults(): void {
   results.hidden = true;
   currentResult = null;
@@ -73,20 +73,26 @@ function resetResults(): void {
   inputSnapshot = null;
   for (const id of ["application-evidence", "application-print-text"]) element(id).replaceChildren();
 }
-function busy(value: boolean): void { fields.disabled = value; cancel.hidden = !value; form.setAttribute("aria-busy", String(value)); }
+function busy(value: boolean): void {
+  fields.disabled = value; cancel.hidden = !value; form.setAttribute("aria-busy", String(value));
+  element<HTMLButtonElement>('application-generate-documents').disabled=value;
+  if(value) element('application-reset-actions').hidden=false;
+}
 function text(tag: string, value: string): HTMLElement {
   const node = document.createElement(tag);
   node.textContent = value;
   return node;
 }
 
-async function post(path: "/api/application" | "/api/profile-import", body: unknown, signal: AbortSignal): Promise<unknown> {
+async function post(path: "/api/assessment" | "/api/application-drafts" | "/api/application" | "/api/profile-import", body: unknown, signal: AbortSignal): Promise<unknown> {
   const endpoint = apiEndpoint(path);
   if (!endpoint) throw new Error("unavailable");
   const response = await fetch(endpoint, {
     method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(body), signal, cache: "no-store",
   });
+  // Compatible with the previous backend during independent Pages/Render deployments.
+  if (response.status === 404 && path === '/api/assessment') return post('/api/application',body,signal);
   if (response.status === 429) throw new Error("limited");
   if (response.status === 503) throw new Error("unavailable");
   if (response.status === 422) throw new Error("invalid-input");
@@ -135,11 +141,12 @@ function render(result: ApplicationResult): void {
   element("application-result-title").textContent = result.role_title;
   element("application-scope").textContent = result.scope_reason;
   const conditions=result.requirements.filter(item=>item.kind==='eligibility'&&item.status!=='documented');
-  element("application-score").textContent = conditions.length
-    ? say(`${conditions.length} condition(s) de candidature à confirmer`, `${conditions.length} application condition(s) to confirm`)
-    : result.score === null
-    ? say("Périmètre à vérifier — score non affiché", "Scope needs review — score not shown")
+  element("application-score").textContent = result.score === null
+    ? (result.scope==='in_scope' ? say("Score indisponible : aucune compétence évaluable extraite.", "Score unavailable: no assessable skills extracted.") : say("Périmètre à vérifier — score non calculé", "Scope needs review — score not calculated"))
     : `${result.score} % · ${say("couverture documentée des compétences", "documented skill coverage")}`;
+  element('application-eligibility').hidden=conditions.length===0;
+  element('application-eligibility').textContent=conditions.length
+    ? say(`${conditions.length} condition(s) de candidature à confirmer — distinctes du score de compétences.`, `${conditions.length} application condition(s) to confirm — separate from the skill score.`) : '';
   element("application-decision").textContent = result.decision === "prepare"
     ? say("Prépare ta candidature en vérifiant les preuves et les conditions ci-dessous.", "Prepare your application, reviewing the evidence and conditions below.")
     : result.decision === "strengthen"
@@ -161,7 +168,7 @@ function render(result: ApplicationResult): void {
   }));
   cvEditor.setSections(result.cv_sections);
   element("cv-role-title").textContent = result.role_title;
-  pitch.value = result.pitch.text;
+  pitch.value = result.pitch?.text ?? "";
   reviewed.checked = false;
   printButton.disabled = download.disabled = true;
   setStep("diagnostic");
@@ -170,7 +177,7 @@ function render(result: ApplicationResult): void {
 
 async function extractProfile(file: File, signal: AbortSignal): Promise<void> {
   if ((!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") || file.size > 4 * 1024 * 1024 || file.size === 0) throw new Error("invalid-pdf");
-  status(say("Étape 1/2 · Lecture de ton CV…", "Step 1/2 · Reading your CV…"));
+  status(say("Lecture du CV… Extraction du texte, puis lecture IA si nécessaire.", "Reading your CV… Extracting text, with AI reading only if needed."));
   const encoded = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(",")[1]);
@@ -192,8 +199,8 @@ form.addEventListener("submit", (event) => {
   event.preventDefault();
   if (controller) return;
   if(workAuthorization.value!=='unknown'&&!workCountry.value.trim()){setStep('profile');workCountry.closest('details')!.open=true;status(say('Précise le pays concerné par ton droit de travailler.','Specify the country covered by your right to work.'));workCountry.focus();return;}
-  if(postingUrl.value.trim()&&!applicationUrl(postingUrl.value)){status(say('Le lien doit être une adresse HTTPS valide.','Enter a valid HTTPS link.'));return;}
-  if (profileMode && !pdf.files?.length && profile.value.trim().length>=50) { if(persist()) setStep('posting'); return; }
+  if(!profileMode&&postingUrl.value.trim()&&!applicationUrl(postingUrl.value)){status(say('Le lien doit être une adresse HTTPS valide.','Enter a valid HTTPS link.'));return;}
+  if (profileMode && !pdf.files?.length && profile.value.trim().length>=50) { persist(); setStep('posting'); element('application-heading-title').scrollIntoView?.({block:'start'}); return; }
   if (!consent.checked) { consent.reportValidity(); status(say("Confirme l’envoi à l’IA avant de continuer.", "Confirm sharing with AI before continuing.")); return; }
   const file = pdf.files?.[0];
   const job = posting.value.trim();
@@ -207,14 +214,19 @@ form.addEventListener("submit", (event) => {
   void perform(async (signal) => {
     if (file) await extractProfile(file, signal);
     if (profileMode) {
-      if (!persist()) return;
-      setStep('posting'); status(say('Profil prêt. Choisis ou colle une annonce.', 'Profile ready. Choose or paste a posting.')); return;
+      persist();
+      setStep('posting'); element('application-heading-title').scrollIntoView?.({block:'start'}); status(say('Profil prêt. Choisis ou colle une annonce.', 'Profile ready. Choose or paste a posting.')); return;
     }
     const candidate = candidateProfile();
     if(candidate.length>16000){status(say('Raccourcis ton profil pour inclure tes conditions de candidature (16 000 caractères au total).','Shorten your profile to include eligibility details (16,000 characters total).'));return;}
+    // Reuse only the current validated result for exactly the same inputs and language.
+    if(currentResult && inputSnapshot && currentResult.output_language===language &&
+       !applicationDraftChanged(inputSnapshot.profile,inputSnapshot.posting,candidate,job)) {
+      setStep('diagnostic'); element('application-heading-title').scrollIntoView?.({block:'start'}); return;
+    }
     resetResults(); persist();
-    status(say("Étape 2/2 · Comparaison de ton profil avec l’annonce et préparation de ta candidature…", "Step 2/2 · Comparing your profile with the posting and preparing your application…"));
-    const raw = await post("/api/application", { candidate_text: candidate, job_description: job, output_language: fr ? "fr" : "en", consent: true }, signal);
+    status(say("Comparaison de ton profil avec l’annonce… Le diagnostic s’affiche avant la rédaction des documents.", "Comparing your profile with the posting… Your assessment appears before document drafting."));
+    const raw = await post("/api/assessment", { candidate_text: candidate, job_description: job, output_language: fr ? "fr" : "en", consent: true }, signal);
     if (signal.aborted) return;
     const result = ApplicationResultSchema.parse(raw);
     if (result.output_language !== (fr ? "fr" : "en")) throw new Error("language");
@@ -342,6 +354,10 @@ function setStep(step:string, updateUrl=true):void {
   results.hidden=form.hidden===false;
   element('application-diagnostic-panel').hidden=step!=='diagnostic';
   element('application-documents-panel').hidden=step!=='documents';
+  const pending=!!currentResult && currentResult.pitch===null;
+  element('application-drafts-controls').hidden=!pending;
+  element('application-drafts-content').hidden=pending;
+  if(step==='documents') status(pending ? say('Ton diagnostic est conservé. Tu peux maintenant rédiger tes documents.', 'Your assessment is saved. You can now draft your documents.') : '');
   const titles:Record<string,string>={profile:say('Ton profil, ton CV, tes projets.','Your profile, CV and projects.'),posting:say('Trouve ta prochaine opportunité.','Find your next opportunity.'),diagnostic:say('Ton diagnostic pour cette offre.','Your assessment for this role.'),documents:say('Prépare ta candidature.','Prepare your application.')};
   element('application-heading-title').textContent=titles[step];
   for(const button of document.querySelectorAll<HTMLButtonElement>('[data-application-step]')){
@@ -350,7 +366,32 @@ function setStep(step:string, updateUrl=true):void {
   }
   if(updateUrl){const url=new URL(location.href);url.searchParams.set('step',step);history.replaceState(null,'',url);}
 }
-for(const button of document.querySelectorAll<HTMLButtonElement>('[data-application-step]'))button.addEventListener('click',()=>{if(controller)return;setStep(button.dataset.applicationStep!);element('application-heading-title').scrollIntoView?.({block:'start'});});
+for(const button of document.querySelectorAll<HTMLButtonElement>('[data-application-step]'))button.addEventListener('click',()=>{
+  if(controller)return;
+  setStep(button.dataset.applicationStep!);element('application-heading-title').scrollIntoView?.({block:'start'});
+  if(button.dataset.applicationStep==='documents' && currentResult?.pitch===null && consent.checked){
+    element<HTMLInputElement>('application-drafts-consent').checked=true;
+    void generateDocuments();
+  }
+});
+async function generateDocuments():Promise<void>{
+  if(controller || !currentResult || currentResult.pitch!==null || !inputSnapshot)return;
+  if(!element<HTMLInputElement>('application-drafts-consent').checked){status(say('Confirme l’envoi à l’IA pour rédiger tes documents.', 'Confirm sharing with AI to draft your documents.'));return;}
+  const assessed=currentResult;
+  const source={...inputSnapshot};
+  await perform(async signal=>{
+    const {role_title,scope,scope_reason,requirements}=assessed;
+    const raw=await post('/api/application-drafts', {candidate_text:source.profile,job_description:source.posting,
+      output_language:assessed.output_language,consent:true,assessment:{role_title,scope,scope_reason,requirements}},signal);
+    if(signal.aborted)return;
+    const result=ApplicationResultSchema.parse(raw);
+    if(result.pitch===null || result.output_language!==assessed.output_language || result.score!==assessed.score ||
+       result.decision!==assessed.decision || JSON.stringify(result.requirements)!==JSON.stringify(assessed.requirements))throw new Error('validation');
+    render(result); inputSnapshot=source; persist(); setStep('documents');
+    status(say('Documents prêts. Relis les faits et personnalise les formulations avant export.', 'Documents ready. Review the facts and personalise the wording before export.'));
+  },say('Rédaction du CV et de ta présentation… Ton diagnostic reste enregistré.', 'Drafting your CV and introduction… Your assessment remains saved.'));
+}
+element('application-generate-documents').addEventListener('click',()=>void generateDocuments());
 window.addEventListener('popstate',()=>setStep(new URLSearchParams(location.search).get('step')??'profile',false));
 setStep(requestedStep??(currentResult?'diagnostic':'profile'),false);
 
@@ -453,3 +494,13 @@ postingUrl.addEventListener('input',()=>{
  historyRows=historyRows.map(row=>row.posting.trim()===posting.value.trim()?{...row,posting_url:applicationUrl(postingUrl.value)??''}:row);
  persist();
 });
+
+// One anonymous readiness request overlaps a sleeping host's startup with profile entry.
+// No polling, candidate data or model call; a failure never blocks the interface.
+const readinessUrl=apiEndpoint('/health');
+if(!import.meta.env.DEV && readinessUrl && typeof fetch==='function'){
+ const readinessController=new AbortController();
+ const readinessTimeout=window.setTimeout(()=>readinessController.abort(),15000);
+ void Promise.resolve().then(()=>fetch(readinessUrl,{method:'GET',signal:readinessController.signal,cache:'no-store'}))
+   .catch(()=>undefined).finally(()=>window.clearTimeout(readinessTimeout));
+}

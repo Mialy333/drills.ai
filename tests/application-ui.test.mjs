@@ -12,7 +12,7 @@ function setup(t, query='?step=posting') {
  t.after(()=>dom.window.close());
  const w=dom.window, get=id=>w.document.getElementById('application-'+id);
  const calls=[];
- w.fetch=async(url, options)=> {calls.push({url,body:JSON.parse(options.body)}); return {ok:true,status:200,json:async()=>url.endsWith('profile-import')?{candidate_text:profileText}:fixture};};
+ w.fetch=async(url, options)=> {if(url.endsWith('/health'))return {ok:true,status:200,json:async()=>({status:'ok'})};calls.push({url,body:JSON.parse(options.body)}); return {ok:true,status:200,json:async()=>url.endsWith('profile-import')?{candidate_text:profileText}:fixture};};
  w.eval(bundle.outputFiles[0].text);
  return {w,get,calls};
 }
@@ -28,7 +28,7 @@ test('one click imports a CV then analyses the posting without manual profile en
  get('consent').checked=true;get('consent').dispatchEvent(new w.Event('change'));
  assert.equal(calls.length,0); // selecting a file and consent alone do not launch paid calls
  submit(w,get);submit(w,get);await done(get);
- assert.deepEqual(calls.map(c=>c.url.split('/').at(-1)),['profile-import','application']);
+ assert.deepEqual(calls.map(c=>c.url.split('/').at(-1)),['profile-import','assessment']);
  assert.equal(calls[1].body.candidate_text,profileText);
  assert.equal(get('results').hidden,false);
  assert.match(get('status').textContent,/Assessment ready/);
@@ -249,7 +249,7 @@ test('profile next moves to opportunities without AI and diagnosis/documents are
  const result=structuredClone(fixture);result.requirements.push({...result.requirements[0],name:'Graduation in 2027',kind:'eligibility',status:'not_documented',candidate_quote:null});result.decision='strengthen';
  w.fetch=async()=>({ok:true,json:async()=>result});submit(w,get);await done(get);
  assert.equal(get('form').hidden,true);assert.equal(get('diagnostic-panel').hidden,false);assert.equal(get('documents-panel').hidden,true);
- assert.match(get('score').textContent,/condition/);assert.doesNotMatch(get('score').textContent,/100/);
+ assert.match(get('score').textContent,/100 %/);assert.match(get('eligibility').textContent,/condition/);
  assert.match(get('evidence').firstChild.textContent,/Graduation/);
  w.document.querySelector('[data-application-step=documents]').click();
  assert.equal(get('diagnostic-panel').hidden,true);assert.equal(get('documents-panel').hidden,false);
@@ -303,3 +303,71 @@ test('opportunities start with only two choices and reveal controls only on requ
  for(const id of ['posting-url','residence','work-country','contact'])assert.equal(get(id).value,'');
  assert.equal(get('work-authorization').value,'unknown');assert.equal(get('apply-link').hidden,true);assert.equal(get('consent').checked,false);
  });
+
+function pendingAssessment(){return {...structuredClone(fixture),cv_sections:[],pitch:null,drafts_pending:true};}
+test('assessment appears before drafts; documents generate on demand and keep score/history',async t=>{
+ const {w,get,calls}=setup(t);
+ w.fetch=async(url,options)=>{calls.push({url,body:JSON.parse(options.body)});return {ok:true,status:200,json:async()=>url.endsWith('application-drafts')?fixture:pendingAssessment()};};
+ get('profile').value=profileText;get('posting').value='AI Agent Engineer internship with API integration, tests and workflow design.';get('consent').checked=true;
+ submit(w,get);await done(get);
+ assert.equal(calls.length,1);assert.match(calls[0].url,/assessment$/);assert.equal(get('results').hidden,false);
+ assert.equal(get('cv').value,'');assert.match(get('score').textContent,/100/);
+ w.document.querySelector('[data-application-step="documents"]').click();await done(get);
+ assert.equal(calls.length,2);assert.match(calls[1].url,/application-drafts$/);
+ assert.equal(get('documents-panel').hidden,false);assert.ok(get('cv').value.length>0);
+ assert.equal(JSON.parse(w.sessionStorage.getItem('drills.application.v1')).history[0].analyses,1);
+ // Revisiting documents must not regenerate or overwrite edits.
+ get('pitch').value='My edited introduction';get('pitch').dispatchEvent(new w.Event('input'));
+ w.document.querySelector('[data-application-step="diagnostic"]').click();
+ w.document.querySelector('[data-application-step="documents"]').click();
+ assert.equal(calls.length,2);assert.equal(get('pitch').value,'My edited introduction');
+});
+test('failed document generation preserves assessment and offers an explicit retry',async t=>{
+ const {w,get}=setup(t);
+ w.fetch=async url=>url.endsWith('application-drafts')?{ok:false,status:502,json:async()=>({})}:{ok:true,status:200,json:async()=>pendingAssessment()};
+ get('profile').value=profileText;get('posting').value='AI Agent Engineer internship with API integration, tests and workflow design.';get('consent').checked=true;
+ submit(w,get);await done(get);w.document.querySelector('[data-application-step="documents"]').click();await done(get);
+ assert.equal(JSON.parse(w.sessionStorage.getItem('drills.application.v1')).result.score,100);
+ assert.equal(get('drafts-controls').hidden,false);assert.match(get('drafts-status').textContent,/failed/);
+ assert.equal(get('generate-documents').disabled,false);assert.equal(get('drafts-content').hidden,true);
+});
+test('score remains visible alongside unresolved eligibility, including zero, without inventing null scores',async t=>{
+ const {w,get}=setup(t);
+ for(const score of [100,0,null]){
+  const result=structuredClone(fixture);result.score=score;result.scope=score===null?'out_of_scope':'in_scope';
+  result.requirements.push({...result.requirements[0],kind:'eligibility',name:'Availability',status:'not_documented',candidate_quote:null});
+  w.fetch=async()=>({ok:true,status:200,json:async()=>result});
+  get('profile').value=profileText;get('posting').value='AI Agent Engineer internship with API integration, tests and workflow design. '+score;get('posting').dispatchEvent(new w.Event('input'));get('consent').checked=true;
+  submit(w,get);await done(get);
+  assert.match(get('eligibility').textContent,/condition/);
+  if(score===null)assert.match(get('score').textContent,/not calculated/);else assert.match(get('score').textContent,new RegExp('^'+score+' %'));
+ }
+});
+test('unchanged assessment is reused without a second request',async t=>{
+ const {w,get,calls}=setup(t);get('profile').value=profileText;get('posting').value='AI Agent Engineer internship with API integration, tests and workflow design.';get('consent').checked=true;
+ submit(w,get);await done(get);submit(w,get);await done(get);assert.equal(calls.length,1);
+});
+test('previous backend remains usable during deployment rollout',async t=>{
+ const {w,get,calls}=setup(t);
+ w.fetch=async(url,options)=>{calls.push({url});return url.endsWith('/assessment')?{ok:false,status:404}:{ok:true,status:200,json:async()=>fixture};};
+ get('profile').value=profileText;get('posting').value='AI Agent Engineer internship with API integration, tests and workflow design.';get('consent').checked=true;
+ submit(w,get);await done(get);assert.deepEqual(calls.map(x=>x.url.split('/').at(-1)),['assessment','application']);assert.equal(get('results').hidden,false);
+});
+test('profile navigation does not require browser storage to succeed',t=>{
+ const {w,get}=setup(t,'?step=profile');
+ w.Storage.prototype.setItem=()=>{throw new Error('storage blocked')};
+ get('profile').value=profileText;submit(w,get);
+ assert.equal(get('posting-card').hidden,false);assert.match(w.location.search,/posting/);
+});
+
+test('pending assessment survives reload and requires consent before drafting again',async t=>{
+ const dom=new JSDOM(html,{url:'http://localhost:4321/drills.ai/en/apply/?step=documents',runScripts:'outside-only'});t.after(()=>dom.window.close());
+ const w=dom.window,get=id=>w.document.getElementById('application-'+id),calls=[];
+ w.sessionStorage.setItem('drills.application.v1',JSON.stringify({version:1,expiresAt:Date.now()+60000,profile:profileText,posting:'AI Agent Engineer internship with API integration and automated tests.',result:pendingAssessment(),cv:'',pitch:'',reviewed:false,remember:false}));
+ w.fetch=async(url,options)=>{if(url.endsWith('/health'))return {ok:true,status:200};calls.push(url);return {ok:true,status:200,json:async()=>fixture};};
+ w.eval(bundle.outputFiles[0].text);
+ assert.equal(get('documents-panel').hidden,false);assert.equal(get('drafts-controls').hidden,false);
+ get('generate-documents').click();assert.equal(calls.length,0);assert.match(get('drafts-status').textContent,/Confirm/);
+ get('drafts-consent').checked=true;get('generate-documents').click();await done(get);
+ assert.equal(calls.length,1);assert.equal(get('drafts-controls').hidden,true);assert.equal(get('drafts-content').hidden,false);
+});

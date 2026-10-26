@@ -6,7 +6,7 @@ const draftSection = z.object({
   source_quotes: z.array(z.string().min(8).max(16_000)).min(1).max(8),
 }).strict();
 
-export const ApplicationResultSchema = z.object({
+const FullApplicationResultSchema = z.object({
   role_title: z.string().min(2).max(160),
   scope: z.enum(["in_scope", "uncertain", "out_of_scope"]),
   scope_reason: z.string().min(10).max(500),
@@ -31,6 +31,15 @@ export const ApplicationResultSchema = z.object({
   output_language: z.enum(["fr", "en"]),
 }).strict();
 
+// Existing complete dossiers remain valid. Pending drafts are explicit, never placeholders.
+export const ApplicationResultSchema = z.union([
+  FullApplicationResultSchema,
+  FullApplicationResultSchema.extend({
+    drafts_pending: z.literal(true),
+    cv_sections: z.array(draftSection).max(0),
+    pitch: z.null(),
+  }).strict(),
+]);
 export type ApplicationResult = z.infer<typeof ApplicationResultSchema>;
 
 /** Plain text output only. Rendering uses textContent, never model-generated HTML. */

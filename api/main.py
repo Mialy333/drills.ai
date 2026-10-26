@@ -23,9 +23,10 @@ from src.ai_generator.pipeline_schemas import DynamicDrillSchema
 from src.ai_generator.application import (
     ApplicationAgent, ApplicationRequest, ApplicationResult,
     ProfileImportRequest, ImportedProfile, ApplicationOutputError, EvidenceError,
+    AssessmentResult, ApplicationDraftRequest,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error.drills")
 
 DEFAULT_ORIGINS = (
     "https://mialy333.github.io,"
@@ -85,13 +86,13 @@ application_slots = asyncio.Semaphore(2)
 async def private_application_responses(request: Request, call_next):
     started = perf_counter()
     response = await call_next(request)
-    if request.url.path in {"/api/application", "/api/profile-import", "/api/interview/transcribe", "/api/interview/feedback", "/api/interview/technical"} or request.url.path.startswith("/mcp/"):
+    if request.url.path in {"/api/application", "/api/assessment", "/api/application-drafts", "/api/profile-import", "/api/interview/transcribe", "/api/interview/feedback", "/api/interview/technical"} or request.url.path.startswith("/mcp/"):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Server-Timing"] = f"application;dur={(perf_counter()-started)*1000:.0f}"
     return response
 
 
-async def run_application_operation(operation):
+async def run_application_operation(operation, stage="application"):
     if not os.getenv("OPENAI_API_KEY"):
         raise HTTPException(status_code=503, detail="Application service is not configured.")
     if application_slots.locked():
@@ -100,9 +101,10 @@ async def run_application_operation(operation):
         started = perf_counter()
         try:
             result = await asyncio.wait_for(operation(), timeout=95)
-            logger.info("Application operation completed in %.2fs", perf_counter() - started)
+            logger.info("Application stage=%s duration_ms=%.0f outcome=ok", stage, (perf_counter() - started)*1000)
             return result
         except (asyncio.TimeoutError, TimeoutError):
+            logger.warning("Application stage=%s duration_ms=%.0f outcome=timeout", stage, (perf_counter()-started)*1000)
             raise HTTPException(status_code=504, detail="Preparation timed out. Your inputs have not been saved.") from None
         except ApplicationOutputError as exc:
             logger.warning("Application preparation rejected: %s", exc.code)
@@ -123,7 +125,19 @@ async def prepare_application(request: Request, payload: ApplicationRequest) -> 
 @app.post("/api/profile-import", response_model=ImportedProfile)
 @limiter.limit("3/minute;10/hour")
 async def import_candidate_pdf(request: Request, payload: ProfileImportRequest) -> ImportedProfile:
-    return await run_application_operation(lambda: ApplicationAgent().import_pdf(payload))
+    return await run_application_operation(lambda: ApplicationAgent().import_pdf(payload), "profile-import")
+
+
+@app.post("/api/assessment", response_model=AssessmentResult)
+@limiter.limit("3/minute;20/hour")
+async def assess_application(request: Request, payload: ApplicationRequest) -> AssessmentResult:
+    return await run_application_operation(lambda: ApplicationAgent().assess(payload), "assessment")
+
+
+@app.post("/api/application-drafts", response_model=ApplicationResult)
+@limiter.limit("3/minute;20/hour")
+async def draft_application(request: Request, payload: ApplicationDraftRequest) -> ApplicationResult:
+    return await run_application_operation(lambda: ApplicationAgent().draft(payload), "drafts")
 
 
 class DrillRequest(BaseModel):
